@@ -1,0 +1,87 @@
+@startuml secuencia_validacion_solicitudes
+
+title Diagrama de Secuencia - Validación de Solicitudes\nManos Solidarias
+
+actor "Administrador" as Admin
+participant "Aplicación\nMóvil" as Sistema
+participant "Servicio de\nAdministración" as ServicioAdmin
+database "Base de\nDatos" as BD
+participant "Sistema de\nNotificaciones" as Notificacion
+
+== Revisión de Solicitud ==
+
+Admin -> Sistema: Seleccionar solicitud pendiente
+activate Sistema
+
+Sistema -> ServicioAdmin: obtenerDetalleSolicitud(id_solicitud)
+activate ServicioAdmin
+
+ServicioAdmin -> BD: SELECT solicitud + datos KYC usuario
+activate BD
+BD --> ServicioAdmin: Detalle completo
+deactivate BD
+
+ServicioAdmin --> Sistema: Solicitud + Perfil KYC
+deactivate ServicioAdmin
+
+Sistema --> Admin: Mostrar solicitud completa
+deactivate Sistema
+
+== Decisión: Aprobar o Rechazar ==
+
+alt Aprobar
+
+    Admin -> Sistema: Aprobar solicitud
+    activate Sistema
+    
+    Sistema -> ServicioAdmin: aprobarSolicitud(id)
+    activate ServicioAdmin
+    
+    ServicioAdmin -> BD: UPDATE solicitudes\nSET estado = 'APROBADA'
+    activate BD
+    BD --> ServicioAdmin: OK
+    deactivate BD
+    
+    ServicioAdmin -> BD: INSERT INTO campanias\n(datos de solicitud)
+    activate BD
+    BD --> ServicioAdmin: Campaña creada
+    deactivate BD
+    
+    ServicioAdmin -> Notificacion: notificar(usuario, "Aprobada")
+    activate Notificacion
+    Notificacion --> ServicioAdmin: Enviado
+    deactivate Notificacion
+    
+    ServicioAdmin --> Sistema: Campaña publicada
+    deactivate ServicioAdmin
+    
+    Sistema --> Admin: "Solicitud aprobada"
+    deactivate Sistema
+
+else Rechazar
+
+    Admin -> Sistema: Rechazar solicitud + motivo
+    activate Sistema
+    
+    Sistema -> ServicioAdmin: rechazarSolicitud(id, motivo)
+    activate ServicioAdmin
+    
+    ServicioAdmin -> BD: UPDATE solicitudes\nSET estado = 'RECHAZADA',\nmotivo_rechazo = ?
+    activate BD
+    BD --> ServicioAdmin: OK
+    deactivate BD
+    
+    ServicioAdmin -> Notificacion: notificar(usuario, motivo)
+    activate Notificacion
+    Notificacion --> ServicioAdmin: Enviado
+    deactivate Notificacion
+    
+    ServicioAdmin --> Sistema: Solicitud rechazada
+    deactivate ServicioAdmin
+    
+    Sistema --> Admin: "Solicitud rechazada"
+    deactivate Sistema
+
+end
+
+@enduml

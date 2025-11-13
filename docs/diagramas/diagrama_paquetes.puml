@@ -1,0 +1,84 @@
+@startuml diagrama_paquetes
+
+title Diagrama de Paquetes UML: Sistema de Gestión de Donaciones
+
+left to right direction
+
+package "Capa de Presentación" {
+  component [Aplicación móvil\n(Flutter)] as app
+}
+
+package "Capa de Lógica de Negocio" {
+  
+  package "Gestión de Campañas" as pkg_campaigns {
+  }
+  
+  package "Gestión de Donaciones" as pkg_donations {
+  }
+  
+  package "Gestión de Usuarios" as pkg_users {
+  }
+  
+  package "Gestión de Evidencias" as pkg_evidence {
+  }
+  
+  package "Gestión de Organizaciones" as pkg_orgs {
+  }
+  
+  package "Sistema de Notificaciones" as pkg_notif {
+  }
+  
+  package "Reportes y Auditoría" as pkg_reports {
+  }
+}
+
+package "Capa de Datos (Supabase)" {
+  
+  database "PostgreSQL" as db
+  
+  component [Supabase Storage] as storage
+  
+  component [Supabase Auth] as auth
+}
+
+package "Servicios Externos" {
+  
+  component [Geocoding API] as geo
+  
+  component [Sistema de Correo] as email
+}
+
+' Relaciones Presentación → Lógica de Negocio
+app --> pkg_campaigns
+app --> pkg_donations
+app --> pkg_users
+app --> pkg_evidence
+app --> pkg_orgs
+app --> pkg_notif
+app --> pkg_reports
+
+' Relaciones Presentación → Servicios Externos
+app --> geo : Ubicación
+
+' Relaciones Lógica de Negocio → Capa de Datos
+pkg_campaigns --> db
+pkg_campaigns --> storage : Imágenes
+
+pkg_donations --> db
+pkg_donations --> storage : Comprobantes
+
+pkg_users --> db
+pkg_users --> auth
+
+pkg_evidence --> db
+pkg_evidence --> storage : Documentos
+
+pkg_orgs --> db
+pkg_orgs --> storage : Validación KYB
+
+pkg_notif --> db
+pkg_notif --> email : Envío
+
+pkg_reports --> db
+
+@enduml

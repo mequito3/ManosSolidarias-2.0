@@ -1,0 +1,35 @@
+@startuml caso_uso_nivel_1_admin_solicitudes
+
+title Diagrama de Casos de Uso - Nivel 1\nAprobar/Rechazar Solicitudes - Manos Solidarias
+
+left to right direction
+
+actor Administrador
+
+rectangle "Sistema de gestión transparente de donaciones" {
+    ' Caso de uso principal
+    (Aprobar/Rechazar Solicitudes) as UC17
+    
+    ' Casos de uso secundarios
+    (Ver Lista de Solicitudes Pendientes) as UC17B
+    (Ver Detalle de Solicitud) as UC17C
+    (Verificar Perfil KYC) as UC17D
+    (Aprobar Solicitud) as UC17E
+    (Rechazar Solicitud) as UC17F
+    (Enviar Notificación) as UC17G
+    
+    ' Relaciones include (pasos obligatorios)
+    UC17 ..> UC17B : <<include>>
+    UC17 ..> UC17C : <<include>>
+    UC17 ..> UC17D : <<include>>
+    UC17 ..> UC17G : <<include>>
+    
+    ' Relaciones extend (funcionalidades opcionales)
+    UC17E ..> UC17 : <<extend>>
+    UC17F ..> UC17 : <<extend>>
+}
+
+' Conexión del actor al caso principal
+Administrador --> UC17
+
+@enduml

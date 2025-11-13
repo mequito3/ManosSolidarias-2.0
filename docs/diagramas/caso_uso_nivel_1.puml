@@ -1,0 +1,31 @@
+@startuml caso_uso_nivel_1
+
+title Diagrama de Casos de Uso - Nivel 1\nGestión de Campañas - Manos Solidarias
+
+left to right direction
+
+actor Usuario
+
+rectangle "Sistema de gestión transparente de donaciones" {
+    ' Casos de uso ordenados de arriba hacia abajo
+    (Crear Solicitud de Campaña) as UC11
+    (Completar Perfil KYC) as UC3
+    (Eliminar Solicitud Pendiente) as UC13
+    (Ver Mis Solicitudes) as UC12
+    (Ver Progreso de Campaña) as UC15
+    (Subir Evidencias) as UC14
+    
+    ' Relaciones include
+    UC11 ..> UC3 : <<include>>
+    
+    ' Relaciones extend
+    UC13 ..> UC11 : <<extend>>
+    UC15 ..> UC12 : <<extend>>
+}
+
+' Conexiones principales (de izquierda a derecha)
+Usuario --> UC11
+Usuario --> UC12
+Usuario --> UC14
+
+@enduml

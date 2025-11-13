@@ -1,0 +1,39 @@
+@startuml caso_uso_nivel_1_donar
+
+title Diagrama de Casos de Uso - Nivel 1\nDonar a una Campaña - Manos Solidarias
+
+left to right direction
+
+actor Usuario
+
+rectangle "Sistema de gestión transparente de donaciones" {
+    ' Casos de uso principales
+    (Ver Campañas Activas) as UC4
+    (Realizar Donación) as UC6
+    (Ver Historial de Donaciones) as UC7
+    
+    ' Casos de uso secundarios
+    (Filtrar por Categoría) as UC5
+    (Seleccionar Campaña) as UC4A
+    (Ingresar Monto) as UC6A
+    (Subir Comprobante) as UC6B
+    (Agregar a Favoritos) as UC8
+    (Compartir Campaña) as UC9
+    
+    ' Relaciones include (pasos obligatorios)
+    UC6 ..> UC4A : <<include>>
+    UC6 ..> UC6A : <<include>>
+    UC6 ..> UC6B : <<include>>
+    
+    ' Relaciones extend (funcionalidades opcionales)
+    UC5 ..> UC4 : <<extend>>
+    UC8 ..> UC4A : <<extend>>
+    UC9 ..> UC4A : <<extend>>
+}
+
+' Conexiones del actor a casos principales
+Usuario --> UC4
+Usuario --> UC6
+Usuario --> UC7
+
+@enduml

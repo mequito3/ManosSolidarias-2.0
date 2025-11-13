@@ -1,0 +1,74 @@
+@startuml secuencia_donacion
+
+title Diagrama de Secuencia - Proceso de Donación\nManos Solidarias
+
+actor "Usuario\n(Donante)" as Usuario
+participant "Aplicación\nMóvil" as Sistema
+participant "Servicio de\nDonaciones" as ServicioDonacion
+database "Base de\nDatos" as BD
+participant "Sistema de\nNotificaciones" as Notificacion
+
+== Inicio del Proceso ==
+
+Usuario -> Sistema: Seleccionar campaña y\npresionar "Donar"
+activate Sistema
+
+Sistema --> Usuario: Mostrar formulario de donación
+deactivate Sistema
+
+== Ingreso de Datos ==
+
+Usuario -> Sistema: Completar formulario:\n1. Ingresar monto ($100)\n2. Seleccionar método (Transferencia)\n3. Subir comprobante de pago\n4. Agregar mensaje opcional
+activate Sistema
+
+Sistema -> Sistema: Validar datos:\n- Monto > 0 ✓\n- Comprobante adjunto ✓\n- Formato válido ✓
+
+alt Validación exitosa
+    
+    == Registro de Donación ==
+    
+    Sistema -> ServicioDonacion: realizarDonacion(datos)
+    activate ServicioDonacion
+    
+    ServicioDonacion -> BD: INSERT INTO donaciones\n(user_id, campania_id, monto,\nmetodo, mensaje, estado='PENDIENTE')
+    activate BD
+    BD --> ServicioDonacion: id_donacion generado
+    deactivate BD
+    
+    ServicioDonacion -> BD: INSERT INTO comprobantes\n(donacion_id, archivo_url,\nformato, tamaño)
+    activate BD
+    BD --> ServicioDonacion: Comprobante guardado
+    deactivate BD
+    
+    == Notificación ==
+    
+    ServicioDonacion -> Notificacion: notificarNuevaDonacion(\ncreador_campania, monto)
+    activate Notificacion
+    
+    Notificacion -> BD: INSERT INTO notificaciones\n(tipo='NUEVA_DONACION',\nusuario_id, mensaje)
+    activate BD
+    BD --> Notificacion: Notificación creada
+    deactivate BD
+    
+    Notificacion --> ServicioDonacion: Notificación enviada
+    deactivate Notificacion
+    
+    ServicioDonacion --> Sistema: Donación registrada exitosamente\nEstado: PENDIENTE
+    deactivate ServicioDonacion
+    
+    Sistema --> Usuario: Mostrar confirmación:\n"Tu donación de $100 fue registrada.\nEstá en espera de validación."
+    deactivate Sistema
+
+else Validación fallida
+    
+    Sistema --> Usuario: Mostrar error:\n"Por favor corrige los datos"
+    deactivate Sistema
+    
+end
+
+note over BD
+Donación queda en estado PENDIENTE
+hasta validación del administrador
+end note
+
+@enduml

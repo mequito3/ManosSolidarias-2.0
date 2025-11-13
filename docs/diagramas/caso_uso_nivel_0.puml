@@ -1,0 +1,60 @@
+@startuml caso_uso_nivel_0
+
+title Diagrama de Casos de Uso - Nivel 0\nManos Solidarias
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor Administrador
+actor Usuario
+
+rectangle "Sistema Manos Solidarias" {
+    
+    (Registrarse) as UC1
+    (Iniciar Sesión) as UC2
+    (Completar Perfil KYC) as UC3
+    (Ver Campañas Activas) as UC4
+    (Filtrar por Categoría) as UC5
+    (Realizar Donación) as UC6
+    (Ver Historial de Donaciones) as UC7
+    (Agregar a Favoritos) as UC8
+    (Compartir Campaña) as UC9
+    (Ver Ranking Solidario) as UC10
+    (Crear Solicitud de Campaña) as UC11
+    (Ver Mis Solicitudes) as UC12
+    (Eliminar Solicitud Pendiente) as UC13
+    (Subir Evidencias) as UC14
+    (Ver Progreso de Campaña) as UC15
+    (Ver Panel de Control) as UC16
+    (Aprobar/Rechazar Solicitudes) as UC17
+    (Validar Donaciones) as UC18
+    (Verificar Evidencias) as UC19
+    (Gestionar Organizaciones) as UC20
+    (Suspender Campañas) as UC21
+}
+
+Administrador --> UC2
+Administrador --> UC16
+Administrador --> UC17
+Administrador --> UC18
+Administrador --> UC19
+Administrador --> UC20
+Administrador --> UC21
+
+UC1 <-- Usuario
+UC2 <-- Usuario
+UC3 <-- Usuario
+UC4 <-- Usuario
+UC5 <-- Usuario
+UC6 <-- Usuario
+UC7 <-- Usuario
+UC8 <-- Usuario
+UC9 <-- Usuario
+UC10 <-- Usuario
+UC11 <-- Usuario
+UC12 <-- Usuario
+UC13 <-- Usuario
+UC14 <-- Usuario
+UC15 <-- Usuario
+
+@enduml

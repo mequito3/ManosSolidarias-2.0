@@ -1,0 +1,1 @@
+todo el sql debe estar en un solo archivo supabase.sql

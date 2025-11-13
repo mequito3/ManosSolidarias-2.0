@@ -1,0 +1,56 @@
+@startuml secuencia_autenticacion
+
+title Diagrama de Secuencia - Proceso de Autenticación\nManos Solidarias
+
+actor "Usuario" as Usuario
+participant "Aplicación\nMóvil" as Sistema
+participant "Servicio de\nAutenticación" as ServicioAuth
+database "Base de\nDatos" as BD
+
+== Ingreso de Credenciales ==
+
+Usuario -> Sistema: Ingresar email y contraseña
+activate Sistema
+
+Sistema -> Sistema: Validar formato
+
+Sistema -> ServicioAuth: iniciarSesion(email, password)
+activate ServicioAuth
+
+ServicioAuth -> BD: SELECT * FROM usuarios\nWHERE email = ?
+activate BD
+BD --> ServicioAuth: Datos usuario
+deactivate BD
+
+== Verificación ==
+
+alt Credenciales válidas
+
+    ServicioAuth -> ServicioAuth: Verificar contraseña:\ncompararHash()
+    
+    ServicioAuth -> ServicioAuth: Generar token JWT
+    
+    ServicioAuth -> BD: UPDATE usuarios\nSET ultimo_acceso = NOW()
+    activate BD
+    BD --> ServicioAuth: OK
+    deactivate BD
+    
+    ServicioAuth --> Sistema: Token JWT + Datos
+    deactivate ServicioAuth
+    
+    Sistema -> Sistema: Guardar sesión local
+    
+    Sistema --> Usuario: Acceso concedido
+    deactivate Sistema
+
+else Credenciales inválidas
+
+    ServicioAuth --> Sistema: Error de autenticación
+    deactivate ServicioAuth
+    
+    Sistema --> Usuario: "Email o contraseña incorrectos"
+    deactivate Sistema
+
+end
+
+@enduml

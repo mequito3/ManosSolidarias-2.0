@@ -1,0 +1,4 @@
+enum AuthFlowResult {
+  signedIn,
+  requiresEmailVerification,
+}

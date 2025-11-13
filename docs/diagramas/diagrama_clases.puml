@@ -1,0 +1,162 @@
+@startuml diagrama_clases
+
+title Diagrama de Clases - Manos Solidarias\nSistema de Gestión Transparente de Donaciones
+
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor White
+    BorderColor Black
+    ArrowColor Black
+}
+
+class Usuario {
+    - id_usuario: String
+    - nombre: String
+    - correo: String
+    - contraseña: String
+    - rol: String
+    - fechaRegistro: DateTime
+    - estadoCuenta: String
+    --
+    + registrarse(): void
+    + iniciarSesion(): void
+    + actualizarPerfil(): void
+    + consultarHistorial(): void
+    + comentarCampaña(): void
+}
+
+class Administrador {
+    --
+    + revisarSolicitud(): void
+    + validarSolicitud(): void
+    + rechazarSolicitud(): void
+    + gestionarUsuarios(): void
+    + devolverSolicitud(): void
+    + supervisarCampañas(): void
+    + generarReporte(): void
+    + consultarMetricas(): void
+}
+
+class SolicitudAyuda {
+    - idSolicitud: String
+    - titulo: String
+    - descripcion: String
+    - categoria: String
+    - montoRequerido: Double
+    - fechaCreacion: DateTime
+    - estadoSolicitud: String
+    --
+    + crear(): void
+    + eliminar(): void
+}
+
+class Campaña {
+    - id_campaña: String
+    - titulo: String
+    - descripcion: String
+    - categoria: String
+    - montoObjetivo: Double
+    - montoRecaudado: Double
+    - estado: String
+    --
+    + consultar(): void
+    + verDetalle(): void
+    + cerrar(): void
+}
+
+class Donacion {
+    - id_donacion: String
+    - monto: Double
+    - fecha: DateTime
+    - metodoPago: String
+    - recibo: String
+    --
+    + registrarDonacion(): void
+}
+
+class Comprobante {
+    - id_comprobante: String
+    - archivo: String
+    - formato: String
+    - tamaño: Integer
+    - fechaRegistro: DateTime
+    --
+    + composicion
+}
+
+class Evidencia {
+    - idEvidencia: String
+    - archivoAdjunto: String
+    - tipo: String
+    - fechaRegistro: DateTime
+    --
+    + adjunta
+}
+
+class Notificacion {
+    - idNotificacion: String
+    - tipo: String
+    - mensaje: String
+    - fecha: DateTime
+    - leida: Boolean
+    --
+    + recibe
+    + si es aprobada, se convierte
+}
+
+class Comentario {
+    - idComentario: String
+    - contenido: String
+    - fecha: DateTime
+    - estado: String
+    --
+    + recibe
+}
+
+class Reporte {
+    - id_reporte: String
+    - tipo: String
+    - fechaGeneracion: DateTime
+    --
+    + genera
+    + exportarExcel(): void
+    + exportarPDF(): void
+}
+
+class Metrica {
+    - nombre: String
+    - valor: Double
+    - fecha: DateTime
+    --
+    + consulta
+}
+
+class Recibo {
+    --
+}
+
+' ===============================
+' RELACIONES
+' ===============================
+
+Usuario "1" -- "0..*" SolicitudAyuda : crea >
+Usuario "1" -- "0..*" Donacion : realiza >
+Usuario "0..*" -- "0..*" Comentario : escribe >
+
+Administrador --|> Usuario
+Administrador "0..*" -- "0..*" SolicitudAyuda : gestiona >
+Administrador "1" -- "0..*" Reporte : genera >
+Administrador "1" -- "0..*" Metrica : consulta >
+
+SolicitudAyuda "1" ..> "0..1" Campaña : aprobada/rechaza/devolver >
+SolicitudAyuda "0..1" -- "0..1" Evidencia : adjunta >
+
+Campaña "1" -- "0..*" Donacion : recibe >
+Campaña "1" -- "0..*" Comentario : contiene >
+
+Donacion "1" *-- "1" Comprobante : composición >
+Donacion "0..1" -- "0..1" Recibo : si es aprobada, se convierte >
+
+Usuario "0..*" -- "0..*" Notificacion : recibe >
+
+@enduml

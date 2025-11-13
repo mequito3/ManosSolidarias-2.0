@@ -1,0 +1,62 @@
+@startuml actividad_validacion_solicitudes
+
+title Diagrama de Actividades - Validación de Solicitudes\nManos Solidarias
+
+|Administrador|
+start
+
+:Acceder al panel de administración;
+
+:Seleccionar solicitud pendiente;
+
+|Sistema|
+
+:Consultar detalle de solicitud;
+
+:Obtener perfil KYC del usuario;
+
+:Mostrar información completa;
+
+|Administrador|
+
+:Revisar información de la solicitud;
+
+:Verificar perfil KYC;
+
+:Analizar legitimidad de la campaña;
+
+if (¿Cumple requisitos?) then (Sí)
+  
+  :Aprobar solicitud;
+  
+  |Sistema|
+  
+  :Actualizar estado a "APROBADA";
+  
+  :Crear campaña activa;
+  
+  :Publicar en plataforma;
+  
+  :Enviar notificación de aprobación;
+  
+else (No)
+  
+  |Administrador|
+  
+  :Rechazar solicitud;
+  
+  :Ingresar motivo del rechazo;
+  
+  |Sistema|
+  
+  :Actualizar estado a "RECHAZADA";
+  
+  :Guardar motivo del rechazo;
+  
+  :Enviar notificación de rechazo;
+  
+endif
+
+stop
+
+@enduml

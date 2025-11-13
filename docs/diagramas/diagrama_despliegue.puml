@@ -1,0 +1,52 @@
+@startuml diagrama_despliegue
+
+title Diagrama de Despliegue - Manos Solidarias
+
+left to right direction
+
+node "Dispositivo Móvil" {
+  component [Aplicación Flutter\n(Android / iOS)] as mobile_app
+}
+
+cloud "Supabase Cloud" {
+  
+  node "Servidor de Aplicaciones" {
+    component [Supabase API\nREST / Realtime] as supabase_api
+  }
+  
+  node "Servidor de Base de Datos" {
+    database [PostgreSQL\nBase de Datos] as postgres
+  }
+  
+  node "Servidor de Almacenamiento" {
+    component [Supabase Storage\nArchivos] as storage
+  }
+  
+  node "Servidor de Autenticación" {
+    component [Supabase Auth\nJWT] as auth
+  }
+}
+
+cloud "Servicios Externos" {
+  
+  node "Proveedor de Mapas" {
+    component [Geocoding API\nGoogle] as geocoding
+  }
+  
+  node "Servicio de Email" {
+    component [SMTP Server\nNotificaciones] as smtp
+  }
+}
+
+' Protocolos de comunicación
+mobile_app --> supabase_api : HTTPS / WebSocket
+mobile_app --> geocoding : HTTPS
+mobile_app --> storage : HTTPS
+
+supabase_api --> postgres : TCP/IP
+supabase_api --> auth : HTTP
+supabase_api --> smtp : SMTP
+
+auth --> postgres : TCP/IP
+
+@enduml
