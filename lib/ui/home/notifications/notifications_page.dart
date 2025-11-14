@@ -15,8 +15,22 @@ class NotificationsPage extends StatefulWidget {
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
 
-class _NotificationsPageState extends State<NotificationsPage> {
+class _NotificationsPageState extends State<NotificationsPage>
+    with SingleTickerProviderStateMixin {
   NotificationController get _controller => widget.controller;
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   Future<void> _handleRefresh() => _controller.refreshNotifications();
 
@@ -65,86 +79,167 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Notificaciones'),
         elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final unreadCount = _controller.unreadCount;
+              return Container(
+                color: Colors.white,
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: AppColors.bluePrimary,
+                  indicatorWeight: 3,
+                  labelColor: AppColors.bluePrimary,
+                  unselectedLabelColor: AppColors.grayNeutral,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                  tabs: [
+                    const Tab(text: 'Todas'),
+                    Tab(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('No leídas'),
+                          if (unreadCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.bluePrimary,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                unreadCount > 99 ? '99+' : '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
       ),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
           final isLoading = _controller.isLoading;
           final hasLoaded = _controller.hasLoaded;
-          final notifications = _controller.notifications;
+          final allNotifications = _controller.notifications;
           final error = _controller.errorMessage;
 
           if (isLoading && !hasLoaded) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (error != null && notifications.isEmpty) {
+          if (error != null && allNotifications.isEmpty) {
             return _NotificationsError(
               message: error,
               onRetry: _handleRefresh,
             );
           }
 
-          if (notifications.isEmpty) {
+          if (allNotifications.isEmpty) {
             return _NotificationsEmpty(onRefresh: _handleRefresh);
           }
 
-          final sections = _groupNotifications(notifications);
-
-          final children = <Widget>[
-            _NotificationsHeroBanner(
-              unreadCount: _controller.unreadCount,
-              totalCount: notifications.length,
-              isProcessingMarkAll: _controller.isMarkingAll,
-              onMarkAll: _controller.unreadCount > 0 ? _handleMarkAll : null,
-            ),
-          ];
-
-          if (error != null) {
-            children
-              ..add(const SizedBox(height: 16))
-              ..add(_InlineError(message: error, onRetry: _handleRefresh));
-          }
-
-          for (var i = 0; i < sections.length; i++) {
-            final section = sections[i];
-            children.add(SizedBox(height: i == 0 ? 24 : 32));
-            children.add(_NotificationsSectionHeader(title: section.title));
-            children.add(const SizedBox(height: 12));
-
-            for (var j = 0; j < section.entries.length; j++) {
-              final entry = section.entries[j];
-              children.add(
-                _NotificationTile(
-                  entry: entry,
-                  onTap: () => _openDetail(entry),
-                  onMarkAsRead: () => _handleMarkAsRead(entry),
-                  isProcessing: _controller.isProcessing(entry.id),
-                ),
-              );
-
-              if (j != section.entries.length - 1) {
-                children.add(const SizedBox(height: 16));
-              }
-            }
-          }
-
-          children.add(const SizedBox(height: 32));
-
-          return RefreshIndicator(
-            color: AppColors.bluePrimary,
-            onRefresh: _handleRefresh,
-            child: ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              children: children,
-            ),
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              // Tab "Todas"
+              _buildNotificationsList(allNotifications, error),
+              // Tab "No leídas"
+              _buildNotificationsList(
+                allNotifications.where((n) => n.isUnread).toList(),
+                error,
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildNotificationsList(
+    List<NotificationEntry> notifications,
+    String? error,
+  ) {
+    if (notifications.isEmpty) {
+      return _NotificationsEmpty(onRefresh: _handleRefresh);
+    }
+
+    final sections = _groupNotifications(notifications);
+    final children = <Widget>[];
+
+    // Mostrar contador y botón solo en la pestaña "Todas"
+    if (_tabController.index == 0 && _controller.unreadCount > 0) {
+      children.add(
+        _CompactHeaderBanner(
+          unreadCount: _controller.unreadCount,
+          isProcessingMarkAll: _controller.isMarkingAll,
+          onMarkAll: _handleMarkAll,
+        ),
+      );
+      children.add(const SizedBox(height: 8));
+    }
+
+    if (error != null) {
+      children.add(_InlineError(message: error, onRetry: _handleRefresh));
+      children.add(const SizedBox(height: 12));
+    }
+
+    for (var i = 0; i < sections.length; i++) {
+      final section = sections[i];
+      children.add(_NotificationsSectionHeader(title: section.title));
+      children.add(const SizedBox(height: 4));
+
+      for (var j = 0; j < section.entries.length; j++) {
+        final entry = section.entries[j];
+        children.add(
+          _NotificationTile(
+            entry: entry,
+            onTap: () => _openDetail(entry),
+            onMarkAsRead: () => _handleMarkAsRead(entry),
+            isProcessing: _controller.isProcessing(entry.id),
+          ),
+        );
+      }
+
+      if (i != sections.length - 1) {
+        children.add(const SizedBox(height: 16));
+      }
+    }
+
+    children.add(const SizedBox(height: 24));
+
+    return RefreshIndicator(
+      color: AppColors.bluePrimary,
+      onRefresh: _handleRefresh,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+        children: children,
       ),
     );
   }
@@ -380,6 +475,74 @@ class _NotificationSection {
   final List<NotificationEntry> entries;
 }
 
+class _CompactHeaderBanner extends StatelessWidget {
+  const _CompactHeaderBanner({
+    required this.unreadCount,
+    required this.isProcessingMarkAll,
+    required this.onMarkAll,
+  });
+
+  final int unreadCount;
+  final bool isProcessingMarkAll;
+  final Future<void> Function() onMarkAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.bluePrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.circle,
+            size: 8,
+            color: AppColors.bluePrimary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$unreadCount ${unreadCount == 1 ? 'notificación nueva' : 'notificaciones nuevas'}',
+              style: TextStyle(
+                color: AppColors.bluePrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: isProcessingMarkAll ? null : onMarkAll,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: isProcessingMarkAll
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.bluePrimary,
+                    ),
+                  )
+                : Text(
+                    'Marcar todas',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _NotificationsSectionHeader extends StatelessWidget {
   const _NotificationsSectionHeader({required this.title});
 
@@ -387,125 +550,16 @@ class _NotificationsSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      title,
-      style: theme.textTheme.titleMedium?.copyWith(
-        color: AppColors.darkText,
-        fontWeight: FontWeight.w700,
-      ),
-    );
-  }
-}
-
-class _NotificationsHeroBanner extends StatelessWidget {
-  const _NotificationsHeroBanner({
-    required this.unreadCount,
-    required this.totalCount,
-    required this.isProcessingMarkAll,
-    this.onMarkAll,
-  });
-
-  final int unreadCount;
-  final int totalCount;
-  final bool isProcessingMarkAll;
-  final Future<void> Function()? onMarkAll;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final hasUnread = unreadCount > 0;
-    final title = hasUnread
-        ? '$unreadCount ${unreadCount == 1 ? 'nueva' : 'nuevas'}'
-        : 'Todo al día';
-    final subtitle = hasUnread
-        ? 'Tienes notificaciones sin revisar'
-        : 'No hay notificaciones nuevas';
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: hasUnread 
-            ? AppColors.bluePrimary.withValues(alpha: 0.2)
-            : AppColors.grayNeutral.withValues(alpha: 0.15),
-          width: 1.5,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: AppColors.grayNeutral,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          letterSpacing: 0.3,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: hasUnread 
-                ? AppColors.bluePrimary.withValues(alpha: 0.12)
-                : AppColors.grayNeutral.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              hasUnread ? Icons.notifications_active : Icons.notifications_none,
-              color: hasUnread ? AppColors.bluePrimary : AppColors.grayNeutral,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: AppColors.darkText,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.darkText.withValues(alpha: 0.65),
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (hasUnread && onMarkAll != null) ...[
-            const SizedBox(width: 12),
-            IconButton(
-              onPressed: isProcessingMarkAll ? null : onMarkAll,
-              icon: isProcessingMarkAll
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.bluePrimary,
-                      ),
-                    )
-                  : Icon(
-                      Icons.done_all_rounded,
-                      color: AppColors.bluePrimary,
-                    ),
-              tooltip: 'Marcar todo como leído',
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
@@ -531,41 +585,22 @@ class _NotificationTile extends StatelessWidget {
     final iconData = _resolveIcon(entry.type);
     final accentColor = _resolveColor(entry.type);
 
-    // Solo mostrar información relevante, excluir IDs técnicos
-    final payloadPills = <Widget>[];
+    // Extraer información relevante del payload
+    String? primaryInfo;
     final excludedKeys = {
-      'id', 
-      'donacion_id', 
-      'campania_id', 
-      'user_id', 
-      'donante_id',
-      'creador_id',
-      'recompensa_id',
-      'created_at',
-      'updated_at',
+      'id', 'donacion_id', 'campania_id', 'user_id', 'donante_id',
+      'creador_id', 'recompensa_id', 'created_at', 'updated_at',
     };
-    
+
     for (final entryData in entry.payload.entries) {
-      if (payloadPills.length >= 2) {
-        break;
-      }
-      
-      // Saltar campos técnicos
-      if (excludedKeys.contains(entryData.key)) {
-        continue;
-      }
-      
+      if (excludedKeys.contains(entryData.key)) continue;
       final value = _formatPayloadValue(entryData.value, entryData.key);
-      if (value == null) {
-        continue;
+      if (value != null && primaryInfo == null) {
+        if (entryData.key == 'monto' || entryData.key == 'titulo') {
+          primaryInfo = value;
+          break;
+        }
       }
-      
-      payloadPills.add(
-        _PayloadPill(
-          label: _formatPayloadLabel(entryData.key),
-          value: value,
-        ),
-      );
     }
 
     return Dismissible(
@@ -573,108 +608,117 @@ class _NotificationTile extends StatelessWidget {
       direction: isUnread ? DismissDirection.endToStart : DismissDirection.none,
       confirmDismiss: isUnread ? (_) async {
         onMarkAsRead();
-        return false; // No eliminamos el widget, solo marcamos como leído
+        return false;
       } : null,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: AppColors.greenSuccess,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.check_rounded, color: Colors.white, size: 28),
+        padding: const EdgeInsets.only(right: 24),
+        color: AppColors.greenSuccess.withValues(alpha: 0.1),
+        child: Icon(Icons.check_rounded, color: AppColors.greenSuccess, size: 24),
       ),
       child: Material(
-        color: Colors.transparent,
+        color: Colors.white,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: isUnread 
-                ? accentColor.withValues(alpha: 0.04)
+              color: isUnread
+                ? AppColors.bluePrimary.withValues(alpha: 0.02)
                 : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isUnread
-                    ? accentColor.withValues(alpha: 0.15)
-                    : AppColors.grayNeutral.withValues(alpha: 0.12),
-                width: 1,
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.shade200,
+                  width: 0.5,
+                ),
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(iconData, color: accentColor, size: 24),
+                // Avatar con indicador de no leído
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: accentColor.withValues(alpha: 0.12),
+                      child: Icon(iconData, color: accentColor, size: 26),
+                    ),
+                    if (isUnread)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: AppColors.bluePrimary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
+                // Contenido
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              entry.typeLabel,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: accentColor,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.2,
+                      // Mensaje principal
+                      RichText(
+                        text: TextSpan(
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppColors.darkText,
+                            height: 1.35,
+                            fontSize: 14.5,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: entry.message,
+                              style: TextStyle(
+                                fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
                               ),
                             ),
-                          ),
-                          Text(
-                            formatRelativeTime(entry.createdAt),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.darkText.withValues(alpha: 0.5),
-                              fontSize: 12,
-                            ),
-                          ),
-                          if (isUnread) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: accentColor,
-                                shape: BoxShape.circle,
+                            if (primaryInfo != null) ...[
+                              const TextSpan(text: ' '),
+                              TextSpan(
+                                text: primaryInfo,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: accentColor,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        entry.message,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText,
-                          fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
-                          height: 1.4,
                         ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (payloadPills.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          children: payloadPills,
+                      const SizedBox(height: 4),
+                      // Timestamp
+                      Text(
+                        formatRelativeTime(entry.createdAt),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.bluePrimary,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
+                // Menú de opciones
+                if (isUnread)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Icon(
+                      Icons.circle,
+                      size: 10,
+                      color: AppColors.bluePrimary,
+                    ),
+                  ),
               ],
             ),
           ),
