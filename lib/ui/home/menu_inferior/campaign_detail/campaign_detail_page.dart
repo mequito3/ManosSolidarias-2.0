@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import 'package:saver_gallery/saver_gallery.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../../models/campaign.dart';
 import '../../../../models/user_profile.dart';
@@ -73,13 +75,16 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
   Future<_CampaignDetailBundle> _loadDetail() async {
     final campaignId = widget.campaignSummary.id;
 
-    final detail = await widget.campaignService.fetchCampaignDetail(campaignId);
-    var comments = <CampaignComment>[];
-    try {
-      comments = await widget.campaignService.fetchComments(campaignId);
-    } catch (error) {
-      debugPrint('CampaignDetailPage._loadDetail comments error: $error');
-    }
+    final results = await Future.wait<dynamic>([
+      widget.campaignService.fetchCampaignDetail(campaignId),
+      widget.campaignService.fetchComments(campaignId).catchError((Object error) {
+        debugPrint('CampaignDetailPage._loadDetail comments error: $error');
+        return <CampaignComment>[];
+      }),
+    ]);
+
+    final detail = results[0] as CampaignDetail?;
+    final comments = (results[1] as List).cast<CampaignComment>();
 
     if (mounted) {
       setState(() {
@@ -98,18 +103,14 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
     final trimmed = message.trim();
     if (trimmed.length < 3) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Escribe al menos 3 caracteres para comentar.')),
-        );
+        AppSnackBar.showError(context, 'Escribe al menos 3 caracteres para comentar.');
       }
       return;
     }
 
     if (!widget.campaignService.hasAuthenticatedUser) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Inicia sesión para publicar un comentario.')),
-        );
+        AppSnackBar.showError(context, 'Inicia sesión para publicar un comentario.');
       }
       return;
     }
@@ -143,9 +144,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
       });
 
       FocusScope.of(context).unfocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Comentario publicado.')),
-      );
+      AppSnackBar.showSuccess(context, 'Comentario publicado.');
     } on CampaignServiceException catch (error) {
       if (!mounted) {
         return;
@@ -155,9 +154,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         _isSubmittingComment = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      AppSnackBar.showError(context, error.message);
     } catch (error) {
       debugPrint('CampaignDetailPage._handleSubmitComment error: $error');
       if (!mounted) {
@@ -168,9 +165,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         _isSubmittingComment = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No pudimos publicar tu comentario. Intenta nuevamente.')),
-      );
+      AppSnackBar.showError(context, 'No pudimos publicar tu comentario. Intenta nuevamente.');
     }
   }
 
@@ -325,7 +320,8 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
     await Navigator.of(context).push(PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 220),
       reverseTransitionDuration: const Duration(milliseconds: 160),
-      opaque: true,
+      opaque: false,
+      barrierColor: Colors.black.withValues(alpha: 0.1),
       pageBuilder: (routeContext, animation, secondaryAnimation) {
         return FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
@@ -377,87 +373,157 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
     }
   }
 
-  Future<void> _handleShare() async {
-    final shareUrl = _buildShareUrl();
-    final title = widget.campaignSummary.title.trim();
-    final description = widget.campaignSummary.shortDescription.trim();
-    final shareMessage = [
-      if (title.isNotEmpty) title,
-      if (description.isNotEmpty) description,
-      'Súmate a la campaña: $shareUrl',
-    ].join('\n\n');
+  /// Mensaje enriquecido para WhatsApp (soporta *negrita* y _cursiva_).
+  String _buildWhatsAppMessage() {
+    final s = widget.campaignSummary;
+    final title = s.title.trim();
+    final desc = s.shortDescription.trim();
+    final pct = s.completionPercentage.toStringAsFixed(0);
+    final raised = _formatCurrency(s.raisedAmount);
+    final goal = _formatCurrency(s.goalAmount);
+    final donors = s.donorCount;
+    final category = s.category.trim();
+    final organizer = (s.organizerName ?? '').trim();
 
-    if (!mounted) {
-      return;
-    }
+    final lines = <String>[
+      '🌟 *${title.isNotEmpty ? title : 'Campaña solidaria'}* 🌟',
+      '',
+      '🙏 Esta causa solidaria en Bolivia necesita tu apoyo.',
+      if (desc.isNotEmpty) '',
+      if (desc.isNotEmpty) '"$desc"',
+      '',
+      '📊 *Progreso actual*',
+      '💰 Recaudado: $raised  /  Meta: $goal',
+      '📈 Avance: $pct% completado',
+      if (donors > 0) '👥 $donors ${donors == 1 ? 'persona ya donó' : 'personas ya donaron'}',
+      if (category.isNotEmpty) '📂 Categoría: $category',
+      if (organizer.isNotEmpty) '🏢 Organiza: $organizer',
+      '',
+      '📲 Pide a tu contacto que descargue la app *Manos Solidarias* para apoyar la causa.',
+      '',
+      '_Difunde esta causa y ayuda a alcanzar la meta_ 💙',
+    ];
+    return lines.join('\n');
+  }
+
+  /// Cuerpo del correo con formato legible en cualquier cliente de email.
+  String _buildEmailBody() {
+    final s = widget.campaignSummary;
+    final title = s.title.trim();
+    final desc = s.shortDescription.trim();
+    final pct = s.completionPercentage.toStringAsFixed(0);
+    final raised = _formatCurrency(s.raisedAmount);
+    final goal = _formatCurrency(s.goalAmount);
+    final donors = s.donorCount;
+    final category = s.category.trim();
+    final organizer = (s.organizerName ?? '').trim();
+    const separator = '------------------------------------------';
+
+    final lines = <String>[
+      'Hola,',
+      '',
+      'Te comparto esta campaña solidaria que merece tu apoyo:',
+      '',
+      separator,
+      '📌 ${title.toUpperCase()}',
+      if (category.isNotEmpty) 'Categoría: $category',
+      if (organizer.isNotEmpty) 'Organizado por: $organizer',
+      separator,
+      if (desc.isNotEmpty) '',
+      if (desc.isNotEmpty) '"$desc"',
+      '',
+      'PROGRESO ACTUAL',
+      '• Recaudado : $raised',
+      '• Meta      : $goal',
+      '• Avance    : $pct%',
+      if (donors > 0) '• Donantes  : $donors ${donors == 1 ? 'persona' : 'personas'}',
+      '',
+      'Para apoyar esta campaña, descarga la app Manos Solidarias.',
+      '',
+      '¡Juntos podemos lograrlo! Gracias por difundir esta causa.',
+      '',
+      separator,
+      'Manos Solidarias  |  App solidaria en Bolivia',
+    ];
+    return lines.join('\n');
+  }
+
+  Future<void> _handleShare() async {
+    final title = widget.campaignSummary.title.trim();
+    final whatsAppText = _buildWhatsAppMessage();
+
+    if (!mounted) return;
 
     await showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (sheetContext) {
         return _ShareSheet(
-          title: 'Compartir campaña',
-          subtitle: 'Difunde esta causa en tus canales de confianza.',
+          campaignTitle: title.isNotEmpty ? title : 'Campaña solidaria',
           options: [
-            _ShareOption(
-              icon: Icons.link_rounded,
-              label: 'Enlace',
-              description: 'Copiar link',
-              iconColor: Colors.white,
-              backgroundColor: AppColors.bluePrimary,
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: shareUrl));
-                if (!mounted) {
-                  return;
-                }
-                Navigator.of(sheetContext).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Enlace copiado al portapapeles.')),
-                );
-              },
-            ),
             _ShareOption(
               icon: Icons.chat_rounded,
               label: 'WhatsApp',
-              description: 'Enviar mensaje',
-              iconColor: Colors.white,
-              backgroundColor: Color(0xFF25D366),
+              description: 'Enviar por mensaje directo',
+              accentColor: const Color(0xFF25D366),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
-                final uri = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(shareMessage)}');
+                final uri = Uri.parse(
+                    'https://wa.me/?text=${Uri.encodeComponent(whatsAppText)}');
                 await _launchShareUri(uri);
               },
             ),
             _ShareOption(
               icon: Icons.facebook,
               label: 'Facebook',
-              description: 'Publicar',
-              iconColor: Colors.white,
-              backgroundColor: Color(0xFF1877F2),
+              description: 'Compartir en tu muro',
+              accentColor: const Color(0xFF1877F2),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
+                final quote = title.isNotEmpty
+                    ? '🌟 $title — Súmate en Manos Solidarias 💙'
+                    : '🌟 Campaña solidaria en Manos Solidarias 💙';
                 final uri = Uri.parse(
-                  'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(shareUrl)}',
+                  'https://www.facebook.com/sharer/sharer.php'
+                  '?quote=${Uri.encodeComponent(quote)}',
                 );
                 await _launchShareUri(uri);
               },
             ),
             _ShareOption(
               icon: Icons.mail_outline_rounded,
-              label: 'Email',
-              description: 'Enviar correo',
-              iconColor: Colors.white,
-              backgroundColor: Color(0xFFEA4335),
+              label: 'Correo electrónico',
+              description: 'Enviar a tus contactos',
+              accentColor: const Color(0xFFEA4335),
               onTap: () async {
                 Navigator.of(sheetContext).pop();
+                final subject = title.isNotEmpty
+                    ? '$title — Manos Solidarias'
+                    : 'Campaña solidaria — Manos Solidarias';
                 final emailUri = Uri(
                   scheme: 'mailto',
                   queryParameters: {
-                    'subject': title.isNotEmpty ? title : 'Campaña solidaria',
-                    'body': shareMessage,
+                    'subject': subject,
+                    'body': _buildEmailBody(),
                   },
                 );
                 await _launchShareUri(emailUri);
+              },
+            ),
+            _ShareOption(
+              icon: Icons.copy_rounded,
+              label: 'Copiar mensaje',
+              description: 'Listo para pegar en cualquier app',
+              accentColor: AppColors.bluePrimary,
+              onTap: () async {
+                await Clipboard.setData(ClipboardData(text: whatsAppText));
+                Navigator.of(sheetContext).pop();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Mensaje copiado al portapapeles.')),
+                );
               },
             ),
           ],
@@ -487,18 +553,6 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
     }
   }
 
-  String _buildShareUrl() {
-    final slug = widget.campaignSummary.slug.trim();
-    if (slug.isNotEmpty) {
-      return 'https://manossolidarias.bo/campanas/$slug';
-    }
-    final id = widget.campaignSummary.id.trim();
-    if (id.isNotEmpty) {
-      return 'https://manossolidarias.bo/campanas/$id';
-    }
-    return 'https://manossolidarias.bo/campanas';
-  }
-
   @override
   Widget build(BuildContext context) {
     final summary = widget.campaignSummary;
@@ -506,14 +560,39 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
         elevation: 0,
-        scrolledUnderElevation: 2,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.25),
+              ),
+            ),
+          ),
+        ),
+        foregroundColor: Colors.white,
+        leading: Container(
+          margin: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.25),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.3),
+              width: 1,
+            ),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, size: 22),
+            color: Colors.white,
+            padding: EdgeInsets.zero,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
         title: Text(
           summary.title,
@@ -521,35 +600,44 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
-            fontSize: 18,
-            letterSpacing: -0.3,
+            fontSize: 17,
+            letterSpacing: -0.2,
+            color: Colors.white,
           ),
         ),
         actions: [
           // Botón eliminar (solo para el creador de solicitudes pendientes sin donaciones)
           if (_canDeleteCampaign(summary))
             Container(
-              margin: const EdgeInsets.only(right: 8),
+              margin: const EdgeInsets.only(right: 6),
               decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                color: AppColors.error.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  width: 1,
+                ),
               ),
               child: IconButton(
-                icon: const Icon(Icons.delete_outline, size: 22),
-                color: AppColors.error,
+                icon: const Icon(Icons.delete_outline, size: 20),
+                color: Colors.white,
                 tooltip: 'Eliminar solicitud',
                 onPressed: () => _handleDeleteRequest(summary),
               ),
             ),
           Container(
-            margin: const EdgeInsets.only(right: AppColors.space8),
+            margin: const EdgeInsets.only(right: AppColors.space12),
             decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
+              color: Colors.white.withValues(alpha: 0.25),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
             child: IconButton(
-              icon: const Icon(Icons.share_rounded, size: 22),
-              color: AppColors.bluePrimary,
+              icon: const Icon(Icons.share_rounded, size: 20),
+              color: Colors.white,
               tooltip: 'Compartir campaña',
               onPressed: _handleShare,
             ),
@@ -557,60 +645,91 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         ],
       ),
       bottomNavigationBar: canSupport
-          ? Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                minimum: const EdgeInsets.symmetric(
-                  horizontal: AppColors.space24,
-                  vertical: AppColors.space16,
-                ),
+          ? ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: AppColors.actionGradient,
-                    borderRadius: BorderRadius.circular(AppColors.radiusLg),
+                    color: Colors.white.withValues(alpha: 0.82),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.orangeAction.withValues(alpha: 0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                        color: AppColors.orangeAction.withValues(alpha: 0.08),
+                        blurRadius: 24,
+                        offset: const Offset(0, -6),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 8,
+                        offset: const Offset(0, -1),
                       ),
                     ],
                   ),
-                  child: ElevatedButton.icon(
-                    onPressed: _handleSupportTap,
-                    icon: const Icon(Icons.favorite_rounded, size: 24),
-                    label: const Text(
-                      'Apoyar esta campaña',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      shadowColor: Colors.transparent,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppColors.radiusLg),
-                      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top gradient accent line
+                  Container(
+                    height: 2,
+                    decoration: const BoxDecoration(
+                      gradient: AppColors.actionGradient,
                     ),
                   ),
-                ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppColors.space20,
+                        AppColors.space12,
+                        AppColors.space20,
+                        AppColors.space16,
+                      ),
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: AppColors.actionGradient,
+                          borderRadius: BorderRadius.circular(AppColors.radiusLg),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.orangeAction.withValues(alpha: 0.45),
+                              blurRadius: 14,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          onPressed: _handleSupportTap,
+                          icon: const Icon(Icons.favorite_rounded, size: 20),
+                          label: const Text(
+                            'Apoyar ahora',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                            ),
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            shadowColor: Colors.transparent,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppColors.radiusLg),
+                            ),
+                          ),
+                        ),
+                      ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                       .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut)
+                       .shimmer(duration: 3.seconds, color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                  ),
+                ],
               ),
-            )
-          : null,
+            ),
+          ),
+        ) : null,
       body: FutureBuilder<_CampaignDetailBundle>(
         future: _bundleFuture,
         builder: (context, snapshot) {

@@ -37,7 +37,10 @@ class CampaignSummary {
             goal: (json['monto_objetivo'] as num?)?.toDouble() ?? 0,
           ),
       donorCount: (json['donadores'] as num?)?.toInt() ?? json['donor_count'] as int? ?? 0,
-      category: json['categoria'] as String? ?? json['category'] as String? ?? 'General',
+      category: json['categoria'] as String?
+              ?? (json['categorias'] as Map?)?['nombre'] as String?
+              ?? json['category'] as String?
+              ?? '',
       startDate: _parseDate(json['fecha_inicio'] ?? json['start_date']),
       endDate: _parseDate(json['fecha_fin'] ?? json['end_date']),
       organizerName: json['organizacion_nombre'] as String? ?? json['organizer_name'] as String?,
@@ -108,7 +111,7 @@ class CampaignSummary {
     };
   }
 
-  CampaignSummary copyWith({bool? isFavorite}) {
+  CampaignSummary copyWith({bool? isFavorite, String? status}) {
     return CampaignSummary(
       id: id,
       slug: slug,
@@ -125,6 +128,9 @@ class CampaignSummary {
       organizerName: organizerName,
       isVerified: isVerified,
       isFavorite: isFavorite ?? this.isFavorite,
+      creatorId: creatorId,
+      status: status ?? this.status,
+      requestId: requestId,
     );
   }
 

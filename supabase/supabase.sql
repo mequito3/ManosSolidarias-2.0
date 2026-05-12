@@ -1029,6 +1029,53 @@ $$;
 
 grant execute on function public.get_campaign_payment_instructions(uuid) to anon, authenticated;
 
+-- ============================================================
+-- FUNCIÓN: Obtener monto máximo permitido para donar
+-- ============================================================
+create or replace function public.get_campaign_max_donation_amount(p_campaign_id uuid)
+returns table (
+  max_amount numeric,
+  remaining_amount numeric,
+  goal_amount numeric,
+  current_amount numeric,
+  is_goal_reached boolean
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_goal numeric;
+  v_current numeric;
+  v_remaining numeric;
+begin
+  -- Obtener montos de la campaña
+  select monto_objetivo, monto_actual
+    into v_goal, v_current
+  from public.campanias
+  where id = p_campaign_id
+    and estado in ('activa', 'suspendida');
+
+  -- Si no se encuentra la campaña, retornar NULL
+  if not found then
+    return;
+  end if;
+
+  -- Calcular monto restante
+  v_remaining := greatest(v_goal - v_current, 0);
+
+  return query
+    select
+      v_remaining as max_amount,
+      v_remaining as remaining_amount,
+      v_goal as goal_amount,
+      v_current as current_amount,
+      (v_current >= v_goal) as is_goal_reached;
+end;
+$$;
+
+grant execute on function public.get_campaign_max_donation_amount(uuid) to anon, authenticated;
+
 create or replace function public.on_donacion_aprobada()
 returns trigger language plpgsql 
 security definer
@@ -2266,6 +2313,23 @@ DROP FUNCTION IF EXISTS notify_followers_campaign_update();
 DROP FUNCTION IF EXISTS notify_new_favorite();
 DROP FUNCTION IF EXISTS notify_organizacion_status();
 DROP FUNCTION IF EXISTS on_comentario_created();
+
+-- ============================================================
+-- 18) CONFIGURACIÓN DE REALTIME
+-- ============================================================
+
+-- Habilitar replica identity FULL para que Supabase Realtime funcione correctamente
+-- Esto permite que los clientes reciban todos los datos del row cuando hay cambios
+
+ALTER TABLE public.campanias REPLICA IDENTITY FULL;
+ALTER TABLE public.donaciones REPLICA IDENTITY FULL;
+ALTER TABLE public.organizaciones REPLICA IDENTITY FULL;
+ALTER TABLE public.notificaciones REPLICA IDENTITY FULL;
+ALTER TABLE public.comentarios REPLICA IDENTITY FULL;
+ALTER TABLE public.favoritos REPLICA IDENTITY FULL;
+
+-- Habilitar publicación de eventos de realtime para las tablas principales
+-- Nota: Esto se debe configurar también en el Dashboard de Supabase > Database > Replication
 
 -- ════════════════════════════════════════════════════════════════════════════
 -- FIN DEL SCRIPT

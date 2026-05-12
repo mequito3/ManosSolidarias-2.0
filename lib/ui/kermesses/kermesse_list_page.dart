@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../controllers/kermesse_controller.dart';
 import '../../models/kermesse.dart';
 import '../../theme/app_colors.dart';
+import '../home/menu_inferior/shared_states.dart';
+import '../home/widgets/home_section.dart';
 
 class KermesseListPage extends StatefulWidget {
   const KermesseListPage({super.key, required this.controller});
@@ -81,7 +83,108 @@ class _KermesseListPageState extends State<KermesseListPage> {
     );
   }
 }
+// ─────────────────────────────────────────────────────────────────────────────
+// KermesseTabView — Scaffold-free version for embedding in NavigationBar tabs
+// ─────────────────────────────────────────────────────────────────────────────
 
+class KermesseTabView extends StatefulWidget {
+  const KermesseTabView({super.key, required this.controller});
+
+  final KermesseController controller;
+
+  @override
+  State<KermesseTabView> createState() => _KermesseTabViewState();
+}
+
+class _KermesseTabViewState extends State<KermesseTabView> {
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.controller.hasLoaded) {
+      widget.controller.loadKermesses();
+    }
+  }
+
+  Future<void> _handleRefresh() => widget.controller.refreshKermesses();
+
+  void _openDetail(KermesseSummary kermesse) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => KermesseDetailPage(kermesse: kermesse),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: widget.controller,
+      builder: (context, _) {
+        final controller = widget.controller;
+
+        if (controller.isLoading && controller.kermesses.isEmpty) {
+          return const HomeTabLoadingState();
+        }
+
+        if (controller.errorMessage != null && controller.kermesses.isEmpty) {
+          return HomeTabErrorState(
+            message: controller.errorMessage!,
+            onRetry: controller.refreshKermesses,
+          );
+        }
+
+        if (controller.kermesses.isEmpty) {
+          return const _EmptyKermesses();
+        }
+
+        final featured = controller.kermesses.first;
+        final rest = controller.kermesses.skip(1).toList();
+
+        return RefreshIndicator(
+          color: AppColors.bluePrimary,
+          onRefresh: _handleRefresh,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            children: [
+              HomeSection(
+                title: 'Evento destacado',
+                subtitle: 'El próximo evento solidario más cercano.',
+                icon: Icons.local_activity_rounded,
+                iconColor: AppColors.orangeAction,
+                child: _KermesseFeatureCard(
+                  kermesse: featured,
+                  onTap: () => _openDetail(featured),
+                ),
+              ),
+              if (rest.isNotEmpty)
+                HomeSection(
+                  title: 'Más eventos',
+                  subtitle: 'Todos los eventos solidarios activos en tu comunidad.',
+                  icon: Icons.grid_view_rounded,
+                  iconColor: AppColors.grayNeutral,
+                  child: Column(
+                    children: rest
+                        .map(
+                          (k) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _KermesseCompactCard(
+                              kermesse: k,
+                              onTap: () => _openDetail(k),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
 class _KermesseCard extends StatelessWidget {
   const _KermesseCard({required this.kermesse, required this.onTap});
 
@@ -113,7 +216,7 @@ class _KermesseCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.festival_outlined, size: 34, color: Colors.white.withValues(alpha: 0.9)),
+                    Icon(Icons.local_activity_rounded, size: 34, color: Colors.white.withValues(alpha: 0.9)),
                     const SizedBox(height: 10),
                     Text(
                       kermesse.title,
@@ -207,38 +310,450 @@ class _KermesseMetaRow extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tab-view widgets (KermesseTabView exclusive)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _KermesseFeatureCard extends StatelessWidget {
+  const _KermesseFeatureCard({required this.kermesse, required this.onTap});
+
+  final KermesseSummary kermesse;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                child: SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // ── Hero image (or branded fallback) ──────────────────
+                      if (kermesse.hasCover)
+                        Image.network(
+                          kermesse.coverUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _KermessePlaceholder(id: kermesse.id),
+                        )
+                      else
+                        _KermessePlaceholder(id: kermesse.id),
+                      // ── Bottom-to-top dark scrim for text legibility ──────
+                      const Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        top: 60,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [Colors.transparent, Color(0xCC000000)],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.93),
+                            borderRadius: BorderRadius.circular(99),
+                            boxShadow: [
+                              BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.14),
+                                  blurRadius: 6),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.sell_rounded,
+                                  size: 11, color: AppColors.orangeAction),
+                              SizedBox(width: 4),
+                              Text(
+                                'Kermese solidaria',
+                                style: TextStyle(
+                                  color: AppColors.orangeAction,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 14,
+                        right: 14,
+                        bottom: 14,
+                        child: Text(
+                          kermesse.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            height: 1.25,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 6)
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (kermesse.shortDescription.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 13, 16, 0),
+                  child: Text(
+                    kermesse.shortDescription,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      height: 1.45,
+                      color: AppColors.darkText.withValues(alpha: 0.68),
+                    ),
+                  ),
+                ),
+              if (kermesse.eventDateText != null ||
+                  kermesse.locationName != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (kermesse.eventDateText != null)
+                        _TabMetaRow(
+                          icon: Icons.event_outlined,
+                          label: kermesse.eventDateText!,
+                        ),
+                      if (kermesse.locationName != null)
+                        _TabMetaRow(
+                          icon: Icons.place_outlined,
+                          label: kermesse.locationName!,
+                        ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _KermesseCompactCard extends StatelessWidget {
+  const _KermesseCompactCard({required this.kermesse, required this.onTap});
+
+  final KermesseSummary kermesse;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.dividerColor.withValues(alpha: 0.6),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 60,
+                  height: 60,
+                  child: kermesse.hasCover
+                      ? Image.network(
+                          kermesse.coverUrl!,
+                          fit: BoxFit.cover,
+                          width: 60,
+                          height: 60,
+                          errorBuilder: (_, __, ___) => _KermessePlaceholder(
+                              id: kermesse.id, small: true),
+                        )
+                      : _KermessePlaceholder(id: kermesse.id, small: true),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color:
+                                AppColors.orangeAction.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(99),
+                          ),
+                          child: const Text(
+                            '🎪 Evento',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.orangeAction,
+                            ),
+                          ),
+                        ),
+                        if (kermesse.eventDateText != null) ...[
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              kermesse.eventDateText!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color:
+                                    AppColors.darkText.withValues(alpha: 0.45),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      kermesse.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: AppColors.darkText,
+                        height: 1.3,
+                      ),
+                    ),
+                    if (kermesse.locationName != null) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(Icons.place_outlined,
+                              size: 11,
+                              color:
+                                  AppColors.darkText.withValues(alpha: 0.45)),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              kermesse.locationName!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.darkText
+                                    .withValues(alpha: 0.55),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 20,
+                color: AppColors.darkText.withValues(alpha: 0.3),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Branded placeholder shown when a kermesse has no cover image.
+/// Uses a deterministic gradient derived from the event [id] so every
+/// card looks distinct even without a real photo.
+class _KermessePlaceholder extends StatelessWidget {
+  const _KermessePlaceholder({required this.id, this.small = false});
+
+  final String id;
+  final bool small;
+
+  static const List<List<Color>> _palettes = [
+    [Color(0xFFFF8C42), Color(0xFFB04000)],
+    [Color(0xFFE85D04), Color(0xFF9D0208)],
+    [Color(0xFFF48C06), Color(0xFFAE2012)],
+    [Color(0xFF0096C7), Color(0xFF023E8A)],
+    [Color(0xFF2D6A4F), Color(0xFF1B4332)],
+    [Color(0xFF7B2D8B), Color(0xFF3D0066)],
+    [Color(0xFFD62828), Color(0xFF7A0000)],
+    [Color(0xFFE9C46A), Color(0xFFF4A261)],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final idx = id.codeUnits.fold(0, (a, b) => a + b) % _palettes.length;
+    final colors = _palettes[idx];
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors,
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.local_activity_rounded,
+          color: Colors.white.withValues(alpha: 0.55),
+          size: small ? 26 : 64,
+        ),
+      ),
+    );
+  }
+}
+
+class _TabMetaRow extends StatelessWidget {
+  const _TabMetaRow({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: AppColors.orangeAction),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: AppColors.darkText.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _EmptyKermesses extends StatelessWidget {
   const _EmptyKermesses();
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.event_busy, size: 64, color: AppColors.grayNeutral),
-          const SizedBox(height: 18),
-          Text(
-            'Aún no hay kermesses aprobadas.',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.darkText,
-            ),
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Cuando los organizadores registren sus eventos y el equipo los apruebe, aparecerán aquí para que puedas sumarte.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.darkText.withValues(alpha: 0.7),
-              height: 1.4,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.local_activity_rounded,
+                color: AppColors.orangeAction,
+                size: 40,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Sin eventos por ahora',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.darkText,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Cuando los organizadores registren sus kermeses y el equipo las apruebe, aparecerán aquí para que puedas participar.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.darkText.withValues(alpha: 0.7),
+                      height: 1.45,
+                    ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -288,7 +803,6 @@ class KermesseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final mapPoint = _resolveMapPoint(kermesse);
     final hasLocationSection = mapPoint != null ||
         kermesse.locationName != null ||
@@ -299,51 +813,41 @@ class KermesseDetailPage extends StatelessWidget {
         slivers: [
           SliverAppBar(
             pinned: true,
-            expandedHeight: 160,
-            backgroundColor: AppColors.lightBackground,
+            expandedHeight: 220,
+            backgroundColor: AppColors.orangeAction,
             elevation: 0,
             systemOverlayStyle: SystemUiOverlayStyle.light,
             iconTheme: const IconThemeData(color: Colors.white),
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 16, right: 16),
-              title: SizedBox(
-                width: double.infinity,
-                child: Text(
-                  kermesse.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              background: const _HeaderGradientBanner(),
+              collapseMode: CollapseMode.parallax,
+              background: _DetailHeroBanner(kermesse: kermesse),
             ),
           ),
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _MetadataChips(kermesse: kermesse),
-                  const SizedBox(height: 18),
-                  if (kermesse.overview.isNotEmpty)
-                    _SectionCard(
-                      icon: Icons.info_outline,
+                  _KermesseMetaPills(kermesse: kermesse),
+                  if (kermesse.overview.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+                    _DetailSection(
+                      icon: Icons.info_outline_rounded,
                       title: 'Resumen del evento',
                       child: Text(
                         kermesse.overview,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.8),
-                          height: 1.45,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 1.55,
+                          color: AppColors.darkText.withValues(alpha: 0.78),
                         ),
                       ),
                     ),
+                  ],
                   if (kermesse.galleryImages.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _SectionCard(
+                    _DetailSection(
                       icon: Icons.photo_library_outlined,
                       title: 'Galería del evento',
                       child: _KermesseGallery(images: kermesse.galleryImages),
@@ -351,7 +855,7 @@ class KermesseDetailPage extends StatelessWidget {
                   ],
                   if (hasLocationSection) ...[
                     const SizedBox(height: 16),
-                    _SectionCard(
+                    _DetailSection(
                       icon: Icons.place_outlined,
                       title: 'Ubicación y logística',
                       child: Column(
@@ -360,73 +864,79 @@ class KermesseDetailPage extends StatelessWidget {
                           if (mapPoint != null) ...[
                             _KermesseMap(point: mapPoint),
                             const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: () => _openExternalMap(
-                                  mapPoint,
-                                  kermesse.locationName ?? kermesse.address,
-                                ),
-                                icon: const Icon(Icons.map_outlined),
-                                label: const Text('Abrir en mapa'),
+                            TextButton.icon(
+                              onPressed: () => _openExternalMap(
+                                mapPoint,
+                                kermesse.locationName ?? kermesse.address,
+                              ),
+                              icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                              label: const Text('Abrir en mapa'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.orangeAction,
+                                padding: EdgeInsets.zero,
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 8),
                           ],
                           if (kermesse.locationName != null)
                             _DetailRow(label: 'Lugar', value: kermesse.locationName!),
                           if (kermesse.address != null)
-                            _DetailRow(label: 'Dirección de referencia', value: kermesse.address!),
-                          if (mapPoint == null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'El organizador no compartió las coordenadas exactas, pero puedes contactar para más detalles.',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.darkText.withValues(alpha: 0.7),
-                                height: 1.35,
+                            _DetailRow(
+                                label: 'Dirección de referencia', value: kermesse.address!),
+                          if (mapPoint == null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                'El organizador no compartió coordenadas exactas. Contáctalo para más detalles.',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  height: 1.4,
+                                  color: AppColors.darkText.withValues(alpha: 0.55),
+                                ),
                               ),
                             ),
-                          ],
                         ],
                       ),
                     ),
                   ],
-                  if (kermesse.goalDescription != null || kermesse.beneficiaries != null)
-                    ...[
-                      const SizedBox(height: 16),
-                      _SectionCard(
-                        icon: Icons.groups_outlined,
-                        title: 'Impacto solidario',
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (kermesse.beneficiaries != null)
-                              _DetailRow(label: 'Beneficiarios', value: kermesse.beneficiaries!),
-                            if (kermesse.goalDescription != null)
-                              _DetailRow(label: 'Uso de fondos', value: kermesse.goalDescription!),
-                            if (kermesse.partners != null)
-                              _DetailRow(label: 'Aliados confirmados', value: kermesse.partners!),
-                          ],
-                        ),
+                  if (kermesse.goalDescription != null ||
+                      kermesse.beneficiaries != null) ...[
+                    const SizedBox(height: 16),
+                    _DetailSection(
+                      icon: Icons.groups_outlined,
+                      title: 'Impacto solidario',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (kermesse.beneficiaries != null)
+                            _DetailRow(
+                                label: 'Beneficiarios', value: kermesse.beneficiaries!),
+                          if (kermesse.goalDescription != null)
+                            _DetailRow(
+                                label: 'Uso de fondos', value: kermesse.goalDescription!),
+                          if (kermesse.partners != null)
+                            _DetailRow(
+                                label: 'Aliados confirmados', value: kermesse.partners!),
+                        ],
                       ),
-                    ],
+                    ),
+                  ],
                   if (kermesse.menuItems.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _ListSection(
-                      icon: Icons.restaurant_menu,
+                    _DetailSection(
+                      icon: Icons.restaurant_menu_rounded,
                       title: 'Menú solidario',
-                      items: kermesse.menuItems,
+                      child: _CheckList(items: kermesse.menuItems),
                     ),
                   ],
                   if (kermesse.activities.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _ListSection(
+                    _DetailSection(
                       icon: Icons.celebration_outlined,
                       title: 'Actividades confirmadas',
-                      items: kermesse.activities,
+                      child: _CheckList(items: kermesse.activities),
                     ),
                   ],
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -472,82 +982,158 @@ class KermesseDetailPage extends StatelessWidget {
   }
 }
 
-class _HeaderGradientBanner extends StatelessWidget {
-  const _HeaderGradientBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.bluePrimary, AppColors.orangeAction],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Icon(Icons.festival_outlined, size: 64, color: Colors.white70),
-        ],
-      ),
-    );
-  }
-}
-
-class _MetadataChips extends StatelessWidget {
-  const _MetadataChips({required this.kermesse});
+class _DetailHeroBanner extends StatelessWidget {
+  const _DetailHeroBanner({required this.kermesse});
 
   final KermesseSummary kermesse;
 
   @override
   Widget build(BuildContext context) {
-    final chips = <Widget>[];
-    if (kermesse.eventDateText != null) {
-      chips.add(_InfoChip(icon: Icons.event_outlined, label: kermesse.eventDateText!));
-    }
-    if (kermesse.locationName != null) {
-      chips.add(_InfoChip(icon: Icons.place_outlined, label: kermesse.locationName!));
-    }
-
-    if (chips.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: chips,
+    final theme = Theme.of(context);
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // ── Background: real image or branded placeholder ──────────────
+        if (kermesse.hasCover)
+          Image.network(
+            kermesse.coverUrl!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) =>
+                _KermessePlaceholder(id: kermesse.id),
+          )
+        else
+          _KermessePlaceholder(id: kermesse.id),
+        // ── Full-height fade so text stays readable ────────────────────
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0x55000000), Color(0xDD000000)],
+              stops: [0.0, 1.0],
+            ),
+          ),
+        ),
+        // ── Text content ───────────────────────────────────────────────
+        SafeArea(
+          bottom: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.local_activity_rounded,
+                    size: 28,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  kermesse.title,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                  ),
+                ),
+                if (kermesse.shortDescription.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    kermesse.shortDescription,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
+class _KermesseMetaPills extends StatelessWidget {
+  const _KermesseMetaPills({required this.kermesse});
+
+  final KermesseSummary kermesse;
+
+  @override
+  Widget build(BuildContext context) {
+    final pills = <Widget>[];
+    if (kermesse.eventDateText != null) {
+      pills.add(_MetaPill(
+        icon: Icons.event_outlined,
+        label: kermesse.eventDateText!,
+      ));
+    }
+    if (kermesse.locationName != null) {
+      pills.add(_MetaPill(
+        icon: Icons.place_outlined,
+        label: kermesse.locationName!,
+      ));
+    }
+    if (pills.isEmpty) return const SizedBox.shrink();
+    return Wrap(spacing: 10, runSpacing: 10, children: pills);
+  }
+}
+
+class _MetaPill extends StatelessWidget {
+  const _MetaPill({required this.icon, required this.label});
 
   final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: Icon(icon, size: 18, color: AppColors.bluePrimary),
-      label: Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.bluePrimary,
-              fontWeight: FontWeight.w600,
-            ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(99),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.12),
-      side: BorderSide(color: AppColors.bluePrimary.withValues(alpha: 0.25)),
-      shape: const StadiumBorder(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: AppColors.orangeAction),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.darkText,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
+class _DetailSection extends StatelessWidget {
+  const _DetailSection({
     required this.icon,
     required this.title,
     required this.child,
@@ -559,18 +1145,22 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 24,
             offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
@@ -579,24 +1169,39 @@ class _SectionCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 22, color: AppColors.bluePrimary),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.darkText,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.orangeAction.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: AppColors.orangeAction),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.darkText,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           child,
         ],
       ),
     );
   }
 }
+
+// _SectionCard alias kept for KermesseListPage (standalone) compatibility
+typedef _SectionCard = _DetailSection;
 
 class _KermesseGallery extends StatelessWidget {
   const _KermesseGallery({required this.images});
@@ -667,17 +1272,18 @@ class _KermesseMap extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.bluePrimary,
+                      color: AppColors.orangeAction,
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.18),
+                          color: AppColors.orangeAction.withValues(alpha: 0.38),
                           blurRadius: 10,
-                          offset: const Offset(0, 6),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.place, color: Colors.white),
+                    child: const Icon(
+                        Icons.local_activity_rounded, color: Colors.white, size: 22),
                   ),
                 ),
               ],
@@ -697,29 +1303,98 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: theme.textTheme.labelLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkText.withValues(alpha: 0.8),
+          Container(
+            margin: const EdgeInsets.only(top: 3),
+            width: 3,
+            height: 14,
+            decoration: BoxDecoration(
+              color: AppColors.orangeAction,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.darkText.withValues(alpha: 0.75),
-              height: 1.4,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.orangeAction,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.45,
+                    color: AppColors.darkText.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CheckList extends StatelessWidget {
+  const _CheckList({required this.items});
+
+  final List<String> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: items
+          .map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: AppColors.orangeAction.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 13,
+                      color: AppColors.orangeAction,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        height: 1.45,
+                        color: AppColors.darkText.withValues(alpha: 0.78),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -737,36 +1412,10 @@ class _ListSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return _SectionCard(
       icon: icon,
       title: title,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: items
-            .map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.check_circle_outline, size: 18, color: AppColors.greenHope),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.78),
-                          height: 1.35,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
+      child: _CheckList(items: items),
     );
   }
 }

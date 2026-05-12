@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../models/solicitud.dart';
 import '../../../theme/app_colors.dart';
@@ -26,23 +27,65 @@ class SolicitudTypeStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Selecciona el tipo de solicitud',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Elige si tu iniciativa es una campaña de recaudación directa o una kermesse presencial. Esto adaptará el formulario a los datos necesarios.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ],
+        // ── Header card ─────────────────────────────────────────────
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.bluePrimary.withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+            border: Border.all(
+              color: AppColors.bluePrimary.withValues(alpha: 0.08),
+              width: 1.5,
             ),
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.category_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Tipo de iniciativa',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Elige si es una campaña de recaudación directa o una kermesse presencial. Esto adapta el formulario a los datos necesarios.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.55),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
@@ -52,18 +95,11 @@ class SolicitudTypeStep extends StatelessWidget {
           onChanged: onTipoChanged,
         ),
         const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-           
-            const SizedBox(width: 12),
-            AppPrimaryButton(
-              label: 'Continuar',
-              icon: Icons.arrow_forward_rounded,
-              expanded: false,
-              onPressed: onNext,
-            ),
-          ],
+        AppPrimaryButton(
+          label: 'Continuar',
+          icon: Icons.arrow_forward_rounded,
+          expanded: true,
+          onPressed: onNext,
         ),
       ],
     );
@@ -82,71 +118,174 @@ class SolicitudTypeSelector extends StatelessWidget {
   final SolicitudTipo selected;
   final ValueChanged<SolicitudTipo> onChanged;
 
+  static IconData _iconFor(SolicitudTipo tipo) {
+    switch (tipo) {
+      case SolicitudTipo.campania:
+        return Icons.volunteer_activism_rounded;
+      case SolicitudTipo.kermesse:
+        return Icons.diversity_3_rounded;
+      case SolicitudTipo.rifa:
+        return Icons.confirmation_number_rounded;
+    }
+  }
+
+  static Color _colorFor(SolicitudTipo tipo) {
+    switch (tipo) {
+      case SolicitudTipo.campania:
+        return AppColors.bluePrimary;
+      case SolicitudTipo.kermesse:
+        return AppColors.orangeAction;
+      case SolicitudTipo.rifa:
+        return AppColors.grayNeutral;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: configs
+          .asMap()
+          .entries
+          .map(
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _TypeCardTile(
+                config: entry.value,
+                isSelected: entry.value.tipo == selected,
+                icon: _iconFor(entry.value.tipo),
+                accentColor: _colorFor(entry.value.tipo),
+                onTap: () => onChanged(entry.value.tipo),
+              ).animate()
+                 .fade(duration: 400.ms, delay: (100 * entry.key).ms)
+                 .slideY(begin: 0.1, curve: Curves.easeOutQuad, duration: 400.ms),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _TypeCardTile extends StatelessWidget {
+  const _TypeCardTile({
+    required this.config,
+    required this.isSelected,
+    required this.icon,
+    required this.accentColor,
+    required this.onTap,
+  });
+
+  final SolicitudTypeConfig config;
+  final bool isSelected;
+  final IconData icon;
+  final Color accentColor;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Elige el tipo de solicitud',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: configs.map((config) {
-                final isSelected = config.tipo == selected;
-                return ChoiceChip(
-                  label: SizedBox(
-                    width: 220,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          config.chipTitle,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : AppColors.darkText,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        color: isSelected ? accentColor.withValues(alpha: 0.04) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isSelected ? accentColor.withValues(alpha: 0.8) : AppColors.bluePrimary.withValues(alpha: 0.08),
+          width: isSelected ? 2.5 : 1.5,
+        ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: accentColor.withValues(alpha: 0.2),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                )
+              ]
+            : [
+                BoxShadow(
+                  color: AppColors.bluePrimary.withValues(alpha: 0.04),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                )
+              ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                // Icon badge
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: isSelected ? 0.15 : 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: accentColor,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                // Text content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        config.chipTitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: isSelected ? accentColor : AppColors.darkText,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          config.chipDescription,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: isSelected
-                                ? Colors.white.withOpacity(0.9)
-                                : AppColors.darkText.withOpacity(0.75),
-                          ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        config.chipDescription,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.darkText.withValues(alpha: 0.55),
+                          fontSize: 12.5,
+                          height: 1.4,
                         ),
-                      ],
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Selection indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOutCubic,
+                  width: 26,
+                  height: 26,
+                  decoration: BoxDecoration(
+                    color: isSelected ? accentColor : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isSelected ? accentColor : AppColors.dividerColor,
+                      width: 2,
                     ),
                   ),
-                  selected: isSelected,
-                  onSelected: (_) => onChanged(config.tipo),
-                  showCheckmark: false,
-                  selectedColor: AppColors.bluePrimary,
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: BorderSide(
-                      color: isSelected ? AppColors.bluePrimary : AppColors.grayNeutral,
-                      width: 1.3,
-                    ),
-                  ),
-                );
-              }).toList(),
+                  child: isSelected
+                      ? const Icon(Icons.check_rounded, color: Colors.white, size: 15)
+                      : null,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

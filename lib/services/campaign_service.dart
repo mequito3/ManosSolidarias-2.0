@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/campaign.dart';
+import '../models/category.dart' as my_category;
 
 class CampaignService {
   CampaignService(this._client);
@@ -11,6 +12,22 @@ class CampaignService {
   bool get hasAuthenticatedUser => _client.auth.currentUser != null;
 
   String? get currentUserId => _client.auth.currentUser?.id;
+
+  Future<List<my_category.Category>> fetchCategories() async {
+    try {
+      final response = await _client
+          .from('categorias')
+          .select()
+          .eq('activa', true)
+          .order('orden', ascending: true);
+      
+      final data = (response as List<dynamic>).cast<Map<String, dynamic>>();
+      return data.map(my_category.Category.fromJson).toList();
+    } catch (error, stackTrace) {
+      debugPrint('CampaignService.fetchCategories error: $error');
+      return []; // Devolvemos vacío si falla para no romper el buscador
+    }
+  }
 
   Future<List<CampaignSummary>> fetchActiveCampaigns({
     String? category,
@@ -48,7 +65,7 @@ class CampaignService {
       // Debe poder cargar campañas archivadas (que llegaron a 100%)
       final detailResponse = await _client
           .from('campanias')
-          .select()
+          .select('*, categorias(nombre)')
           .eq('id', campaignId)
           .maybeSingle();
 
@@ -87,17 +104,9 @@ class CampaignService {
         debugPrint('CampaignService.fetchCampaignDetail rewards error: $error');
       }
 
-      var updates = <Map<String, dynamic>>[];
-      try {
-        final response = await _client
-            .from('actualizaciones')
-            .select()
-            .eq('campania_id', campaignId)
-            .order('fecha_publicacion', ascending: false);
-        updates = (response as List<dynamic>).cast<Map<String, dynamic>>();
-      } catch (error) {
-        debugPrint('CampaignService.fetchCampaignDetail updates error: $error');
-      }
+      // La tabla 'actualizaciones' (novedades de campaña) aún no existe en el schema.
+      // Se deja como lista vacía hasta que se cree en Supabase.
+      final updates = <Map<String, dynamic>>[];
 
       var evidences = <Map<String, dynamic>>[];
       try {
@@ -105,7 +114,7 @@ class CampaignService {
             .from('evidencias')
             .select()
             .eq('campania_id', campaignId)
-            .order('creado_en', ascending: false);
+            .order('created_at', ascending: false);
         evidences = (response as List<dynamic>).cast<Map<String, dynamic>>();
       } catch (error) {
         debugPrint('CampaignService.fetchCampaignDetail evidences error: $error');

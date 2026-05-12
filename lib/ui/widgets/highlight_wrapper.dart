@@ -110,13 +110,13 @@ class _HighlightWrapperState extends State<HighlightWrapper>
                 if (opacity > 0) ...[
                   // Sombra interna (borde brillante)
                   BoxShadow(
-                    color: widget.highlightColor.withOpacity(opacity * 0.4),
+                    color: widget.highlightColor.withValues(alpha: opacity * 0.4),
                     blurRadius: 8,
                     spreadRadius: 2,
                   ),
                   // Sombra externa más suave
                   BoxShadow(
-                    color: widget.highlightColor.withOpacity(opacity * 0.2),
+                    color: widget.highlightColor.withValues(alpha: opacity * 0.2),
                     blurRadius: 16,
                     spreadRadius: 4,
                   ),
@@ -127,7 +127,7 @@ class _HighlightWrapperState extends State<HighlightWrapper>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: widget.highlightColor.withOpacity(opacity),
+                  color: widget.highlightColor.withValues(alpha: opacity),
                   width: 2 + (opacity * 1), // Borde que crece
                 ),
               ),

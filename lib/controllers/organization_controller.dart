@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/organization.dart';
 import '../services/organization_service.dart';
@@ -7,6 +8,7 @@ class OrganizationController extends ChangeNotifier {
   OrganizationController(this._service);
 
   final OrganizationService _service;
+  RealtimeChannel? _realtimeChannel;
 
   bool _isLoading = false;
   bool _hasLoadedInitially = false;
@@ -32,6 +34,38 @@ class OrganizationController extends ChangeNotifier {
   }
 
   Future<void> refreshOrganizations() => loadOrganizations(forceRefresh: true);
+
+  /// Suscribe a cambios en tiempo real de organizaciones
+  void subscribeToRealtime() {
+    try {
+      _realtimeChannel = Supabase.instance.client
+          .channel('organizations_realtime')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'organizaciones',
+            callback: (_) => _handleRealtimeUpdate(),
+          )
+          .subscribe();
+      
+      debugPrint('✅ OrganizationController: Subscribed to realtime updates');
+    } catch (error) {
+      debugPrint('❌ OrganizationController realtime subscription error: $error');
+    }
+  }
+
+  /// Cancela la suscripción de realtime
+  void unsubscribeFromRealtime() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    debugPrint('🔌 OrganizationController: Unsubscribed from realtime');
+  }
+
+  /// Maneja actualizaciones en tiempo real
+  Future<void> _handleRealtimeUpdate() async {
+    debugPrint('🔄 OrganizationController: Realtime update detected, refreshing...');
+    await refreshOrganizations();
+  }
 
   Future<void> loadOrganizations({bool forceRefresh = false}) async {
     if (_isLoading) {
@@ -97,5 +131,11 @@ class OrganizationController extends ChangeNotifier {
         .where((org) => org.hasDirectContact)
         .take(10)
         .toList();
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

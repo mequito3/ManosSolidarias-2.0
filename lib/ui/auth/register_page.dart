@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../theme/app_colors.dart';
@@ -18,12 +18,16 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
+  late final AnimationController _anim;
+  late final Animation<double> _fadeIn;
+  late final Animation<Offset> _slideIn;
 
   bool _acceptsPolicies = false;
   bool _submitting = false;
@@ -31,33 +35,42 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _anim = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    )..forward();
+    _fadeIn = CurvedAnimation(parent: _anim, curve: Curves.easeOut);
+    _slideIn = Tween(begin: const Offset(0, 0.06), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _anim, curve: Curves.easeOutCubic));
+  }
+
+  @override
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
+    _anim.dispose();
     super.dispose();
   }
 
   String _mapSignupAuthError(AuthException error) {
     final lower = error.message.toLowerCase();
-
     if (lower.contains('signups not allowed')) {
       return 'Los registros están deshabilitados temporalmente. Ponte en contacto con el administrador de la plataforma.';
     }
-
     if (lower.contains('email rate limit')) {
       return 'Has realizado demasiados intentos con este correo. Espera unos minutos y vuelve a intentarlo.';
     }
-
-    if (lower.contains('invalid email') || lower.contains('invalid login credentials')) {
+    if (lower.contains('invalid email') ||
+        lower.contains('invalid login credentials')) {
       return 'Revisa que el correo electrónico tenga un formato válido.';
     }
-
     if (lower.contains('password')) {
       return 'La contraseña no cumple los requisitos de seguridad. Asegúrate de que tenga al menos 8 caracteres.';
     }
-
     return error.message;
   }
 
@@ -68,29 +81,21 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => _error = 'Debes aceptar las políticas de uso y privacidad.');
       return;
     }
-    if (form == null || !form.validate()) {
-      return;
-    }
-
+    if (form == null || !form.validate()) return;
     setState(() {
       _error = null;
       _submitting = true;
     });
-
     try {
       final supabase = Supabase.instance.client;
       final trimmedEmail = _emailCtrl.text.trim();
       final response = await supabase.auth.signUp(
         email: trimmedEmail,
         password: _passwordCtrl.text,
-        data: {
-          'display_name': _nameCtrl.text.trim(),
-        },
+        data: {'display_name': _nameCtrl.text.trim()},
         emailRedirectTo: SupabaseRedirects.oauthRedirectUri,
       );
-
       if (!mounted) return;
-
       if (response.user == null) {
         setState(() {
           _error = 'No pudimos crear tu cuenta. Revisa tu conexión e inténtalo nuevamente.';
@@ -98,18 +103,12 @@ class _RegisterPageState extends State<RegisterPage> {
         });
         return;
       }
-
       if (response.session != null) {
         Navigator.of(context).pop(AuthFlowResult.signedIn);
         return;
       }
-
-      setState(() {
-        _submitting = false;
-      });
-
+      setState(() => _submitting = false);
       if (!mounted) return;
-
       final navigator = Navigator.of(context);
       final result = await navigator.push<AuthFlowResult?>(
         MaterialPageRoute(
@@ -120,18 +119,15 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         ),
       );
-
       if (!mounted) return;
-
       if (result == AuthFlowResult.signedIn) {
         navigator.pop(AuthFlowResult.signedIn);
       } else {
         navigator.pop(AuthFlowResult.requiresEmailVerification);
       }
     } on AuthException catch (error) {
-      final friendly = _mapSignupAuthError(error);
       setState(() {
-        _error = friendly;
+        _error = _mapSignupAuthError(error);
         _submitting = false;
       });
     } catch (error, stackTrace) {
@@ -146,12 +142,10 @@ class _RegisterPageState extends State<RegisterPage> {
 
   Future<void> _signUpWithGoogle() async {
     if (_googleLoading || _submitting) return;
-
     setState(() {
       _error = null;
       _googleLoading = true;
     });
-
     try {
       final supabase = Supabase.instance.client;
       await supabase.auth.signInWithOAuth(
@@ -159,15 +153,12 @@ class _RegisterPageState extends State<RegisterPage> {
         redirectTo: SupabaseRedirects.oauthRedirectUri,
         scopes: 'email profile',
       );
-
       if (!mounted) return;
-
       final session = supabase.auth.currentSession;
       if (session != null) {
         Navigator.of(context).pop(AuthFlowResult.signedIn);
         return;
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Continúa el flujo en la ventana de Google y regresa a la app cuando finalices.'),
@@ -176,7 +167,6 @@ class _RegisterPageState extends State<RegisterPage> {
     } on AuthException catch (error) {
       final lower = error.message.toLowerCase();
       String friendlyMessage;
-      
       if (lower.contains('provider is not enabled')) {
         friendlyMessage = 'El inicio de sesión con Google no está habilitado. Contacta al administrador.';
       } else if (lower.contains('network') || lower.contains('connection')) {
@@ -184,52 +174,151 @@ class _RegisterPageState extends State<RegisterPage> {
       } else {
         friendlyMessage = 'No pudimos iniciar sesión con Google. Intenta más tarde.';
       }
-      
-      setState(() {
-        _error = friendlyMessage;
-      });
+      setState(() => _error = friendlyMessage);
     } catch (error, stackTrace) {
       debugPrint('Google sign-in error: $error');
       debugPrintStack(stackTrace: stackTrace);
-      setState(() {
-        _error = 'No pudimos iniciar sesión con Google. Intenta más tarde.';
-      });
+      setState(() => _error = 'No pudimos iniciar sesión con Google. Intenta más tarde.');
     } finally {
-      if (mounted) {
-        setState(() {
-          _googleLoading = false;
-        });
-      }
+      if (mounted) setState(() => _googleLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final headerH = size.height * 0.25;
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded), // MEJORA: Ícono rounded más moderno
-          onPressed: _submitting ? null : () => Navigator.of(context).maybePop(),
-        ),
-        title: const AppLogo(symbolSize: 36),
-        foregroundColor: AppColors.darkText,
-        elevation: 0, // MEJORA: Sin sombra para look más limpio
-        backgroundColor: Colors.transparent, // MEJORA: AppBar transparente
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppColors.space24, // MEJORA: Usar sistema de espaciados
-              vertical: AppColors.space32,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: _buildForm(context),
+      body: Column(
+        children: [
+          // ── Hero header verde ──────────────────────────────────────
+          SizedBox(
+            height: headerH,
+            child: Stack(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.successGradient,
+                    borderRadius:
+                        BorderRadius.vertical(bottom: Radius.circular(36)),
+                  ),
+                ),
+                Positioned(
+                  top: -30,
+                  right: -50,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -25,
+                  left: -20,
+                  child: Container(
+                    width: 110,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
+                ),
+                SafeArea(
+                  child: Stack(
+                    children: [
+                      // Botón back arriba a la izquierda
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: IconButton(
+                          icon: const Icon(
+                              Icons.arrow_back_ios_new_rounded,
+                              color: Colors.white,
+                              size: 20),
+                          onPressed: _submitting
+                              ? null
+                              : () => Navigator.of(context).maybePop(),
+                        ),
+                      ),
+                      // Logo centrado
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.favorite,
+                                  color: AppColors.orangeAction,
+                                  size: 32,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Manos Solidarias',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Crea tu cuenta solidaria',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.80),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
+
+          // ── Formulario ─────────────────────────────────────────────
+          Expanded(
+            child: FadeTransition(
+              opacity: _fadeIn,
+              child: SlideTransition(
+                position: _slideIn,
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: _buildForm(context),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -239,41 +328,25 @@ class _RegisterPageState extends State<RegisterPage> {
       key: const ValueKey('form'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // MEJORA: Ícono decorativo de bienvenida centrado
-        Center(
-          child: Container(
-            padding: const EdgeInsets.all(AppColors.space16),
-            decoration: BoxDecoration(
-              gradient: AppColors.successGradient,
-              borderRadius: BorderRadius.circular(AppColors.radiusLg),
-              boxShadow: AppColors.shadowSm,
-            ),
-            child: const Icon(
-              Icons.volunteer_activism_rounded,
-              size: AppColors.iconSizeXl,
-              color: Colors.white,
-            ),
+        const Text(
+          'Crear cuenta',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.darkText,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: AppColors.space24),
-        Text(
-          'Únete a la comunidad solidaria',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppColors.darkText,
-                fontWeight: FontWeight.bold,
-                fontSize: 28, // MEJORA: Título más grande
-                letterSpacing: -0.5, // MEJORA: Mejor spacing
-              ),
+        const SizedBox(height: 5),
+        const Text(
+          'Los administradores revisarán tu registro para garantizar campañas confiables.',
+          style: TextStyle(
+            fontSize: 13,
+            color: AppColors.mediumText,
+            height: 1.5,
+          ),
         ),
-        const SizedBox(height: AppColors.space12),
-        Text(
-          'Los administradores revisarán tu registro para garantizar campañas confiables para toda la comunidad.',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppColors.mediumText, // MEJORA: Usar color del sistema
-                height: 1.5, // MEJORA: Mejor line height
-              ),
-        ),
-        const SizedBox(height: AppColors.space32),
+        const SizedBox(height: 22),
         Form(
           key: _formKey,
           child: Column(
@@ -289,7 +362,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: AppColors.space20), // MEJORA: Espaciado consistente
+              const SizedBox(height: AppColors.space20),
               AppTextField(
                 controller: _emailCtrl,
                 label: 'Correo electrónico',
@@ -336,19 +409,19 @@ class _RegisterPageState extends State<RegisterPage> {
                 onFieldSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: AppColors.space24),
-              // Políticas - Diseño moderno y minimalista
+              // Políticas
               InkWell(
                 onTap: () => setState(() => _acceptsPolicies = !_acceptsPolicies),
                 borderRadius: BorderRadius.circular(AppColors.radiusMd),
                 child: Container(
                   padding: const EdgeInsets.all(AppColors.space16),
                   decoration: BoxDecoration(
-                    color: _acceptsPolicies 
+                    color: _acceptsPolicies
                         ? AppColors.bluePrimary.withValues(alpha: 0.08)
                         : AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(AppColors.radiusMd),
                     border: Border.all(
-                      color: _acceptsPolicies 
+                      color: _acceptsPolicies
                           ? AppColors.bluePrimary.withValues(alpha: 0.4)
                           : AppColors.dividerColor,
                       width: 1.5,
@@ -369,11 +442,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         ),
                         child: _acceptsPolicies
-                            ? const Icon(
-                                Icons.check_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              )
+                            ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                             : null,
                       ),
                       const SizedBox(width: AppColors.space12),
@@ -398,7 +467,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                           ),
                                         );
                                       },
-                                      child: Text(
+                                      child: const Text(
                                         'Políticas de Uso y Privacidad',
                                         style: TextStyle(
                                           color: AppColors.bluePrimary,
@@ -435,9 +504,9 @@ class _RegisterPageState extends State<RegisterPage> {
               AppPrimaryButton(
                 label: _submitting ? 'Creando cuenta...' : 'Crear cuenta',
                 onPressed: _submitting ? null : _submit,
-                icon: _submitting ? null : Icons.arrow_forward_rounded, // MEJORA: Ícono rounded
+                icon: _submitting ? null : Icons.arrow_forward_rounded,
               ),
-              const SizedBox(height: AppColors.space16), // MEJORA: Más espacio
+              const SizedBox(height: AppColors.space16),
               AppSecondaryButton(
                 label: 'Iniciar sesión',
                 onPressed: _submitting

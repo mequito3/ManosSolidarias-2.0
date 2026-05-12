@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' hide Category;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/admin_dashboard.dart';
@@ -48,7 +49,7 @@ class AdminService {
           .select('id, estado, created_at, updated_at')
           .then((data) => data)
           .catchError((error) {
-            print('Error fetching requests: $error');
+            debugPrint('Error fetching requests: $error');
             return <Map<String, dynamic>>[];
           });
       
@@ -57,7 +58,7 @@ class AdminService {
           .select('id, user_id, monto, created_at, estado')
           .then((data) => data)
           .catchError((error) {
-            print('Error fetching donations: $error');
+            debugPrint('Error fetching donations: $error');
             return <Map<String, dynamic>>[];
           });
       
@@ -67,7 +68,7 @@ class AdminService {
           .eq('estado', 'finalizada')
           .then((data) => data)
           .catchError((error) {
-            print('Error fetching completed campaigns: $error');
+            debugPrint('Error fetching completed campaigns: $error');
             return <Map<String, dynamic>>[];
           });
 
@@ -131,7 +132,7 @@ class AdminService {
         }
       }
     } catch (e) {
-      print('Error processing donors: $e');
+      debugPrint('Error processing donors: $e');
     }
     final totalDonors = donorIds.length;
     final repeatDonors = donorCounts.values.where((count) => count > 1).length;
@@ -161,7 +162,7 @@ class AdminService {
         }
       }).length;
     } catch (e) {
-      print('Error calculating monthly donations: $e');
+      debugPrint('Error calculating monthly donations: $e');
     }
     
     final donationGrowthRate = donationsLastMonth > 0 
@@ -180,11 +181,23 @@ class AdminService {
           ? totalDonationAmount / approvedDonations.length 
           : 0.0;
     } catch (e) {
-      print('Error calculating average donation: $e');
+      debugPrint('Error calculating average donation: $e');
     }
     
-    // Categoría más popular (no se usa en UI pero se mantiene para el modelo)
+    // Categoría más popular: calcula la categoría con más campañas finalizadas
     String topCategory = 'N/A';
+    if (campaignsCompleted.isNotEmpty) {
+      final categoryCounts = <String, int>{};
+      for (final c in campaignsCompleted) {
+        final cat = (c['categorias'] as Map<String, dynamic>?)?['nombre'] as String?;
+        if (cat != null) categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+      }
+      if (categoryCounts.isNotEmpty) {
+        topCategory = categoryCounts.entries
+            .reduce((a, b) => a.value >= b.value ? a : b)
+            .key;
+      }
+    }
 
     return AdminDashboardMetrics(
       pendingRequests: pendingRequests,
@@ -204,7 +217,7 @@ class AdminService {
       topCampaignCategory: topCategory,
     );
     } catch (e) {
-      print('Error in fetchDashboardMetrics: $e');
+      debugPrint('Error in fetchDashboardMetrics: $e');
       // Retornar métricas por defecto en caso de error
       return const AdminDashboardMetrics(
         pendingRequests: 0,

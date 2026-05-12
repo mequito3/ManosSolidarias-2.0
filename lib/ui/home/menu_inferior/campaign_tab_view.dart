@@ -59,17 +59,20 @@ class CampaignTabView extends StatelessWidget {
         ? controller.featuredCampaigns.where((c) => c.category == categoryFilter).toList()
         : controller.featuredCampaigns
     );
+    final featuredIds = featured.map((c) => c.id).toSet();
     final nearGoal = List<CampaignSummary>.from(
-      categoryFilter != null 
+      (categoryFilter != null 
         ? controller.nearGoalCampaigns.where((c) => c.category == categoryFilter).toList()
         : controller.nearGoalCampaigns
+      ).where((c) => !featuredIds.contains(c.id))
     );
+    final seenIds = {...featuredIds, ...nearGoal.map((c) => c.id)};
     final recent = (categoryFilter != null 
         ? controller.recentCampaigns.where((c) => c.category == categoryFilter).toList()
         : controller.recentCampaigns
-    ).take(2).toList();
+    ).where((c) => !seenIds.contains(c.id)).take(2).toList();
 
-  const double featuredCarouselHeight = 480;
+    final featuredCarouselHeight = (MediaQuery.of(context).size.height * 0.45).clamp(365.0, 420.0);
 
     if (isLoading && campaigns.isEmpty) {
       return const HomeTabLoadingState();
@@ -116,17 +119,10 @@ class CampaignTabView extends StatelessWidget {
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 24),
             child: SortToggleBar(
               selectedOption: sortOption,
               onSelected: onSortSelected,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20, left: 8),
-            child: _ResultCounter(
-              count: sorted.length,
-              sortOption: sortOption,
             ),
           ),
           if (donorTrophyController != null)
@@ -146,6 +142,8 @@ class CampaignTabView extends StatelessWidget {
             HomeSection(
               title: 'Campañas destacadas',
               subtitle: 'Proyectos verificados con alto impacto comunitario.',
+              icon: Icons.star_rounded,
+              iconColor: AppColors.orangeAction,
               child: SizedBox(
                 height: featuredCarouselHeight,
                 child: ListView.separated(
@@ -158,6 +156,7 @@ class CampaignTabView extends StatelessWidget {
                       width: 320,
                       child: CampaignCard(
                         campaign: campaign,
+                        heroTagPrefix: 'featured',
                         onTap: () => onOpenCampaign(campaign),
                         onSupport: () => onSupportCampaign(campaign),
                         onToggleFavorite: () => onToggleFavorite(campaign),
@@ -172,6 +171,8 @@ class CampaignTabView extends StatelessWidget {
             HomeSection(
               title: 'Cerca de la meta',
               subtitle: 'Estas campañas están a punto de alcanzar su objetivo.',
+              icon: Icons.local_fire_department_rounded,
+              iconColor: AppColors.greenSuccess,
               child: Column(
                 children: nearGoal
                     .take(4)
@@ -193,6 +194,8 @@ class CampaignTabView extends StatelessWidget {
             HomeSection(
               title: 'Recién lanzadas',
               subtitle: 'Ideas frescas que necesitan sus primeros aliados.',
+              icon: Icons.rocket_launch_rounded,
+              iconColor: AppColors.bluePrimary,
               child: Column(
                 children: recent
                     .map(
@@ -212,6 +215,8 @@ class CampaignTabView extends StatelessWidget {
             HomeSection(
               title: 'Todas las campañas',
               subtitle: 'Explora la base completa de iniciativas activas.',
+              icon: Icons.grid_view_rounded,
+              iconColor: AppColors.grayNeutral,
               child: Column(
                 children: visibleCampaigns
                     .map(
@@ -219,6 +224,7 @@ class CampaignTabView extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: 20),
                         child: CampaignCard(
                           campaign: campaign,
+                          heroTagPrefix: 'all',
                           onTap: () => onOpenCampaign(campaign),
                           onSupport: () => onSupportCampaign(campaign),
                           onToggleFavorite: () => onToggleFavorite(campaign),
@@ -677,94 +683,128 @@ class _DonorLeaderboardPreview extends StatelessWidget {
               // Posición del usuario
               if (profile != null) ...[
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        profile.hasRanking
-                            ? AppColors.bluePrimary.withValues(alpha: 0.08)
-                            : AppColors.grayNeutral.withValues(alpha: 0.06),
-                        Colors.transparent,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: profile.hasRanking
-                          ? AppColors.bluePrimary.withValues(alpha: 0.2)
-                          : AppColors.grayNeutral.withValues(alpha: 0.15),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      // Avatar del usuario
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.bluePrimary,
-                              AppColors.blueSecondary,
-                            ],
-                          ),
-                        ),
-                        padding: const EdgeInsets.all(2),
-                        child: CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.person_rounded,
-                            color: AppColors.bluePrimary,
-                            size: 24,
-                          ),
-                        ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 320;
+                    
+                    return Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isNarrow ? 10 : 14,
+                        vertical: isNarrow ? 10 : 14,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tu posición',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                    color: AppColors.darkText.withValues(alpha: 0.6),
-                                    fontSize: 11,
-                                  ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              profile.hasRanking
-                                  ? '#${profile.position} · ${profile.level.label}'
-                                  : 'Aún sin ranking',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.darkText,
-                                  ),
-                            ),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            profile.hasRanking
+                                ? AppColors.bluePrimary.withValues(alpha: 0.08)
+                                : AppColors.grayNeutral.withValues(alpha: 0.06),
+                            Colors.transparent,
                           ],
                         ),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: profile.hasRanking
+                              ? AppColors.bluePrimary.withValues(alpha: 0.2)
+                              : AppColors.grayNeutral.withValues(alpha: 0.15),
+                          width: 1.5,
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      // Monto del usuario
-                      Flexible(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                          Text(
-                            profile.hasRanking ? 'Total donado' : 'Primera donación',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppColors.darkText.withValues(alpha: 0.6),
-                                  fontSize: 11,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
+                      child: Row(
+                        children: [
+                          // Avatar del usuario con borde
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.bluePrimary.withValues(alpha: 0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: isNarrow ? 22 : 26,
+                              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
+                              backgroundImage: profile.avatarUrl != null 
+                                ? NetworkImage(profile.avatarUrl!) 
+                                : null,
+                              child: profile.avatarUrl == null
+                                ? Icon(
+                                    Icons.person_rounded,
+                                    color: AppColors.bluePrimary,
+                                    size: isNarrow ? 24 : 28,
+                                  )
+                                : null,
+                            ),
+                          ),
+                          SizedBox(width: isNarrow ? 10 : 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Tu posición',
+                                  style: TextStyle(
+                                    color: AppColors.darkText.withValues(alpha: 0.6),
+                                    fontSize: isNarrow ? 10 : 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                if (profile.hasRanking)
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: isNarrow ? 6 : 8,
+                                          vertical: isNarrow ? 3 : 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.bluePrimary.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          '#${profile.position}',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            color: AppColors.bluePrimary,
+                                            fontSize: isNarrow ? 12 : 14,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          profile.level.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.darkText,
+                                            fontSize: isNarrow ? 11 : 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                else
+                                  Text(
+                                    'Sin ranking',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.darkText.withValues(alpha: 0.5),
+                                      fontSize: isNarrow ? 11 : 13,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: isNarrow ? 8 : 10),
+                          // Badge de monto
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isNarrow ? 10 : 14,
+                              vertical: isNarrow ? 8 : 10,
                             ),
                             decoration: BoxDecoration(
                               gradient: LinearGradient(
@@ -773,31 +813,45 @@ class _DonorLeaderboardPreview extends StatelessWidget {
                                   AppColors.orangeActionLight,
                                 ],
                               ),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(12),
                               boxShadow: [
                                 BoxShadow(
                                   color: AppColors.orangeAction.withValues(alpha: 0.3),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
-                            child: Text(
-                              profile.hasRanking
-                                  ? _formatPreviewAmount(profile.totalDonated)
-                                  : '🎁 Desbloquea',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 13,
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Total',
+                                  style: TextStyle(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontSize: isNarrow ? 8 : 9,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  profile.hasRanking
+                                      ? _formatPreviewAmount(profile.totalDonated)
+                                      : 'Bs 0',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: isNarrow ? 13 : 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                        ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ],
             ],
@@ -827,13 +881,13 @@ class _LeaderboardPreviewTile extends StatelessWidget {
     final double avatarSize = podiumData['avatarSize'];
     
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: color.withValues(alpha: 0.15),
-          width: 1.5,
+          color: color.withValues(alpha: 0.2),
+          width: 2,
         ),
       ),
       child: Column(
@@ -841,8 +895,8 @@ class _LeaderboardPreviewTile extends StatelessWidget {
         children: [
           // Badge de posición arriba
           Container(
-            width: 28,
-            height: 28,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: podiumData['gradientColors'] as List<Color>,
@@ -851,7 +905,7 @@ class _LeaderboardPreviewTile extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: color.withValues(alpha: 0.3),
-                  blurRadius: 8,
+                  blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -861,13 +915,13 @@ class _LeaderboardPreviewTile extends StatelessWidget {
                   ? const Icon(
                       Icons.emoji_events_rounded,
                       color: Colors.white,
-                      size: 18,
+                      size: 16,
                     )
                   : Text(
                       '${entry.position}',
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w900,
                         height: 1.0,
                       ),
@@ -875,55 +929,81 @@ class _LeaderboardPreviewTile extends StatelessWidget {
             ),
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
-          // Avatar
-          CircleAvatar(
-            radius: avatarSize,
-            backgroundColor: color.withValues(alpha: 0.15),
-            backgroundImage: entry.avatarUrl != null ? NetworkImage(entry.avatarUrl!) : null,
-            child: entry.avatarUrl == null
-                ? Icon(
-                    Icons.person_rounded,
-                    size: avatarSize * 1.2,
-                    color: color,
-                  )
+          // Avatar con borde
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color.withValues(alpha: 0.3),
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: avatarSize,
+              backgroundColor: color.withValues(alpha: 0.15),
+              backgroundImage: entry.avatarUrl != null 
+                ? NetworkImage(entry.avatarUrl!) 
                 : null,
+              child: entry.avatarUrl == null
+                  ? Icon(
+                      Icons.person_rounded,
+                      size: avatarSize * 1.1,
+                      color: color,
+                    )
+                  : null,
+            ),
           ),
           
           const SizedBox(height: 8),
           
-          // Nombre (puede ocupar 2 líneas si es necesario)
-          Text(
-            entry.displayName,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkText,
-              fontSize: 11,
-              height: 1.2,
+          // Nombre (máximo 2 líneas, bien centrado)
+          SizedBox(
+            height: 30, // Altura fija para alinear todas las tarjetas
+            child: Center(
+              child: Text(
+                entry.displayName,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.darkText,
+                  fontSize: 11,
+                  height: 1.2,
+                ),
+              ),
             ),
           ),
           
           const SizedBox(height: 6),
           
           // Monto destacado
-          Text(
-            _formatContribution(entry.totalDonated),
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w800,
-              fontSize: 14,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              _formatContribution(entry.totalDonated),
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
             ),
           ),
           
-          const SizedBox(height: 3),
+          const SizedBox(height: 4),
           
           // Nivel pequeño
           Text(
             entry.level.label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: AppColors.darkText.withValues(alpha: 0.6),
               fontSize: 9,
@@ -1022,105 +1102,27 @@ class SortToggleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.grayNeutral.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-            child: Row(
-              children: CampaignSortOption.values.map((option) {
-                final isSelected = option == selectedOption;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 6),
-                  child: _SortChip(
-                    icon: option.icon,
-                    label: option.label,
-                    isSelected: isSelected,
-                    onTap: () => onSelected(option),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.grayNeutral.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        child: Row(
+          children: CampaignSortOption.values.map((option) {
+            final isSelected = option == selectedOption;
+            return _SortChip(
+              icon: option.icon,
+              label: option.label,
+              isSelected: isSelected,
+              onTap: () => onSelected(option),
+            );
+          }).toList(),
         ),
-      ],
-    );
-  }
-}
-
-class _ResultCounter extends StatelessWidget {
-  const _ResultCounter({
-    required this.count,
-    required this.sortOption,
-  });
-
-  final int count;
-  final CampaignSortOption sortOption;
-
-  @override
-  Widget build(BuildContext context) {
-    String message = '';
-    switch (sortOption) {
-      case CampaignSortOption.recommended:
-        message = '$count campañas recomendadas para ti';
-        break;
-      case CampaignSortOption.newest:
-        message = '$count campañas recientes';
-        break;
-      case CampaignSortOption.funding:
-        message = '$count campañas por avance';
-        break;
-      case CampaignSortOption.donors:
-        message = '$count campañas por donadores';
-        break;
-    }
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.bluePrimary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: AppColors.bluePrimary.withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.filter_list_rounded,
-                size: 16,
-                color: AppColors.bluePrimary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                message,
-                style: TextStyle(
-                  color: AppColors.bluePrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1140,40 +1142,50 @@ class _SortChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: isSelected 
-          ? AppColors.bluePrimary 
-          : Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                size: 18,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected 
+                  ? AppColors.bluePrimary 
+                  : AppColors.darkText.withValues(alpha: 0.5),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
                 color: isSelected 
-                    ? Colors.white 
+                    ? AppColors.darkText 
                     : AppColors.darkText.withValues(alpha: 0.6),
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                letterSpacing: -0.1,
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected 
-                      ? Colors.white 
-                      : AppColors.darkText,
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  height: 1.0,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1197,85 +1209,122 @@ class CampaignProgressTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canSupport = !campaign.isCompleted;
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ProgressBadge(percent: campaign.completionPercentage),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      campaign.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360;
+        final isVeryNarrow = constraints.maxWidth < 320;
+        
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isNarrow ? 16 : 20),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(isNarrow ? 16 : 20),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isVeryNarrow ? 12 : (isNarrow ? 16 : 20),
+                vertical: isVeryNarrow ? 12 : (isNarrow ? 14 : 18),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProgressBadge(
+                    percent: campaign.completionPercentage,
+                    size: isVeryNarrow ? 48 : (isNarrow ? 52 : 58),
+                  ),
+                  SizedBox(width: isVeryNarrow ? 10 : (isNarrow ? 12 : 16)),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          campaign.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: AppColors.darkText,
                             fontWeight: FontWeight.w700,
+                            fontSize: isVeryNarrow ? 13 : (isNarrow ? 14 : 16),
+                            height: 1.3,
                           ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      campaign.shortDescription,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        ),
+                        SizedBox(height: isVeryNarrow ? 4 : 6),
+                        Text(
+                          campaign.shortDescription,
+                          maxLines: isVeryNarrow ? 1 : 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
                             color: AppColors.darkText.withValues(alpha: 0.7),
+                            fontSize: isVeryNarrow ? 11 : (isNarrow ? 12 : 14),
+                            height: 1.3,
                           ),
-                    ),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(
-                      value: campaign.normalizedProgress,
-                      minHeight: 6,
-                      color: AppColors.greenHope,
-                      backgroundColor: AppColors.greenSoft.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${campaign.donorCount} donadores · Meta Bs ${campaign.goalAmount.toStringAsFixed(0)}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        ),
+                        SizedBox(height: isVeryNarrow ? 8 : (isNarrow ? 10 : 12)),
+                        LinearProgressIndicator(
+                          value: campaign.normalizedProgress,
+                          minHeight: isVeryNarrow ? 5 : 6,
+                          borderRadius: BorderRadius.circular(10),
+                          color: AppColors.greenHope,
+                          backgroundColor: AppColors.greenSoft.withValues(alpha: 0.3),
+                        ),
+                        SizedBox(height: isVeryNarrow ? 6 : 8),
+                        Text(
+                          '${campaign.donorCount} donadores · Meta Bs ${campaign.goalAmount.toStringAsFixed(0)}',
+                          style: TextStyle(
                             color: AppColors.darkText.withValues(alpha: 0.6),
+                            fontSize: isVeryNarrow ? 10 : (isNarrow ? 11 : 12),
+                            fontWeight: FontWeight.w500,
                           ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: onToggleFavorite,
-                    tooltip: campaign.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
-                    icon: Icon(
-                      campaign.isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: AppColors.orangeAction,
+                        ),
+                      ],
                     ),
                   ),
-                  if (canSupport)
-                    FilledButton.tonal(
-                      onPressed: onSupport,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.orangeAction.withValues(alpha: 0.18),
-                        foregroundColor: AppColors.orangeAction,
+                  SizedBox(width: isVeryNarrow ? 6 : (isNarrow ? 8 : 12)),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        onPressed: onToggleFavorite,
+                        tooltip: campaign.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                        padding: EdgeInsets.all(isVeryNarrow ? 6 : 8),
+                        constraints: BoxConstraints(
+                          minWidth: isVeryNarrow ? 32 : 40,
+                          minHeight: isVeryNarrow ? 32 : 40,
+                        ),
+                        icon: Icon(
+                          campaign.isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: AppColors.orangeAction,
+                          size: isVeryNarrow ? 20 : (isNarrow ? 22 : 24),
+                        ),
                       ),
-                      child: const Text('Apoyar'),
-                    ),
+                      if (canSupport) ...[
+                        SizedBox(height: isVeryNarrow ? 4 : 6),
+                        FilledButton.tonal(
+                          onPressed: onSupport,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.orangeAction.withValues(alpha: 0.18),
+                            foregroundColor: AppColors.orangeAction,
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isVeryNarrow ? 10 : (isNarrow ? 12 : 16),
+                              vertical: isVeryNarrow ? 6 : 8,
+                            ),
+                            textStyle: TextStyle(
+                              fontSize: isVeryNarrow ? 11 : (isNarrow ? 12 : 13),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          child: const Text('Apoyar'),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -1299,259 +1348,279 @@ class CampaignHeadlineTile extends StatelessWidget {
         : 0;
     final isVeryNew = daysOld <= 3;
     
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppColors.bluePrimary.withValues(alpha: 0.1),
-              width: 1.5,
-            ),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white,
-                AppColors.bluePrimary.withValues(alpha: 0.02),
-              ],
-            ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Imagen thumbnail con badge NUEVO
-              Stack(
-                children: [
-                  // Imagen
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.bluePrimary.withValues(alpha: 0.15),
-                            AppColors.blueSecondary.withValues(alpha: 0.1),
-                          ],
-                        ),
-                      ),
-                      child: campaign.coverUrl.isNotEmpty
-                          ? Image.network(
-                              campaign.coverUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _buildPlaceholderImage(),
-                            )
-                          : _buildPlaceholderImage(),
-                    ),
-                  ),
-                  
-                  // Badge "NUEVO" si tiene menos de 3 días
-                  if (isVeryNew)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.orangeAction, AppColors.orangeActionLight],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.orangeAction.withValues(alpha: 0.4),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Text(
-                          '¡NUEVO!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                  
-                  // Badge de progreso superpuesto
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Text(
-                        '${campaign.completionPercentage.toInt()}%',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.bluePrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 360;
+        final isVeryNarrow = constraints.maxWidth < 320;
+        final imageSize = isVeryNarrow ? 64.0 : (isNarrow ? 72.0 : 80.0);
+        
+        return Material(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isNarrow ? 16 : 20),
+          elevation: 0,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(isNarrow ? 16 : 20),
+            child: Container(
+              padding: EdgeInsets.all(isVeryNarrow ? 12 : (isNarrow ? 14 : 16)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(isNarrow ? 16 : 20),
+                border: Border.all(
+                  color: AppColors.bluePrimary.withValues(alpha: 0.1),
+                  width: 1.5,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    AppColors.bluePrimary.withValues(alpha: 0.02),
+                  ],
+                ),
               ),
-              
-              const SizedBox(width: 14),
-              
-              // Contenido
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Categoría + días
-                    Row(
-                      children: [
-                        // Categoría chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Imagen thumbnail con badge NUEVO
+                  Stack(
+                    children: [
+                      // Imagen
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(isNarrow ? 10 : 14),
+                        child: Container(
+                          width: imageSize,
+                          height: imageSize,
                           decoration: BoxDecoration(
-                            color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: AppColors.bluePrimary.withValues(alpha: 0.2),
+                            gradient: LinearGradient(
+                              colors: [
+                                AppColors.bluePrimary.withValues(alpha: 0.15),
+                                AppColors.blueSecondary.withValues(alpha: 0.1),
+                              ],
                             ),
+                          ),
+                          child: campaign.coverUrl.isNotEmpty
+                              ? Image.network(
+                                  campaign.coverUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => _buildPlaceholderImage(imageSize),
+                                )
+                              : _buildPlaceholderImage(imageSize),
+                        ),
+                      ),
+                      
+                      // Badge "NUEVO" si tiene menos de 3 días
+                      if (isVeryNew && !isVeryNarrow)
+                        Positioned(
+                          top: -4,
+                          right: -4,
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: isNarrow ? 6 : 8,
+                              vertical: isNarrow ? 3 : 4,
+                            ),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [AppColors.orangeAction, AppColors.orangeActionLight],
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.orangeAction.withValues(alpha: 0.4),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              '¡NUEVO!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: isNarrow ? 8 : 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      
+                      // Badge de progreso superpuesto
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isVeryNarrow ? 4 : 6,
+                            vertical: isVeryNarrow ? 2 : 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.15),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
                           ),
                           child: Text(
-                            campaign.category,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                            '${campaign.completionPercentage.toInt()}%',
+                            style: TextStyle(
+                              fontSize: isVeryNarrow ? 9 : (isNarrow ? 10 : 11),
+                              fontWeight: FontWeight.w800,
                               color: AppColors.bluePrimary,
                             ),
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                  
+                  SizedBox(width: isVeryNarrow ? 10 : (isNarrow ? 12 : 14)),
+                  
+                  // Contenido
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Categoría + días
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 4,
+                          children: [
+                            // Categoría chip
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isVeryNarrow ? 6 : 8,
+                                vertical: isVeryNarrow ? 3 : 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.bluePrimary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppColors.bluePrimary.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Text(
+                                campaign.category,
+                                style: TextStyle(
+                                  fontSize: isVeryNarrow ? 9 : 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.bluePrimary,
+                                ),
+                              ),
+                            ),
+                            
+                            // Días desde lanzamiento
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule_rounded,
+                                  size: isVeryNarrow ? 11 : 13,
+                                  color: AppColors.darkText.withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  'Hace $daysOld ${daysOld == 1 ? 'día' : 'días'}',
+                                  style: TextStyle(
+                                    fontSize: isVeryNarrow ? 9 : 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.darkText.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                         
-                        const SizedBox(width: 8),
+                        SizedBox(height: isVeryNarrow ? 4 : 6),
                         
-                        // Días desde lanzamiento
+                        // Título
+                        Text(
+                          campaign.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: isVeryNarrow ? 12 : (isNarrow ? 13 : 14),
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.darkText,
+                            height: 1.3,
+                          ),
+                        ),
+                        
+                        SizedBox(height: isVeryNarrow ? 6 : 8),
+                        
+                        // Stats compactos
                         Row(
                           children: [
-                            Icon(
-                              Icons.schedule_rounded,
-                              size: 13,
-                              color: AppColors.darkText.withValues(alpha: 0.5),
+                            // Meta
+                            _buildCompactStat(
+                              icon: Icons.flag_rounded,
+                              label: _formatGoal(campaign.goalAmount),
+                              color: AppColors.bluePrimary,
+                              isSmall: isVeryNarrow,
                             ),
-                            const SizedBox(width: 3),
-                            Text(
-                              'Hace $daysOld ${daysOld == 1 ? 'día' : 'días'}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.darkText.withValues(alpha: 0.5),
+                            
+                            SizedBox(width: isVeryNarrow ? 8 : 12),
+                            
+                            // Donantes
+                            _buildCompactStat(
+                              icon: Icons.people_rounded,
+                              label: '${campaign.donorCount}',
+                              color: AppColors.greenSuccess,
+                              isSmall: isVeryNarrow,
+                            ),
+                            
+                            const Spacer(),
+                            
+                            // Botón favorito
+                            Container(
+                              decoration: BoxDecoration(
+                                color: campaign.isFavorite 
+                                    ? AppColors.orangeAction.withValues(alpha: 0.1)
+                                    : Colors.transparent,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: campaign.isFavorite
+                                      ? AppColors.orangeAction.withValues(alpha: 0.3)
+                                      : AppColors.darkText.withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  campaign.isFavorite ? Icons.favorite : Icons.favorite_border,
+                                  color: campaign.isFavorite 
+                                      ? AppColors.orangeAction 
+                                      : AppColors.darkText.withValues(alpha: 0.4),
+                                  size: isVeryNarrow ? 18 : 20,
+                                ),
+                                onPressed: onToggleFavorite,
+                                tooltip: campaign.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
+                                padding: EdgeInsets.all(isVeryNarrow ? 6 : 8),
+                                constraints: const BoxConstraints(),
                               ),
                             ),
                           ],
                         ),
                       ],
                     ),
-                    
-                    const SizedBox(height: 6),
-                    
-                    // Título
-                    Text(
-                      campaign.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkText,
-                        height: 1.3,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 8),
-                    
-                    // Stats compactos
-                    Row(
-                      children: [
-                        // Meta
-                        _buildCompactStat(
-                          icon: Icons.flag_rounded,
-                          label: _formatGoal(campaign.goalAmount),
-                          color: AppColors.bluePrimary,
-                        ),
-                        
-                        const SizedBox(width: 12),
-                        
-                        // Donantes
-                        _buildCompactStat(
-                          icon: Icons.people_rounded,
-                          label: '${campaign.donorCount}',
-                          color: AppColors.greenSuccess,
-                        ),
-                        
-                        const Spacer(),
-                        
-                        // Botón favorito
-                        Container(
-                          decoration: BoxDecoration(
-                            color: campaign.isFavorite 
-                                ? AppColors.orangeAction.withValues(alpha: 0.1)
-                                : Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: campaign.isFavorite
-                                  ? AppColors.orangeAction.withValues(alpha: 0.3)
-                                  : AppColors.darkText.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: IconButton(
-                            icon: Icon(
-                              campaign.isFavorite ? Icons.favorite : Icons.favorite_border,
-                              color: campaign.isFavorite 
-                                  ? AppColors.orangeAction 
-                                  : AppColors.darkText.withValues(alpha: 0.4),
-                              size: 20,
-                            ),
-                            onPressed: onToggleFavorite,
-                            tooltip: campaign.isFavorite ? 'Quitar de favoritos' : 'Añadir a favoritos',
-                            padding: const EdgeInsets.all(8),
-                            constraints: const BoxConstraints(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildPlaceholderImage() {
+  Widget _buildPlaceholderImage(double size) {
     return Container(
       color: AppColors.bluePrimary.withValues(alpha: 0.1),
-      child: const Icon(
+      child: Icon(
         Icons.campaign_rounded,
-        size: 36,
+        size: size * 0.45,
         color: AppColors.bluePrimary,
       ),
     );
@@ -1561,20 +1630,21 @@ class CampaignHeadlineTile extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
+    bool isSmall = false,
   }) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           icon,
-          size: 14,
+          size: isSmall ? 12 : 14,
           color: color,
         ),
         const SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: isSmall ? 10 : 12,
             fontWeight: FontWeight.w700,
             color: color,
           ),

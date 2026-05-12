@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/donor_trophy_entry.dart';
 import '../services/donor_trophy_service.dart';
@@ -7,6 +9,8 @@ class DonorTrophyController extends ChangeNotifier {
   DonorTrophyController(this._service);
 
   final DonorTrophyService _service;
+  RealtimeChannel? _realtimeChannel;
+  Timer? _debounceTimer;
 
   bool _isLoading = false;
   bool _hasLoaded = false;
@@ -54,6 +58,45 @@ class DonorTrophyController extends ChangeNotifier {
 
   Future<void> refresh() => _fetchData(force: true);
 
+  /// Suscribe a cambios en tiempo real de donaciones (afecta el ranking)
+  void subscribeToRealtime() {
+    try {
+      _realtimeChannel = Supabase.instance.client
+          .channel('donor_trophy_realtime')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'donaciones',
+            callback: (_) => _handleRealtimeUpdate(),
+          )
+          .subscribe();
+      
+      debugPrint('✅ DonorTrophyController: Subscribed to realtime updates');
+    } catch (error) {
+      debugPrint('❌ DonorTrophyController realtime subscription error: $error');
+    }
+  }
+
+  /// Cancela la suscripción de realtime
+  void unsubscribeFromRealtime() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    debugPrint('🔌 DonorTrophyController: Unsubscribed from realtime');
+  }
+
+  /// Maneja actualizaciones en tiempo real
+  Future<void> _handleRealtimeUpdate() async {
+    // Cancelar el timer anterior si existe
+    _debounceTimer?.cancel();
+    
+    // Crear un nuevo timer que espera 1 segundo antes de refrescar
+    // El ranking necesita más tiempo porque involucra cálculos complejos
+    _debounceTimer = Timer(const Duration(seconds: 1), () {
+      debugPrint('🔄 DonorTrophyController: Realtime update detected, refreshing...');
+      refresh();
+    });
+  }
+
   Future<void> _fetchData({bool force = false}) async {
     if (_isLoading && !force) {
       return;
@@ -87,5 +130,12 @@ class DonorTrophyController extends ChangeNotifier {
     }
     _isLoading = value;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

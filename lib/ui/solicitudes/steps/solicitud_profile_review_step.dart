@@ -27,30 +27,61 @@ class SolicitudProfileReviewStep extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Confirma tus datos',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+        // ── Header ────────────────────────────────────────────────────
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppColors.shadowSm,
+          ),
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Verifica que la información de tu perfil esté actualizada y coincida con la persona responsable de la iniciativa. Si necesitas ajustar algo, regresa a tu perfil desde el menú principal antes de continuar.',
-                  style: theme.textTheme.bodyMedium?.copyWith(height: 1.35),
+                child: const Icon(
+                  Icons.person_pin_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Confirma tus datos',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.darkText,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Verifica que la información coincida con la persona responsable. Si necesitas ajustar algo, ve a tu perfil desde el menú principal.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.55),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 16),
         RequesterSummary(profile: profile, tipo: tipo),
         const SizedBox(height: 24),
         Row(
-          mainAxisAlignment: MainAxisAlignment.end,
           children: [
             AppSecondaryButton(
               label: 'Atrás',
@@ -58,11 +89,13 @@ class SolicitudProfileReviewStep extends StatelessWidget {
               onPressed: onBack,
             ),
             const SizedBox(width: 12),
-            AppPrimaryButton(
-              label: 'Ir al formulario',
-              icon: Icons.assignment_turned_in_outlined,
-              expanded: false,
-              onPressed: onNext,
+            Expanded(
+              child: AppPrimaryButton(
+                label: 'Ir al formulario',
+                icon: Icons.assignment_turned_in_rounded,
+                expanded: true,
+                onPressed: onNext,
+              ),
             ),
           ],
         ),
@@ -121,24 +154,35 @@ class _RequesterSummaryState extends State<RequesterSummary> {
 
     final qrUrl = _sanitize(profile.donationQrUrl);
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.shadowSm,
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 26,
-                  backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.12),
-                  child: Text(
-                    name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppColors.bluePrimary,
-                      fontWeight: FontWeight.bold,
+                // Avatar circle with gradient
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                      ),
                     ),
                   ),
                 ),
@@ -149,26 +193,41 @@ class _RequesterSummaryState extends State<RequesterSummary> {
                     children: [
                       Text(
                         name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
                           color: AppColors.darkText,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.style_outlined, size: 16, color: AppColors.darkText.withValues(alpha: 0.6)),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              tipo.displayName,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.darkText.withValues(alpha: 0.7),
-                                letterSpacing: 0.1,
+                      const SizedBox(height: 6),
+                      // Type badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.volunteer_activism_rounded,
+                              size: 13,
+                              color: AppColors.bluePrimary,
+                            ),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                tipo.displayName,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppColors.bluePrimary,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.1,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -220,7 +279,7 @@ class _RequesterSummaryState extends State<RequesterSummary> {
             if (qrUrl.isNotEmpty) ...[
               const Divider(height: 28),
               SensitiveSummaryLine(
-                icon: Icons.qr_code_2_outlined,
+                icon: Icons.qr_code_2_rounded,
                 label: 'Canal QR registrado',
                 value: 'Código listo para escanear',
                 obscuredValue: 'Disponible para compartir',
@@ -232,7 +291,6 @@ class _RequesterSummaryState extends State<RequesterSummary> {
             ],
           ],
         ),
-      ),
     );
   }
 
@@ -270,29 +328,41 @@ class SummaryLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: AppColors.bluePrimary.withValues(alpha: 0.9)),
-          const SizedBox(width: 10),
+          // Icon badge
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 17, color: AppColors.bluePrimary),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.darkText.withValues(alpha: 0.7),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.darkText.withValues(alpha: 0.50),
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   value,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.darkText,
-                    height: 1.3,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -359,10 +429,23 @@ class SensitiveSummaryLine extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          tooltip: isVisible ? 'Ocultar' : 'Mostrar',
-          icon: Icon(isVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-          onPressed: onToggleVisibility,
+        Container(
+          margin: const EdgeInsets.only(top: 1),
+          decoration: BoxDecoration(
+            color: AppColors.bluePrimary.withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: IconButton(
+            tooltip: isVisible ? 'Ocultar' : 'Mostrar',
+            icon: Icon(
+              isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+              size: 19,
+              color: AppColors.bluePrimary,
+            ),
+            onPressed: onToggleVisibility,
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          ),
         ),
       ],
     );
@@ -379,19 +462,26 @@ class InfoPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: AppColors.bluePrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: AppColors.bluePrimary.withValues(alpha: 0.12),
+          width: 1,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppColors.bluePrimary.withValues(alpha: 0.75)),
+          Icon(icon, size: 15, color: AppColors.bluePrimary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.darkText.withValues(alpha: 0.75)),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppColors.darkText.withValues(alpha: 0.80),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

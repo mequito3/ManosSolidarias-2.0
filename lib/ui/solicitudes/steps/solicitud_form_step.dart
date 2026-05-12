@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,11 +32,6 @@ class SolicitudFormStep extends StatelessWidget {
     required this.maxEvidenceItems,
     required this.onAddEvidence,
     required this.onRemoveEvidence,
-    required this.onPickCover,
-    required this.onRemoveCover,
-    required this.coverPreviewBytes,
-    required this.uploadedCoverUrl,
-    required this.uploadingCover,
     required this.acceptsGuidelines,
     required this.onAcceptGuidelinesChanged,
     required this.onBack,
@@ -58,6 +55,10 @@ class SolicitudFormStep extends StatelessWidget {
     required this.onAddActivity,
     required this.onEditActivity,
     required this.onRemoveActivity,
+    required this.onPickCover,
+    required this.onRemoveCover,
+    required this.coverPreviewBytes,
+    required this.uploadingCover,
   });
 
   final GlobalKey<FormState> formKey;
@@ -75,11 +76,6 @@ class SolicitudFormStep extends StatelessWidget {
   final int maxEvidenceItems;
   final VoidCallback onAddEvidence;
   final void Function(int index) onRemoveEvidence;
-  final VoidCallback onPickCover;
-  final VoidCallback onRemoveCover;
-  final Uint8List? coverPreviewBytes;
-  final String? uploadedCoverUrl;
-  final bool uploadingCover;
   final bool acceptsGuidelines;
   final ValueChanged<bool?> onAcceptGuidelinesChanged;
   final VoidCallback onBack;
@@ -103,6 +99,10 @@ class SolicitudFormStep extends StatelessWidget {
   final VoidCallback onAddActivity;
   final void Function(int index) onEditActivity;
   final void Function(int index) onRemoveActivity;
+  final VoidCallback onPickCover;
+  final VoidCallback onRemoveCover;
+  final Uint8List? coverPreviewBytes;
+  final bool uploadingCover;
 
   bool get _isCampania => tipo == SolicitudTipo.campania;
   bool get _isKermesse => tipo == SolicitudTipo.kermesse;
@@ -128,14 +128,10 @@ class SolicitudFormStep extends StatelessWidget {
           const SizedBox(height: 16),
           SolicitudFormCard(
             children: [
-              Text(
-                config.sectionTitle,
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tipo seleccionado: ${config.chipTitle}',
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              _FormSectionHeader(
+                icon: Icons.edit_note_rounded,
+                title: config.sectionTitle,
+                subtitle: config.chipTitle,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -181,15 +177,54 @@ class SolicitudFormStep extends StatelessWidget {
                       .where((word) => word.isNotEmpty)
                       .length;
                   final isOverLimit = wordCount > solicitudTitleMaxWords;
+                  final isOk = wordCount >= solicitudTitleMinWords && !isOverLimit;
                   return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      'Palabras: $wordCount/$solicitudTitleMaxWords',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: isOverLimit
-                            ? theme.colorScheme.error
-                            : AppColors.darkText.withOpacity(0.6),
-                      ),
+                    padding: const EdgeInsets.only(top: 8, bottom: 4),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isOverLimit
+                                ? AppColors.error.withValues(alpha: 0.10)
+                                : isOk
+                                    ? AppColors.greenSuccess.withValues(alpha: 0.10)
+                                    : AppColors.bluePrimary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isOverLimit
+                                    ? Icons.warning_amber_rounded
+                                    : isOk
+                                        ? Icons.check_circle_rounded
+                                        : Icons.short_text_rounded,
+                                size: 13,
+                                color: isOverLimit
+                                    ? AppColors.error
+                                    : isOk
+                                        ? AppColors.greenSuccess
+                                        : AppColors.bluePrimary,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                'Palabras: $wordCount / $solicitudTitleMaxWords',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: isOverLimit
+                                      ? AppColors.error
+                                      : isOk
+                                          ? AppColors.greenSuccess
+                                          : AppColors.bluePrimary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -223,11 +258,17 @@ class SolicitudFormStep extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const SolicitudInlineInfo(
-                icon: Icons.category_outlined,
+                icon: Icons.auto_awesome_rounded,
                 message: 'El equipo asignará la categoría solidaria al revisar tu solicitud.',
               ),
-              const SizedBox(height: 16),
-              if (!_isKermesse)
+              if (!_isKermesse) ...[
+                const SizedBox(height: 20),
+                const _FormSectionHeader(
+                  icon: Icons.payments_rounded,
+                  title: 'Meta económica',
+                  subtitle: 'Monto en bolivianos',
+                ),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: goalCtrl,
                   enabled: !isSubmitting,
@@ -238,18 +279,34 @@ class SolicitudFormStep extends StatelessWidget {
                     hint: config.goalHint,
                     helper: 'Ingresa el monto en bolivianos. Deja vacío si no aplica.',
                   ).copyWith(
-                    prefixText: 'Bs ',
-                    prefixStyle: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                    suffixIcon: const Icon(Icons.payments_outlined),
+                    prefixIcon: Container(
+                      margin: const EdgeInsets.only(left: 12, right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Bs',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: AppColors.bluePrimary,
+                        ),
+                      ),
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                    suffixIcon: const Icon(Icons.monetization_on_rounded, color: AppColors.bluePrimary, size: 20),
                   ),
                 ),
+              ],
               if (_isCampania) ...[
-                const SizedBox(height: 20),
-                Text(
-                  'Datos del beneficiario',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                const SizedBox(height: 24),
+                const _FormSectionHeader(
+                  icon: Icons.person_rounded,
+                  title: 'Datos del beneficiario',
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 TextFormField(
                   controller: beneficiaryNameCtrl,
                   enabled: !isSubmitting,
@@ -329,14 +386,15 @@ class SolicitudFormStep extends StatelessWidget {
                 }),
               ],
               if (_isCampania || _isKermesse) ...[
-                const SizedBox(height: 20),
-                Text(
-                  _isCampania
-                      ? 'Evidencias fotográficas (mínimo 2)'
-                      : 'Galería de imágenes del evento (opcional)',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                const SizedBox(height: 24),
+                _FormSectionHeader(
+                  icon: Icons.photo_library_rounded,
+                  title: _isCampania
+                      ? 'Evidencias fotográficas'
+                      : 'Galería del evento',
+                  subtitle: _isCampania ? 'Mínimo 2 imágenes' : 'Opcional',
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 SolicitudEvidencePicker(
                   items: evidenceUploads,
                   uploading: isUploadingEvidence,
@@ -350,15 +408,15 @@ class SolicitudFormStep extends StatelessWidget {
                       : 'Sugerencia: añade fotos del espacio, del equipo y de actividades previas para motivar la asistencia.',
                 ),
               ],
-              const SizedBox(height: 20),
-              Text(
-                'Portada principal',
-                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              const SizedBox(height: 24),
+              _FormSectionHeader(
+                icon: Icons.image_rounded,
+                title: 'Portada de la campaña',
+                subtitle: 'Opcional · JPG, PNG · máx. 3 MB',
               ),
-              const SizedBox(height: 12),
-              SolicitudCoverImagePicker(
+              const SizedBox(height: 16),
+              _CoverPickerCard(
                 previewBytes: coverPreviewBytes,
-                imageUrl: uploadedCoverUrl,
                 uploading: uploadingCover,
                 onPick: onPickCover,
                 onRemove: onRemoveCover,
@@ -368,22 +426,46 @@ class SolicitudFormStep extends StatelessWidget {
           const SizedBox(height: 16),
           SolicitudFormCard(
             children: [
-              CheckboxListTile(
-                value: acceptsGuidelines,
-                onChanged: isSubmitting ? null : onAcceptGuidelinesChanged,
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Confirmo que la información es verificable y subiré evidencias del uso de fondos.',
+              // ─ Guidelines checkbox inside tinted container
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.bluePrimary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.bluePrimary.withValues(alpha: 0.12)),
+                ),
+                child: CheckboxListTile(
+                  value: acceptsGuidelines,
+                  onChanged: isSubmitting ? null : onAcceptGuidelinesChanged,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  activeColor: AppColors.bluePrimary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  title: Text(
+                    'Confirmo que la información es verificable y subiré evidencias del uso de fondos.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkText,
+                      height: 1.4,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               const SolicitudInlineInfo(
-                icon: Icons.notifications_active_outlined,
+                icon: Icons.notifications_rounded,
                 message:
                     'Te enviaremos una notificación cuando cambie el estado de tu solicitud o se requiera información adicional.',
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
+              // ─ Divider
+              Container(
+                height: 1,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
               Row(
                 children: [
                   AppSecondaryButton(
@@ -401,10 +483,21 @@ class SolicitudFormStep extends StatelessWidget {
                   ),
                 ],
               ),
-              TextButton(
-                onPressed: isSubmitting ? null : onCancel,
-                child: const Text('Cancelar y cerrar'),
-              ),
+              if (!isSubmitting)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Center(
+                    child: TextButton(
+                      onPressed: onCancel,
+                      child: Text(
+                        'Cancelar y cerrar',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.darkText.withValues(alpha: 0.40),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -493,11 +586,12 @@ class SolicitudFormStep extends StatelessWidget {
 
     return [
       const SizedBox(height: 20),
-      Text(
-        'Agenda y horario del evento',
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      const _FormSectionHeader(
+        icon: Icons.schedule_rounded,
+        title: 'Agenda y horario',
+        subtitle: 'Fecha y hora de inicio del evento',
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       buildField(
         field: dateField,
         controller: dateController,
@@ -510,12 +604,13 @@ class SolicitudFormStep extends StatelessWidget {
           'Define cuándo inicia la kermesse.',
         ),
       ),
-      const SizedBox(height: 20),
-      Text(
-        'Ubicación para el mapa público',
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      const SizedBox(height: 24),
+      const _FormSectionHeader(
+        icon: Icons.place_rounded,
+        title: 'Ubicación del evento',
+        subtitle: 'Punto visible en el mapa público',
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       buildField(
         field: locationNameField,
         controller: locationNameController,
@@ -532,15 +627,23 @@ class SolicitudFormStep extends StatelessWidget {
         onClear: isSubmitting || kermesseLocation == null ? null : onClearKermesseLocation,
         helperText: 'El punto seleccionado alimentará el mapa público y se guardará junto con la solicitud.',
       ),
-      CheckboxListTile(
-        value: useManualKermesseCoords,
-        onChanged: isSubmitting
-            ? null
-            : (value) => onManualKermesseCoordsChanged(value ?? false),
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: EdgeInsets.zero,
-        title: const Text('Ingresar coordenadas manualmente'),
-        subtitle: const Text('Marca esta opción si no puedes abrir Google Maps en tu dispositivo.'),
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.lightBackground,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.dividerColor),
+        ),
+        child: CheckboxListTile(
+          value: useManualKermesseCoords,
+          onChanged: isSubmitting
+              ? null
+              : (value) => onManualKermesseCoordsChanged(value ?? false),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: const Text('Ingresar coordenadas manualmente'),
+          subtitle: const Text('Marca esta opción si no puedes abrir Google Maps en tu dispositivo.'),
+        ),
       ),
       if (useManualKermesseCoords) ...[
         Row(
@@ -590,42 +693,37 @@ class SolicitudFormStep extends StatelessWidget {
             ),
           ],
         ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Puedes obtener las coordenadas desde Google Maps tocando y manteniendo presionado sobre el punto.',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.darkText.withValues(alpha: 0.7)),
-            ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SolicitudInlineInfo(
+            icon: Icons.info_outline_rounded,
+            message: 'Obtén las coordenadas en Google Maps: toca y mantén presionado sobre el punto deseado.',
           ),
         ),
       ] else if (kermesseLocation != null) ...[
         Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Text(
-            'Coordenadas guardadas automáticamente: ${kermesseLocation!.coordinatesLabel}',
-            style: theme.textTheme.bodySmall?.copyWith(color: AppColors.darkText.withValues(alpha: 0.7)),
+          child: SolicitudInlineInfo(
+            icon: Icons.check_circle_rounded,
+            message: 'Coordenadas guardadas: ${kermesseLocation!.coordinatesLabel}',
           ),
         ),
       ] else ...[
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Text(
-              'Selecciona el punto exacto en Google Maps para mostrarlo a los asistentes.',
-              style: theme.textTheme.bodySmall?.copyWith(color: AppColors.darkText.withValues(alpha: 0.7)),
-            ),
+        const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SolicitudInlineInfo(
+            icon: Icons.map_outlined,
+            message: 'Selecciona el punto exacto en Google Maps para mostrarlo a los asistentes.',
           ),
         ),
       ],
-      const SizedBox(height: 12),
-      Text(
-        'Programación y actividades',
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      const SizedBox(height: 24),
+      const _FormSectionHeader(
+        icon: Icons.event_note_rounded,
+        title: 'Programación y actividades',
+        subtitle: 'Menú, shows y entretenimiento',
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       SolicitudKermesseMenuList(
         items: menuItems,
         enabled: !isSubmitting,
@@ -641,12 +739,13 @@ class SolicitudFormStep extends StatelessWidget {
         onEdit: onEditActivity,
         onRemove: onRemoveActivity,
       ),
-      const SizedBox(height: 12),
-      Text(
-        'Impacto social esperado',
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      const SizedBox(height: 24),
+      const _FormSectionHeader(
+        icon: Icons.people_rounded,
+        title: 'Impacto social esperado',
+        subtitle: 'Beneficiarios y destino de fondos',
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       buildField(
         field: beneficiariesField,
         controller: beneficiariesController,
@@ -659,12 +758,13 @@ class SolicitudFormStep extends StatelessWidget {
         helper: 'Explica a qué proyecto o causa se destinarán los fondos recaudados.',
         maxLines: goalField.maxLines,
       ),
-      const SizedBox(height: 12),
-      Text(
-        'Aliados y patrocinadores (opcional)',
-        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+      const SizedBox(height: 24),
+      const _FormSectionHeader(
+        icon: Icons.handshake_rounded,
+        title: 'Aliados y patrocinadores',
+        subtitle: 'Opcional',
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 16),
       buildField(
         field: partnersField,
         controller: partnersController,
@@ -682,13 +782,16 @@ class SolicitudFormCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: children,
-        ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.shadowSm,
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
       ),
     );
   }
@@ -702,18 +805,29 @@ class SolicitudInlineInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: AppColors.bluePrimary.withValues(alpha: 0.85)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            message,
-            style: Theme.of(context).textTheme.bodySmall,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.bluePrimary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.bluePrimary.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 17, color: AppColors.bluePrimary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.darkText.withValues(alpha: 0.70),
+                height: 1.4,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -727,44 +841,126 @@ class SolicitudIntroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(config.introTitle, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 12),
-            Text(
-              config.introDescription,
-              style: theme.textTheme.bodySmall,
-            ),
-            if (config.checklist.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text('Checklist recomendado', style: theme.textTheme.titleSmall),
-              const SizedBox(height: 8),
-              ...config.checklist.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.check_circle_outline, size: 18, color: AppColors.greenSuccess),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(item, style: theme.textTheme.bodySmall),
+    final isKermesse = config.tipo == SolicitudTipo.kermesse;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: AppColors.shadowSm,
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ─ Header row with badge
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: isKermesse
+                      ? AppColors.actionGradient
+                      : AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  isKermesse
+                      ? Icons.diversity_3_rounded
+                      : Icons.checklist_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      config.introTitle,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: AppColors.darkText,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      config.introDescription,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.55),
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
-            if (submitError != null) ...[
-              const SizedBox(height: 16),
-              SolicitudInlineError(message: submitError!),
-            ],
+          ),
+          if (config.checklist.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.lightBackground,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Checklist recomendado',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText.withValues(alpha: 0.55),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...config.checklist.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: AppColors.greenSuccess.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check_rounded,
+                              size: 13,
+                              color: AppColors.greenSuccess,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.darkText.withValues(alpha: 0.75),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
-        ),
+          if (submitError != null) ...[
+            const SizedBox(height: 14),
+            SolicitudInlineError(message: submitError!),
+          ],
+        ],
       ),
     );
   }
@@ -842,14 +1038,43 @@ class SolicitudCoverImagePicker extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.lightBackground,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.grayNeutral),
+          border: Border.all(
+            color: AppColors.bluePrimary.withValues(alpha: 0.20),
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.image_outlined, size: 44, color: AppColors.grayNeutral),
-            SizedBox(height: 8),
-            Text('Añade una imagen en formato horizontal'),
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.bluePrimary.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.add_photo_alternate_rounded,
+                size: 28,
+                color: AppColors.bluePrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Sube una imagen de portada',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Formato horizontal · JPG o PNG',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: AppColors.darkText.withValues(alpha: 0.45),
+              ),
+            ),
           ],
         ),
       );
@@ -894,11 +1119,19 @@ class SolicitudCoverImagePicker extends StatelessWidget {
           ],
         ),
         if (hasImage)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'Esta portada se mostrará en la lista pública de campañas.',
-              style: TextStyle(fontSize: 12),
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 14, color: AppColors.bluePrimary.withValues(alpha: 0.7)),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'Esta portada se mostrará en la lista pública de campañas.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.grayNeutral),
+                  ),
+                ),
+              ],
             ),
           ),
       ],
@@ -970,41 +1203,75 @@ class SolicitudEvidencePicker extends StatelessWidget {
               SizedBox(
                 width: 120,
                 height: 120,
-                child: OutlinedButton(
-                  onPressed: uploading ? null : onAdd,
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide(color: AppColors.grayNeutral.withValues(alpha: 0.8)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        uploading ? Icons.hourglass_top_outlined : Icons.add_photo_alternate_outlined,
-                        size: 26,
-                        color: AppColors.bluePrimary,
+                child: GestureDetector(
+                  onTap: uploading ? null : onAdd,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.bluePrimary.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.bluePrimary.withValues(alpha: 0.22),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        uploading ? 'Subiendo...' : 'Agregar',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            uploading
+                                ? Icons.hourglass_top_rounded
+                                : Icons.add_photo_alternate_rounded,
+                            size: 19,
+                            color: AppColors.bluePrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          uploading ? 'Subiendo...' : 'Agregar',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.bluePrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
           ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          '$counterLabel: ${items.length} de $maxItems',
-          style: theme.textTheme.bodySmall,
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.bluePrimary.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$counterLabel: ${items.length} / $maxItems',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.bluePrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Text(
           helperText,
-          style: theme.textTheme.bodySmall,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppColors.darkText.withValues(alpha: 0.55),
+          ),
         ),
       ],
     );
@@ -1022,7 +1289,7 @@ InputDecoration solicitudFieldDecoration({
   required String label,
   String? hint,
   String? helper,
-  int helperMaxLines = 1,
+  int helperMaxLines = 2,
 }) {
   return InputDecoration(
     labelText: label,
@@ -1030,21 +1297,284 @@ InputDecoration solicitudFieldDecoration({
     helperText: helper,
     helperMaxLines: helperMaxLines,
     filled: true,
-    fillColor: Colors.white,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+    fillColor: AppColors.lightBackground,
+    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.grayNeutral, width: 1),
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.dividerColor, width: 1),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.grayNeutral, width: 1),
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.dividerColor, width: 1),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(16),
-      borderSide: const BorderSide(color: AppColors.bluePrimary, width: 1.5),
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.bluePrimary, width: 2),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(14),
+      borderSide: const BorderSide(color: AppColors.error, width: 2),
     ),
   );
+}
+
+// ──────────────── Cover picker card ────────────────────────────────
+class _CoverPickerCard extends StatelessWidget {
+  const _CoverPickerCard({
+    required this.previewBytes,
+    required this.uploading,
+    required this.onPick,
+    required this.onRemove,
+  });
+
+  final Uint8List? previewBytes;
+  final bool uploading;
+  final VoidCallback onPick;
+  final VoidCallback onRemove;
+
+  bool get _hasImage => previewBytes != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final radius = BorderRadius.circular(AppColors.radiusLg);
+
+    if (uploading) {
+      return Container(
+        width: double.infinity,
+        height: 160,
+        decoration: BoxDecoration(
+          color: AppColors.lightBackground,
+          borderRadius: radius,
+          border: Border.all(color: AppColors.dividerColor, width: 1.5),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                valueColor: AlwaysStoppedAnimation(AppColors.bluePrimary),
+              ),
+            ),
+            const SizedBox(height: AppColors.space8),
+            Text(
+              'Subiendo portada…',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.bluePrimary,
+                fontWeight: AppColors.fontWeightSemiBold,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_hasImage) {
+      return ClipRRect(
+        borderRadius: radius,
+        child: SizedBox(
+          width: double.infinity,
+          height: 160,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.memory(previewBytes!, fit: BoxFit.cover),
+              // scrim
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.45)],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: AppColors.space8,
+                right: AppColors.space8,
+                child: Row(
+                  children: [
+                    _CoverActionChip(icon: Icons.edit_rounded, label: 'Cambiar', onTap: onPick),
+                    const SizedBox(width: AppColors.space8),
+                    Material(
+                      color: AppColors.error.withValues(alpha: 0.88),
+                      borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                      child: InkWell(
+                        onTap: onRemove,
+                        borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                        child: const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: Icon(Icons.close_rounded, size: 16, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Empty state — tappable area
+    return Material(
+      color: AppColors.lightBackground,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onPick,
+        borderRadius: radius,
+        child: Container(
+          width: double.infinity,
+          height: 160,
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(color: AppColors.dividerColor, width: 1.5),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: AppColors.iconSizeXl,
+                height: AppColors.iconSizeXl,
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                  boxShadow: AppColors.shadowSm,
+                ),
+                child: const Icon(Icons.add_photo_alternate_rounded, color: Colors.white, size: AppColors.iconSizeMd),
+              ),
+              const SizedBox(height: AppColors.space12),
+              Text(
+                'Toca para elegir portada',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: AppColors.fontWeightBold,
+                  color: AppColors.darkText,
+                ),
+              ),
+              const SizedBox(height: AppColors.space4),
+              Text(
+                'Una imagen atractiva genera más donaciones',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.grayNeutral,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoverActionChip extends StatelessWidget {
+  const _CoverActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.92),
+      borderRadius: BorderRadius.circular(AppColors.radiusRound),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppColors.radiusRound),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppColors.space12,
+            vertical: AppColors.space8 - 2,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: AppColors.iconSizeSm - 3, color: AppColors.darkText),
+              const SizedBox(width: AppColors.space4),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: AppColors.fontWeightBold,
+                  color: AppColors.darkText,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────── Form section header ────────────────────────────────
+class _FormSectionHeader extends StatelessWidget {
+  const _FormSectionHeader({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(icon, color: Colors.white, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14,
+                  color: AppColors.darkText,
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.darkText.withValues(alpha: 0.45),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class SolicitudKermesseMenuItem {
@@ -1156,39 +1686,58 @@ class SolicitudKermesseMenuList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Platos y precios',
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        const _FormSectionHeader(
+          icon: Icons.restaurant_menu_rounded,
+          title: 'Platos y precios',
+          subtitle: 'Menú del evento',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Detalla cada plato con su precio para facilitar la difusión.',
-              style: theme.textTheme.bodySmall,
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: SolicitudInlineInfo(
+              icon: Icons.info_outline_rounded,
+              message: 'Detalla cada plato con su precio para facilitar la difusión.',
             ),
           )
         else
           Column(
             children: [
               for (var i = 0; i < items.length; i++)
-                Card(
+                Container(
                   margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.dividerColor),
+                    boxShadow: AppColors.shadowSm,
+                  ),
                   child: ListTile(
-                    title: Text(items[i].name),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeAction.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.fastfood_rounded, size: 18, color: AppColors.orangeAction),
+                    ),
+                    title: Text(items[i].name, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: items[i].price != null
-                        ? Text('Costo sugerido: Bs ${items[i].price!.toStringAsFixed(2)}')
-                        : const Text('Costo sugerido: pendiente'),
+                        ? Text('Bs ${items[i].price!.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.greenSuccess, fontWeight: FontWeight.w600))
+                        : const Text('Precio pendiente', style: TextStyle(color: AppColors.grayDark)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          color: AppColors.bluePrimary,
                           onPressed: enabled ? () => onEdit(i) : null,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline),
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          color: AppColors.error,
                           onPressed: enabled ? () => onRemove(i) : null,
                         ),
                       ],
@@ -1197,9 +1746,10 @@ class SolicitudKermesseMenuList extends StatelessWidget {
                 ),
             ],
           ),
+        const SizedBox(height: 4),
         AppSecondaryButton(
           label: 'Añadir plato',
-          icon: Icons.add_outlined,
+          icon: Icons.add_rounded,
           onPressed: enabled ? onAdd : null,
         ),
       ],
@@ -1229,39 +1779,58 @@ class SolicitudKermesseActivityList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Shows y entretenimiento',
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        const _FormSectionHeader(
+          icon: Icons.music_note_rounded,
+          title: 'Shows y entretenimiento',
+          subtitle: 'Actividades del evento',
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         if (items.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Registra grupos musicales, academias o juegos con su horario o costo.',
-              style: theme.textTheme.bodySmall,
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 4),
+            child: SolicitudInlineInfo(
+              icon: Icons.info_outline_rounded,
+              message: 'Registra grupos musicales, academias o juegos con su horario o costo.',
             ),
           )
         else
           Column(
             children: [
               for (var i = 0; i < items.length; i++)
-                Card(
+                Container(
                   margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.dividerColor),
+                    boxShadow: AppColors.shadowSm,
+                  ),
                   child: ListTile(
-                    title: Text(items[i].name),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.star_rounded, size: 18, color: AppColors.bluePrimary),
+                    ),
+                    title: Text(items[i].name, style: const TextStyle(fontWeight: FontWeight.w600)),
                     subtitle: items[i].detail != null && items[i].detail!.isNotEmpty
-                        ? Text(items[i].detail!)
-                        : const Text('Detalle pendiente'),
+                        ? Text(items[i].detail!, style: const TextStyle(color: AppColors.grayDark))
+                        : const Text('Detalle pendiente', style: TextStyle(color: AppColors.grayNeutral)),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined),
+                          icon: const Icon(Icons.edit_outlined, size: 20),
+                          color: AppColors.bluePrimary,
                           onPressed: enabled ? () => onEdit(i) : null,
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline),
+                          icon: const Icon(Icons.delete_outline, size: 20),
+                          color: AppColors.error,
                           onPressed: enabled ? () => onRemove(i) : null,
                         ),
                       ],
@@ -1270,9 +1839,10 @@ class SolicitudKermesseActivityList extends StatelessWidget {
                 ),
             ],
           ),
+        const SizedBox(height: 4),
         AppSecondaryButton(
           label: 'Añadir show o actividad',
-          icon: Icons.add_outlined,
+          icon: Icons.add_rounded,
           onPressed: enabled ? onAdd : null,
         ),
       ],

@@ -91,37 +91,186 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Antes de empezar',
-                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        // Hero banner
+        Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.bluePrimary.withValues(alpha: 0.28),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      width: 24,
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'Reúne la información clave de tu iniciativa solidaria y prepara evidencias para que el equipo pueda validarla.',
-                  style: theme.textTheme.bodyMedium,
-                ),
-                const SizedBox(height: 12),
-                const SolicitudInlineInfo(
-                  icon: Icons.info_outline,
-                  message:
-                      'Necesitarás una portada en formato horizontal, meta económica en bolivianos y el detalle completo de cómo utilizarás lo recaudado.',
-                ),
-              ],
-            ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.volunteer_activism_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Comparte tu causa',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Crea una campaña o kermesse solidaria y conecta con personas que quieren apoyarte.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.85),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 32),
-        Text(
-          'Cuando estés listo, toca el botón flotante “Crear solicitud” para avanzar.',
-          textAlign: TextAlign.right,
-          style: theme.textTheme.bodySmall,
+        const SizedBox(height: 20),
+        // Checklist card
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.bluePrimary.withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.orangeAction.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.checklist_rounded,
+                      color: AppColors.orangeAction,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Antes de empezar',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _LandingCheckItem(
+                icon: Icons.image_rounded,
+                color: AppColors.bluePrimary,
+                text: 'Foto de portada horizontal (máx. 3 MB)',
+              ),
+              const _LandingCheckItem(
+                icon: Icons.monetization_on_rounded,
+                color: Color(0xFF4CAF50),
+                text: 'Meta económica en bolivianos (Bs)',
+              ),
+              const _LandingCheckItem(
+                icon: Icons.description_rounded,
+                color: AppColors.orangeAction,
+                text: 'Descripción detallada de cómo usarás lo recaudado',
+              ),
+              const _LandingCheckItem(
+                icon: Icons.photo_library_rounded,
+                color: Color(0xFF9C27B0),
+                text: 'Al menos 2 fotos de evidencia para validación',
+              ),
+            ],
+          ),
         ),
+        const SizedBox(height: 14),
+        // Info note
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.bluePrimary.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppColors.bluePrimary.withValues(alpha: 0.15),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                size: 18,
+                color: AppColors.bluePrimary,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Tu solicitud será revisada por el equipo antes de publicarse. Te notificaremos por correo con el resultado.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.bluePrimary.withValues(alpha: 0.8),
+                    height: 1.4,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 80),
       ],
     );
   }
@@ -170,11 +319,6 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       maxEvidenceItems: _maxEvidenceItems,
       onAddEvidence: _openEvidenceSourceSheet,
       onRemoveEvidence: _removeEvidenceAt,
-      onPickCover: _openCoverSourceSheet,
-      onRemoveCover: _removeCoverImage,
-      coverPreviewBytes: _coverPreviewBytes,
-      uploadedCoverUrl: _uploadedCoverUrl,
-      uploadingCover: _uploadingCover,
       acceptsGuidelines: _acceptsGuidelines,
       onAcceptGuidelinesChanged: (value) =>
           setState(() => _acceptsGuidelines = value ?? false),
@@ -200,6 +344,10 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       onAddActivity: _addActivity,
       onEditActivity: _editActivity,
       onRemoveActivity: _removeActivity,
+      onPickCover: _openCoverSourceSheet,
+      onRemoveCover: _removeCoverImage,
+      coverPreviewBytes: _coverPreviewBytes,
+      uploadingCover: _uploadingCover,
     );
   }
 
@@ -335,24 +483,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     }
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Tomar foto'),
-                onTap: () => Navigator.of(context).pop(ImageSource.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Elegir de la galería'),
-                onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-              ),
-              const SizedBox(height: 4),
-            ],
-          ),
+        return _ImageSourceSheet(
+          title: 'Foto de portada',
+          subtitle: 'Elige la imagen principal de tu campaña',
+          cameraLabel: 'Tomar foto',
+          galleryLabel: 'Elegir de la galería',
+          onCamera: () => Navigator.of(context).pop(ImageSource.camera),
+          onGallery: () => Navigator.of(context).pop(ImageSource.gallery),
         );
       },
     );
@@ -421,24 +560,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
 
     final _EvidencePickerChoice? choice = await showModalBottomSheet<_EvidencePickerChoice>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Tomar foto'),
-                onTap: () => Navigator.of(context).pop(_EvidencePickerChoice.camera),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Elegir varias de la galería'),
-                onTap: () => Navigator.of(context).pop(_EvidencePickerChoice.gallery),
-              ),
-              const SizedBox(height: 4),
-            ],
-          ),
+        return _ImageSourceSheet(
+          title: 'Agregar evidencia',
+          subtitle: 'Fotos que respaldan tu solicitud ($remainingSlots restantes)',
+          cameraLabel: 'Tomar foto',
+          galleryLabel: 'Elegir varias de la galería',
+          onCamera: () => Navigator.of(context).pop(_EvidencePickerChoice.camera),
+          onGallery: () => Navigator.of(context).pop(_EvidencePickerChoice.gallery),
         );
       },
     );
@@ -1077,27 +1207,53 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     });
   }
 
+  int get _stepIndex {
+    switch (_currentStep) {
+      case _SolicitudFlowStep.landing:
+        return 0;
+      case _SolicitudFlowStep.typeSelection:
+        return 1;
+      case _SolicitudFlowStep.profileReview:
+        return 2;
+      case _SolicitudFlowStep.form:
+        return 3;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Registrar solicitud solidaria')),
       backgroundColor: AppColors.lightBackground,
+      appBar: _SolicitudAppBar(stepIndex: _stepIndex),
       floatingActionButton: _currentStep == _SolicitudFlowStep.landing
-          ? FloatingActionButton.extended(
-              onPressed: () => _goToStep(_SolicitudFlowStep.typeSelection),
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Crear solicitud'),
-              backgroundColor: AppColors.orangeAction,
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: AppColors.actionGradient,
+                borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                boxShadow: AppColors.shadowLg,
+              ),
+              child: FloatingActionButton.extended(
+                onPressed: () => _goToStep(_SolicitudFlowStep.typeSelection),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                icon: const Icon(Icons.arrow_forward_rounded, size: 22),
+                label: const Text(
+                  'Comenzar',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+              ),
             )
           : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, _) {
             if (_controller.isLoading && !_controller.hasLoaded) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: CircularProgressIndicator(color: AppColors.bluePrimary),
+              );
             }
             if (_controller.loadError != null && !_controller.hasLoaded) {
               return _LoadErrorView(
@@ -1121,19 +1277,116 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
                 break;
             }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 640),
-                  child: stepContent,
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.04, 0),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: KeyedSubtree(
+                key: ValueKey(_currentStep),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(
+                    left: 20,
+                    right: 20,
+                    top: 16,
+                    bottom: _currentStep == _SolicitudFlowStep.landing ? 100 : 24,
+                  ),
+                  physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics()),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: stepContent,
+                    ),
+                  ),
                 ),
               ),
             );
           },
         ),
       ),
+    );
+  }
+}
+
+// ── Styled app bar with step progress ────────────────────────────────────────
+
+class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const _SolicitudAppBar({required this.stepIndex});
+
+  final int stepIndex;
+
+  static const _stepLabels = ['Inicio', 'Tipo', 'Perfil', 'Formulario'];
+
+  @override
+  Size get preferredSize => const Size.fromHeight(72);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          foregroundColor: AppColors.darkText,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () => Navigator.of(context).maybePop(),
+            tooltip: 'Volver',
+          ),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nueva campaña',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.3,
+                  color: AppColors.darkText,
+                ),
+              ),
+              Text(
+                'Paso ${stepIndex + 1} de 4 · ${_stepLabels[stepIndex]}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkText.withValues(alpha: 0.45),
+                ),
+              ),
+            ],
+          ),
+          centerTitle: false,
+        ),
+        // Step progress bar
+        Container(
+          height: 3,
+          color: AppColors.dividerColor.withValues(alpha: 0.4),
+          child: FractionallySizedBox(
+            alignment: Alignment.centerLeft,
+            widthFactor: (stepIndex + 1) / 4,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: AppColors.primaryGradient,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1166,6 +1419,210 @@ class _LoadErrorView extends StatelessWidget {
               onPressed: onRetry,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Landing checklist item ────────────────────────────────────────────────────
+
+class _LandingCheckItem extends StatelessWidget {
+  const _LandingCheckItem({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 17),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkText,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Image source bottom sheet ─────────────────────────────────────────────────
+
+class _ImageSourceSheet<T> extends StatelessWidget {
+  const _ImageSourceSheet({
+    required this.title,
+    required this.subtitle,
+    required this.cameraLabel,
+    required this.galleryLabel,
+    required this.onCamera,
+    required this.onGallery,
+  });
+
+  final String title;
+  final String subtitle;
+  final String cameraLabel;
+  final String galleryLabel;
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 32,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 4),
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.darkText.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                children: [
+                  _SheetOptionTile(
+                    icon: Icons.photo_camera_rounded,
+                    color: AppColors.bluePrimary,
+                    label: cameraLabel,
+                    onTap: onCamera,
+                  ),
+                  const SizedBox(height: 8),
+                  _SheetOptionTile(
+                    icon: Icons.photo_library_rounded,
+                    color: AppColors.orangeAction,
+                    label: galleryLabel,
+                    onTap: onGallery,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetOptionTile extends StatelessWidget {
+  const _SheetOptionTile({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.07),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                  letterSpacing: -0.1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

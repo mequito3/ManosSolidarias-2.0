@@ -40,14 +40,13 @@ class SolicitudController extends ChangeNotifier {
 		}
 
 			try {
-				final categoriesFuture = _service.fetchCategories();
-				final organizationsFuture = _service.fetchOrganizationsForCurrentUser();
+				final results = await Future.wait([
+					_service.fetchCategories(),
+					_service.fetchOrganizationsForCurrentUser(),
+				]);
 
-				final categories = await categoriesFuture;
-				final organizations = await organizationsFuture;
-
-				_categories = categories;
-				_organizations = organizations;
+				_categories = results[0] as List<SolicitudCategory>;
+				_organizations = results[1] as List<SolicitudOrganization>;
 			_hasLoaded = true;
 		} on SolicitudServiceException catch (error) {
 			_loadError = error.message;

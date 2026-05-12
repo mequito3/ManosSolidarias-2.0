@@ -5,20 +5,48 @@ import '../../models/donor_trophy_entry.dart';
 import '../../theme/app_colors.dart';
 
 class DonorTrophiesPage extends StatefulWidget {
-  const DonorTrophiesPage({super.key, required this.controller});
+  const DonorTrophiesPage({super.key, required this.controller, this.scrollToRanking = false});
 
   final DonorTrophyController controller;
+  final bool scrollToRanking;
 
   @override
   State<DonorTrophiesPage> createState() => _DonorTrophiesPageState();
 }
 
 class _DonorTrophiesPageState extends State<DonorTrophiesPage> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _rankingKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     if (!widget.controller.hasLoaded) {
       widget.controller.loadLeaderboard();
+    }
+    
+    // Hacer scroll al ranking si viene de notificación
+    if (widget.scrollToRanking) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToRanking();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToRanking() {
+    final context = _rankingKey.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -170,6 +198,7 @@ class _DonorTrophiesPageState extends State<DonorTrophiesPage> {
             onRefresh: _handleRefresh,
             color: AppColors.bluePrimary,
             child: CustomScrollView(
+              controller: _scrollController,
               slivers: [
                 // App Bar personalizado
                 SliverAppBar(
@@ -245,9 +274,13 @@ class _DonorTrophiesPageState extends State<DonorTrophiesPage> {
                         const SizedBox(height: 24),
                         _TopThreePodium(entries: controller.topThree),
                         const SizedBox(height: 28),
-                        _SectionHeader(
-                          title: 'Últimos 10 del ranking',
-                          icon: Icons.format_list_numbered,
+                        Container(
+                          key: _rankingKey,
+                          child: _SectionHeader(
+                            title: 'Últimos 10 del ranking',
+                            icon: Icons.format_list_numbered,
+                            highlighted: widget.scrollToRanking,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ...controller.remainingEntries
@@ -352,6 +385,7 @@ class _ProfileHighlight extends StatelessWidget {
       child: Column(
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 decoration: BoxDecoration(
@@ -378,6 +412,7 @@ class _ProfileHighlight extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       profile!.displayName,
@@ -389,10 +424,10 @@ class _ProfileHighlight extends StatelessWidget {
                             fontSize: 16,
                           ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 6),
                     Row(
                       children: [
-                        Icon(Icons.star, size: 12, color: AppColors.orangeAction),
+                        Icon(Icons.star, size: 14, color: AppColors.orangeAction),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -402,66 +437,147 @@ class _ProfileHighlight extends StatelessWidget {
                             style: TextStyle(
                                   color: AppColors.orangeAction,
                                   fontWeight: FontWeight.w600,
-                                  fontSize: 11,
+                                  fontSize: 12,
                                 ),
                           ),
                         ),
                       ],
                     ),
+                    if (profile!.hasRanking) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppColors.bluePrimary, AppColors.bluePrimary.withValues(alpha: 0.8)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.bluePrimary.withValues(alpha: 0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.military_tech, color: Colors.white, size: 16),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '#${profile!.position}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
-              if (profile!.hasRanking)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [AppColors.bluePrimary, AppColors.bluePrimary.withValues(alpha: 0.8)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.bluePrimary.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.orangeAction.withValues(alpha: 0.1),
+                  AppColors.greenSuccess.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.orangeAction.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.military_tech, color: Colors.white, size: 18),
-                      const SizedBox(width: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.paid,
+                            size: 16,
+                            color: AppColors.greenSuccess,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Total donado',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.mediumText,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
                       Text(
-                        '#${profile!.position}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                        _formatCurrency(profile!.totalDonated),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.greenSuccess,
+                          fontSize: 20,
                         ),
                       ),
                     ],
                   ),
                 ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: _StatBlock(
-                  label: 'Total donado',
-                  value: _formatCurrency(profile!.totalDonated),
+                Container(
+                  width: 1,
+                  height: 40,
+                  color: AppColors.grayLight,
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _StatBlock(
-                  label: 'Donaciones',
-                  value: profile!.donationsCount.toString(),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.volunteer_activism,
+                            size: 16,
+                            color: AppColors.bluePrimary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Donaciones',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.mediumText,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        profile!.donationsCount.toString(),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.bluePrimary,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           if (nextAmount != null) ...[
             const SizedBox(height: 16),
@@ -1003,34 +1119,58 @@ class _StatBlock extends StatelessWidget {
 
 // Widget para encabezado de sección
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title, required this.icon});
+  const _SectionHeader({required this.title, required this.icon, this.highlighted = false});
 
   final String title;
   final IconData icon;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.bluePrimary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 600),
+      padding: EdgeInsets.symmetric(
+        horizontal: highlighted ? 12 : 0,
+        vertical: highlighted ? 12 : 0,
+      ),
+      decoration: BoxDecoration(
+        color: highlighted ? AppColors.bluePrimary.withValues(alpha: 0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: highlighted ? Border.all(
+          color: AppColors.bluePrimary.withValues(alpha: 0.3),
+          width: 2,
+        ) : null,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: highlighted ? 0.2 : 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: AppColors.bluePrimary, size: 20),
           ),
-          child: Icon(icon, color: AppColors.bluePrimary, size: 20),
-        ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-            color: AppColors.darkText,
-            letterSpacing: -0.5,
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: highlighted ? 19 : 18,
+              color: AppColors.darkText,
+              letterSpacing: -0.5,
+            ),
           ),
-        ),
-      ],
+          if (highlighted) ...[
+            const SizedBox(width: 8),
+            Icon(
+              Icons.arrow_downward,
+              color: AppColors.bluePrimary,
+              size: 16,
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

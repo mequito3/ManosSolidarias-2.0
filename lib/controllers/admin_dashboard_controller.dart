@@ -301,7 +301,7 @@ class AdminDashboardController extends ChangeNotifier {
     debugPrint('AdminDashboardController: 🔔 Nueva organización detectada');
     debugPrint('Payload: ${payload.newRecord}');
     
-    final estado = payload.newRecord['estado_verificacion'] as String?;
+    final estado = payload.newRecord['estado'] as String?;
     
     // Solo refrescar si está pendiente de verificación
     if (estado == 'pendiente' || estado == 'en_revision') {
@@ -313,8 +313,8 @@ class AdminDashboardController extends ChangeNotifier {
   void _handleOrganizacionUpdate(PostgresChangePayload payload) {
     debugPrint('AdminDashboardController: 🔄 Organización actualizada');
     
-    final oldEstado = payload.oldRecord['estado_verificacion'] as String?;
-    final newEstado = payload.newRecord['estado_verificacion'] as String?;
+    final oldEstado = payload.oldRecord['estado'] as String?;
+    final newEstado = payload.newRecord['estado'] as String?;
     
     // Si cambió el estado, refrescar
     if (oldEstado != newEstado) {

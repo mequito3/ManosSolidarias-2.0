@@ -26,7 +26,24 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Historial de donaciones')),
+      appBar: AppBar(
+        title: const Text(
+          'Historial de donaciones',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppColors.bluePrimary, AppColors.blueSecondary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
       backgroundColor: AppColors.lightBackground,
       body: AnimatedBuilder(
         animation: widget.controller,
@@ -79,127 +96,180 @@ class _DonationHistoryCard extends StatelessWidget {
     final validatedText = entry.validatedAt != null ? _formatDate(entry.validatedAt!) : null;
     final statusColor = _statusColor(entry.status);
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header strip with status colour
+          Container(
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              border: Border(
+                bottom: BorderSide(color: statusColor.withValues(alpha: 0.2)),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(14),
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    Icons.volunteer_activism_outlined,
-                    color: statusColor,
+                  child: Icon(Icons.volunteer_activism_rounded, color: statusColor, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    entry.campaignTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                      height: 1.3,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.campaignTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 8,
-                        children: [
-                          Chip(
-                            backgroundColor: statusColor.withValues(alpha: 0.15),
-                            label: Text(
-                              entry.status.label,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
-                          Chip(
-                            backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.12),
-                            label: Text(
-                              amountText,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.bluePrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                const SizedBox(width: 8),
+                // Status badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.35)),
+                  ),
+                  child: Text(
+                    entry.status.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _DetailRow(
-              icon: Icons.event_outlined,
-              label: 'Registrada',
-              value: dateText,
+          ),
+          // Body
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Amount + date row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppColors.bluePrimary, AppColors.blueSecondary],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        amountText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.access_time_rounded, size: 13, color: AppColors.grayDark),
+                    const SizedBox(width: 4),
+                    Text(
+                      dateText,
+                      style: theme.textTheme.bodySmall?.copyWith(color: AppColors.grayDark),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Detail rows
+                if (validatedText != null)
+                  _DetailRow(
+                    icon: Icons.verified_outlined,
+                    label: entry.status == DonationStatus.approved ? 'Aprobada' : 'Actualizada',
+                    value: validatedText,
+                  ),
+                if (entry.method != null)
+                  _DetailRow(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: 'Método',
+                    value: _methodLabel(entry.method!),
+                  ),
+                if (entry.reference != null)
+                  _DetailRow(
+                    icon: Icons.confirmation_number_outlined,
+                    label: 'Referencia',
+                    value: entry.reference!,
+                  ),
+                if (entry.rewardTitle != null)
+                  _DetailRow(
+                    icon: Icons.card_giftcard_outlined,
+                    label: 'Recompensa',
+                    value: entry.rewardTitle!,
+                  ),
+                if (entry.message != null) ...[
+                  const SizedBox(height: 6),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightBackground,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.grayLight),
+                    ),
+                    child: Text(
+                      entry.message!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.mediumText,
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+                if (entry.hasReceipt) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _openReceipt(context, entry.receiptUrl!),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.bluePrimary.withValues(alpha: 0.4)),
+                        foregroundColor: AppColors.bluePrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.image_search_rounded, size: 18),
+                      label: const Text('Ver comprobante', style: TextStyle(fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            if (validatedText != null)
-              _DetailRow(
-                icon: Icons.verified_outlined,
-                label: entry.status == DonationStatus.approved ? 'Aprobada' : 'Actualizada',
-                value: validatedText,
-              ),
-            if (entry.method != null)
-              _DetailRow(
-                icon: Icons.account_balance_wallet_outlined,
-                label: 'Método',
-                value: _methodLabel(entry.method!),
-              ),
-            if (entry.reference != null)
-              _DetailRow(
-                icon: Icons.confirmation_number_outlined,
-                label: 'Referencia',
-                value: entry.reference!,
-              ),
-            if (entry.rewardTitle != null)
-              _DetailRow(
-                icon: Icons.card_giftcard_outlined,
-                label: 'Recompensa',
-                value: entry.rewardTitle!,
-              ),
-            if (entry.message != null) ...[
-              const SizedBox(height: 12),
-              Text(
-                entry.message!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.darkText.withValues(alpha: 0.75),
-                  height: 1.35,
-                ),
-              ),
-            ],
-            if (entry.hasReceipt) ...[
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  onPressed: () => _openReceipt(context, entry.receiptUrl!),
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: const Text('Ver comprobante'),
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -279,13 +349,20 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(bottom: 7),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.bluePrimary),
+          Container(
+            margin: const EdgeInsets.only(top: 1),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(icon, size: 13, color: AppColors.bluePrimary),
+          ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -293,15 +370,18 @@ class _DetailRow extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.darkText,
+                    color: AppColors.mediumText,
+                    fontSize: 11,
+                    letterSpacing: 0.2,
                   ),
                 ),
                 Text(
                   value,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.darkText.withValues(alpha: 0.75),
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: 13,
                     height: 1.35,
                   ),
                 ),
@@ -320,30 +400,43 @@ class _DonationHistoryEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.history, size: 64, color: AppColors.grayNeutral),
-          const SizedBox(height: 16),
-          Text(
-            'Aún no registraste donaciones.',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: AppColors.darkText,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.bluePrimary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.volunteer_activism_rounded,
+                size: 52,
+                color: AppColors.bluePrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'Cuando registres tus aportes, podrás consultar los comprobantes y el estado de revisión aquí.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.darkText.withValues(alpha: 0.75),
-              height: 1.4,
+            const SizedBox(height: 24),
+            Text(
+              'Sin donaciones aún',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.darkText,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              'Cuando registres tus aportes, podrás consultar los comprobantes y el estado de revisión aquí.',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.mediumText,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -358,30 +451,50 @@ class _DonationHistoryError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 56, color: AppColors.orangeAction),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.darkText,
-              height: 1.35,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
             ),
-          ),
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: () {
-              onRetry();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Reintentar'),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(
+              'Algo salió mal',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: AppColors.darkText,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppColors.mediumText,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: () => onRetry(),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
       ),
     );
   }

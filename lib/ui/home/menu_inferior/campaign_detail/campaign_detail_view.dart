@@ -44,13 +44,38 @@ class _CampaignDetailView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CoverHeader(summary: summary),
-          const SizedBox(height: 12),
-          _CreatorProfile(
-            name: detail.creatorName ?? 'Organizador',
-            avatarUrl: detail.creatorAvatarUrl,
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _CoverHeader(summary: summary),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: -34,
+                child: _CreatorProfile(
+                  name: detail.creatorName ?? 'Organizador',
+                  avatarUrl: detail.creatorAvatarUrl,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          ...[
+            const SizedBox(height: 46),
+          // Título de la campaña — visible y nunca tapado
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              summary.title,
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.darkText,
+                height: 1.25,
+                letterSpacing: -0.4,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: _SummaryStats(
@@ -63,6 +88,8 @@ class _CampaignDetailView extends StatelessWidget {
           const SizedBox(height: 24),
           _SectionCard(
             title: 'Historia',
+            icon: Icons.menu_book_rounded,
+            iconColor: AppColors.bluePrimary,
             child: detail.longDescription?.trim().isNotEmpty == true
                 ? _StoryBody(
                     content: detail.longDescription!.trim(),
@@ -79,6 +106,8 @@ class _CampaignDetailView extends StatelessWidget {
           if (hasStory)
             _SectionCard(
               title: '¿Por qué importa?',
+              icon: Icons.lightbulb_rounded,
+              iconColor: AppColors.orangeAction,
               child: _StoryBody(
                 content: detail.story!.trim(),
                 onOpenLink: onOpenLink,
@@ -114,7 +143,8 @@ class _CampaignDetailView extends StatelessWidget {
             isSubmittingComment: isSubmittingComment,
             highlightCommentId: highlightCommentId,
           ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+          ].animate(interval: 50.ms).fade(duration: 400.ms).slideY(begin: 0.05, duration: 400.ms, curve: Curves.easeOutQuad),
         ],
       ),
     );
@@ -131,12 +161,29 @@ class _CoverHeader extends StatelessWidget {
     final hasImage = summary.coverUrl.isNotEmpty;
     return Stack(
       children: [
-        AspectRatio(
-          aspectRatio: 16 / 9,
-          child: hasImage
+        Hero(
+          tag: 'campaign_cover_${summary.id}',
+          child: Material(
+            type: MaterialType.transparency,
+            child: SizedBox(
+              height: 260,
+              width: double.infinity,
+              child: hasImage
               ? Image.network(
                   summary.coverUrl,
                   fit: BoxFit.cover,
+                  loadingBuilder: (_, child, progress) {
+                    if (progress == null) return child;
+                    return Container(
+                      color: AppColors.bluePrimary.withValues(alpha: 0.06),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.bluePrimary,
+                        ),
+                      ),
+                    );
+                  },
                 )
               : Container(
                   decoration: BoxDecoration(
@@ -144,61 +191,60 @@ class _CoverHeader extends StatelessWidget {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        AppColors.bluePrimary.withValues(alpha: 0.1),
-                        AppColors.blueSecondary.withValues(alpha: 0.15),
+                        AppColors.bluePrimary.withValues(alpha: 0.18),
+                        AppColors.blueSecondary.withValues(alpha: 0.28),
                       ],
                     ),
                   ),
                   child: const Center(
                     child: Icon(
-                      Icons.image_rounded,
+                      Icons.volunteer_activism_rounded,
                       color: AppColors.blueSecondary,
-                      size: 80,
+                      size: 72,
                     ),
                   ),
                 ),
+            ),
+          ),
         ),
-        // Gradiente oscuro inferior para legibilidad
+        // Gradiente decorativo inferior (sin título — queda abajo del creador)
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          child: Container(
-            height: 120,
+          height: 80,
+          child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.7),
+                  Colors.black.withValues(alpha: 0.45),
                 ],
               ),
             ),
           ),
         ),
-        // Badge de categoría (más grande)
+        // Badge de categoría
         Positioned(
-          right: AppColors.space16,
-          top: AppColors.space16,
+          right: AppColors.space12,
+          top: AppColors.space12,
           child: Container(
             padding: const EdgeInsets.symmetric(
-              horizontal: AppColors.space20,
-              vertical: AppColors.space12,
+              horizontal: 12,
+              vertical: 6,
             ),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.65),
-                  Colors.black.withValues(alpha: 0.5),
-                ],
-              ),
+              gradient: AppColors.primaryGradient,
               borderRadius: BorderRadius.circular(AppColors.radiusRound),
-              boxShadow: AppColors.shadowMd,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25),
-                width: 1.5,
-              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.bluePrimary.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -206,16 +252,16 @@ class _CoverHeader extends StatelessWidget {
                 const Icon(
                   Icons.category_rounded,
                   color: Colors.white,
-                  size: 18,
+                  size: 14,
                 ),
-                const SizedBox(width: AppColors.space8),
+                const SizedBox(width: 6),
                 Text(
                   summary.category,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                    letterSpacing: 0.5,
+                    fontSize: 12,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ],
@@ -242,6 +288,12 @@ class _SummaryStats extends StatelessWidget {
 
   CampaignSummary get summary => detail.summary;
 
+  Color _barColor(double pct) {
+    if (pct >= 80) return AppColors.greenSuccess;
+    if (pct >= 40) return AppColors.bluePrimary;
+    return AppColors.orangeAction;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -255,10 +307,10 @@ class _SummaryStats extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.1),
+                color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFF4CAF50).withOpacity(0.3),
+                  color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
                   width: 1.5,
                 ),
               ),
@@ -285,7 +337,7 @@ class _SummaryStats extends StatelessWidget {
                         Text(
                           'Tu generosidad está haciendo la diferencia',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF2E7D32).withOpacity(0.8),
+                                color: const Color(0xFF2E7D32).withValues(alpha: 0.8),
                               ),
                         ),
                       ],
@@ -297,23 +349,67 @@ class _SummaryStats extends StatelessWidget {
           ),
           const SizedBox(height: 16),
         ],
-        Text(
-          summary.title,
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.darkText,
-              ),
-        ),
-        if (summary.organizerName != null && summary.organizerName!.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            'Organizado por ${summary.organizerName}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.darkText.withValues(alpha: 0.65),
+        // Status & organizer row
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: summary.isCompleted
+                    ? AppColors.greenHope.withValues(alpha: 0.12)
+                    : AppColors.bluePrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                border: Border.all(
+                  color: summary.isCompleted
+                      ? AppColors.greenHope.withValues(alpha: 0.4)
+                      : AppColors.bluePrimary.withValues(alpha: 0.3),
+                  width: 1,
                 ),
-          ),
-        ],
-        const SizedBox(height: AppColors.space20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    summary.isCompleted
+                        ? Icons.check_circle_rounded
+                        : Icons.campaign_rounded,
+                    size: 12,
+                    color: summary.isCompleted
+                        ? AppColors.greenHope
+                        : AppColors.bluePrimary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    summary.isCompleted ? 'Completada' : 'Activa',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: summary.isCompleted
+                          ? AppColors.greenHope
+                          : AppColors.bluePrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (!summary.isCompleted && summary.endDate != null) ...[const SizedBox(width: 8), _DaysChip(endDate: summary.endDate!)],
+            if (summary.organizerName != null && summary.organizerName!.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'por ${summary.organizerName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.6),
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: AppColors.space16),
         Container(
           decoration: BoxDecoration(
             gradient: AppColors.cardGradient,
@@ -328,55 +424,71 @@ class _SummaryStats extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Barra de progreso con label embebido
-              Stack(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(AppColors.radiusRound),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.bluePrimary.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppColors.radiusRound),
-                      child: LinearProgressIndicator(
-                        value: summary.normalizedProgress,
-                        minHeight: 16,
-                        color: AppColors.bluePrimary,
-                        backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
-                      ),
+                  Text(
+                    'Progreso de la meta',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkText.withValues(alpha: 0.7),
                     ),
                   ),
-                  Positioned.fill(
-                    child: Center(
-                      child: Text(
-                        '${summary.completionPercentage.toStringAsFixed(0)}%',
-                        style: TextStyle(
-                          color: summary.normalizedProgress > 0.3 
-                              ? Colors.white 
-                              : AppColors.bluePrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                          shadows: summary.normalizedProgress > 0.3
-                              ? [
-                                  const Shadow(
-                                    color: Colors.black26,
-                                    blurRadius: 2,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                      ),
+                  Text(
+                    '${summary.completionPercentage.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: _barColor(summary.completionPercentage),
                     ),
-                  ),
+                  ).animate().fade().scale(curve: Curves.easeOutBack, duration: 600.ms),
                 ],
               ),
-              const SizedBox(height: AppColors.space20),
+              const SizedBox(height: 10),
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _barColor(summary.completionPercentage).withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                  child: LinearProgressIndicator(
+                    value: summary.normalizedProgress,
+                    minHeight: 12,
+                    color: _barColor(summary.completionPercentage),
+                    backgroundColor: _barColor(summary.completionPercentage).withValues(alpha: 0.15),
+                  ).animate().custom(
+                    duration: 1200.ms,
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) {
+                      return LinearProgressIndicator(
+                        value: summary.normalizedProgress * value,
+                        minHeight: 12,
+                        color: _barColor(summary.completionPercentage),
+                        backgroundColor: _barColor(summary.completionPercentage).withValues(alpha: 0.15),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (!summary.isCompleted && summary.raisedAmount < summary.goalAmount)
+                Text(
+                  'Faltan ${_formatCurrency(summary.goalAmount - summary.raisedAmount)} para alcanzar la meta',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _barColor(summary.completionPercentage),
+                  ),
+                ),
+              const SizedBox(height: AppColors.space16),
               LayoutBuilder(
                 builder: (context, constraints) {
                   final spacing = AppColors.space12;
@@ -425,8 +537,11 @@ class _SummaryStats extends StatelessWidget {
                         width: itemWidth,
                         child: _StatBlock(
                           icon: Icons.trending_up_rounded,
-                          label: 'Progreso',
-                          value: '${summary.completionPercentage.toStringAsFixed(0)}%',
+                          label: 'Aporte prom.',
+                          value: summary.donorCount > 0
+                              ? _formatCurrency(
+                                  summary.raisedAmount / summary.donorCount)
+                              : '—',
                         ),
                       ),
                     ],
@@ -456,13 +571,14 @@ class _SummaryStats extends StatelessWidget {
                         'Apoyar ahora',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                          fontSize: 16,
+                          letterSpacing: 0.3,
                         ),
                       ),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(AppColors.radiusMd),
@@ -470,7 +586,9 @@ class _SummaryStats extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
+                ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                 .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut)
+                 .shimmer(duration: 3.seconds, color: Colors.white.withValues(alpha: 0.2)),
               ],
             ],
           ),
@@ -478,16 +596,66 @@ class _SummaryStats extends StatelessWidget {
       ],
     );
   }
+
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child});
-
-  final String title;
-  final Widget child;
+class _DaysChip extends StatelessWidget {
+  const _DaysChip({required this.endDate});
+  final DateTime endDate;
 
   @override
   Widget build(BuildContext context) {
+    final days = endDate.difference(DateTime.now()).inDays;
+    final Color color;
+    final String label;
+    if (days < 0) {
+      color = AppColors.grayNeutral;
+      label = 'Finalizado';
+    } else if (days == 0) {
+      color = AppColors.error;
+      label = '\u23f0 Último día';
+    } else if (days <= 7) {
+      color = AppColors.orangeAction;
+      label = '\u23f3 $days días';
+    } else {
+      color = AppColors.bluePrimary;
+      label = '\ud83d\udcc5 $days días';
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(99),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.child,
+    this.icon,
+    this.iconColor,
+  });
+
+  final String title;
+  final Widget child;
+  final IconData? icon;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = iconColor ?? AppColors.bluePrimary;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppColors.space24,
@@ -496,25 +664,46 @@ class _SectionCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppColors.space24),
         decoration: BoxDecoration(
-          gradient: AppColors.cardGradient,
-          borderRadius: BorderRadius.circular(AppColors.radiusLg),
-          boxShadow: AppColors.shadowMd,
-          border: Border.all(
-            color: AppColors.dividerColor,
-            width: 0.5,
-          ),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.bluePrimary.withValues(alpha: 0.05),
+              blurRadius: 36,
+              offset: const Offset(0, 12),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.darkText,
-                    fontSize: 18,
-                    letterSpacing: -0.3,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: c.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: c, size: 17),
                   ),
+                  const SizedBox(width: 10),
+                ],
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.darkText,
+                          fontSize: 17,
+                          letterSpacing: -0.3,
+                        ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppColors.space16),
             child,
@@ -552,21 +741,10 @@ class _StatBlock extends StatelessWidget {
         vertical: AppColors.space12,
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        border: Border.all(
-          color: isPrimary 
-              ? AppColors.greenHope.withValues(alpha: 0.3)
-              : AppColors.dividerColor.withValues(alpha: 0.65),
-          width: isPrimary ? 1.5 : 0.6,
-        ),
+        color: isPrimary 
+            ? AppColors.greenHope.withValues(alpha: 0.05)
+            : AppColors.bluePrimary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,32 +804,41 @@ class _CreatorProfile extends StatelessWidget {
     final hasAvatar = avatarUrl?.trim().isNotEmpty == true;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
-            backgroundImage: hasAvatar ? NetworkImage(avatarUrl!) : null,
-            child: hasAvatar
-                ? null
-                : const Icon(
-                    Icons.person_rounded,
-                    color: AppColors.bluePrimary,
-                    size: 22,
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.bluePrimary.withValues(alpha: 0.25),
+                width: 2.5,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
+              backgroundImage: hasAvatar ? NetworkImage(avatarUrl!) : null,
+              child: hasAvatar
+                  ? null
+                  : const Icon(
+                      Icons.person_rounded,
+                      color: AppColors.bluePrimary,
+                      size: 26,
+                    ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

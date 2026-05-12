@@ -25,7 +25,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   @override
   void initState() {
     super.initState();
-    _loadRequests();
+    // Esperar unos milisegundos para que la animación de cambio de pantalla (navigator) termine suavemente
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _loadRequests();
+      }
+    });
   }
 
   Future<void> _loadRequests() async {

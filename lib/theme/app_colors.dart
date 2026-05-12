@@ -70,7 +70,7 @@ class AppColors {
   // ============ SHADOWS ============
   static List<BoxShadow> shadowSm = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 1),
     ),
@@ -78,7 +78,7 @@ class AppColors {
 
   static List<BoxShadow> shadowMd = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 8,
       offset: const Offset(0, 2),
     ),
@@ -86,7 +86,7 @@ class AppColors {
 
   static List<BoxShadow> shadowLg = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
+      color: Colors.black.withValues(alpha: 0.1),
       blurRadius: 16,
       offset: const Offset(0, 4),
     ),
@@ -94,7 +94,7 @@ class AppColors {
 
   static List<BoxShadow> shadowXl = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.12),
+      color: Colors.black.withValues(alpha: 0.12),
       blurRadius: 24,
       offset: const Offset(0, 8),
     ),

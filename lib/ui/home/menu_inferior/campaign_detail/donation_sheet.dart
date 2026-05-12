@@ -78,6 +78,10 @@ class _DonationSheetState extends State<_DonationSheet> {
   String? _receiptError;
   Uint8List? _receiptBytes;
   XFile? _receiptFile;
+  
+  // Control de monto máximo permitido
+  double? _maxAllowedAmount;
+  bool _loadingMaxAmount = true;
 
   CampaignPaymentInstructions get _paymentInstructions => widget.detail.paymentInstructions;
 
@@ -98,6 +102,41 @@ class _DonationSheetState extends State<_DonationSheet> {
     }
     final ordered = suggestions.toList()..sort();
     return ordered;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMaxAllowedAmount();
+  }
+
+  /// Carga el monto máximo permitido para esta campaña
+  Future<void> _loadMaxAllowedAmount() async {
+    try {
+      final response = await Supabase.instance.client
+          .rpc('get_campaign_max_donation_amount', params: {
+        'p_campaign_id': widget.detail.summary.id,
+      }).select();
+
+      if (response != null && response.isNotEmpty) {
+        final data = response.first as Map<String, dynamic>;
+        final maxAmount = data['max_amount'];
+        
+        setState(() {
+          _maxAllowedAmount = maxAmount != null ? (maxAmount as num).toDouble() : null;
+          _loadingMaxAmount = false;
+        });
+      } else {
+        setState(() {
+          _loadingMaxAmount = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error cargando monto máximo: $e');
+      setState(() {
+        _loadingMaxAmount = false;
+      });
+    }
   }
 
   @override
@@ -353,9 +392,53 @@ class _DonationSheetState extends State<_DonationSheet> {
                   if (amount == null || amount <= 0) {
                     return 'Ingresa un monto válido';
                   }
+                  
+                  // Validar que no exceda el monto máximo disponible
+                  if (_maxAllowedAmount != null && _maxAllowedAmount! > 0) {
+                    if (amount > _maxAllowedAmount!) {
+                      return 'Máximo: Bs. ${_formatPlainAmount(_maxAllowedAmount!)} (meta casi alcanzada)';
+                    }
+                  }
+                  
                   return null;
                 },
               ),
+              
+              // Mensaje informativo del monto restante
+              if (!_loadingMaxAmount && _maxAllowedAmount != null && _maxAllowedAmount! > 0) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeAction.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.orangeAction.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 20,
+                        color: AppColors.orangeAction.withValues(alpha: 0.9),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          '¡Cerca de la meta! Solo faltan Bs. ${_formatPlainAmount(_maxAllowedAmount!)} para completarla.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.orangeAction.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              
               const SizedBox(height: 32),
               
               // Método de pago
@@ -656,7 +739,7 @@ class _DonationSheetState extends State<_DonationSheet> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -1416,7 +1499,7 @@ class _DonationSheetState extends State<_DonationSheet> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -1501,7 +1584,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -1513,7 +1596,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -1585,7 +1668,7 @@ class _DonationSheetState extends State<_DonationSheet> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -1597,7 +1680,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

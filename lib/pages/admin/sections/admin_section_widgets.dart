@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../../models/user_profile.dart';
 import '../../../theme/app_colors.dart';
@@ -133,54 +133,204 @@ class AdminEmptyState extends StatelessWidget {
 }
 
 class AdminWelcomeHeader extends StatelessWidget {
-	const AdminWelcomeHeader({super.key, required this.profile});
+	const AdminWelcomeHeader({
+		super.key,
+		required this.profile,
+		this.pendingCampaigns = 0,
+		this.pendingDonations = 0,
+		this.pendingOrganizations = 0,
+	});
 
 	final UserProfile profile;
+	final int pendingCampaigns;
+	final int pendingDonations;
+	final int pendingOrganizations;
 
 	@override
 	Widget build(BuildContext context) {
-		final theme = Theme.of(context);
 		final greeting = _buildGreeting();
-		final displayName = profile.displayName?.trim().isNotEmpty == true ? profile.displayName! : 'Administrador';
+		final displayName = profile.displayName?.trim().isNotEmpty == true
+				? profile.displayName!
+				: 'Administrador';
+		final total = pendingCampaigns + pendingDonations + pendingOrganizations;
 
-		return Card(
-			margin: EdgeInsets.zero,
-			shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-			child: Padding(
-				padding: const EdgeInsets.all(20),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
-					children: [
-						Text(
-							'$greeting, $displayName',
-							style: theme.textTheme.titleLarge?.copyWith(
-										fontWeight: FontWeight.w700,
-										color: AppColors.darkText,
-									),
-						),
-						const SizedBox(height: 8),
-						Text(
-							'Desde aquí puedes revisar solicitudes, validar donaciones y acompañar a las organizaciones.',
-							style: theme.textTheme.bodyMedium?.copyWith(
-										color: AppColors.darkText.withValues(alpha: 0.72),
-										height: 1.4,
-									),
-						),
-					],
+		return Container(
+			decoration: BoxDecoration(
+				gradient: const LinearGradient(
+					begin: Alignment.topLeft,
+					end: Alignment.bottomRight,
+					colors: [Color(0xFF1565C0), Color(0xFF1976D2), Color(0xFF42A5F5)],
 				),
+				borderRadius: BorderRadius.circular(20),
+				boxShadow: [
+					BoxShadow(
+						color: AppColors.bluePrimary.withValues(alpha: 0.35),
+						blurRadius: 16,
+						offset: const Offset(0, 6),
+					),
+				],
+			),
+			child: ClipRRect(
+				borderRadius: BorderRadius.circular(20),
+				child: Stack(
+				children: [
+					// Círculo decorativo
+					Positioned(
+						top: -20,
+						right: -20,
+						child: Container(
+							width: 110,
+							height: 110,
+							decoration: BoxDecoration(
+								shape: BoxShape.circle,
+								color: Colors.white.withValues(alpha: 0.08),
+							),
+						),
+					),
+					Padding(
+						padding: const EdgeInsets.all(20),
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								// Saludo
+								Row(
+									crossAxisAlignment: CrossAxisAlignment.center,
+									children: [
+										Container(
+											padding: const EdgeInsets.all(7),
+											decoration: BoxDecoration(
+												color: Colors.white.withValues(alpha: 0.18),
+												borderRadius: BorderRadius.circular(10),
+											),
+											child: const Icon(Icons.admin_panel_settings_rounded,
+													color: Colors.white, size: 20),
+										),
+										const SizedBox(width: 12),
+										Expanded(
+											child: Column(
+												crossAxisAlignment: CrossAxisAlignment.start,
+												children: [
+													Text(
+														greeting,
+														style: TextStyle(
+															color: Colors.white.withValues(alpha: 0.80),
+															fontSize: 12,
+														),
+													),
+													Text(
+														displayName,
+														maxLines: 1,
+														overflow: TextOverflow.ellipsis,
+														style: const TextStyle(
+															color: Colors.white,
+															fontSize: 17,
+															fontWeight: FontWeight.w800,
+															letterSpacing: -0.3,
+														),
+													),
+													if (total > 0) ...[
+														const SizedBox(height: 4),
+														Container(
+															padding: const EdgeInsets.symmetric(
+																	horizontal: 8, vertical: 3),
+															decoration: BoxDecoration(
+																color: AppColors.orangeAction,
+																borderRadius: BorderRadius.circular(999),
+															),
+															child: Text(
+																'$total pendientes',
+																style: const TextStyle(
+																	color: Colors.white,
+																	fontSize: 11,
+																	fontWeight: FontWeight.w700,
+																),
+															),
+														),
+													],
+												],
+											),
+										),
+									],
+								),
+								const SizedBox(height: 16),
+								// Mini chips de pendientes
+								Row(
+									children: [
+										Expanded(child: _PendingChip(
+											icon: Icons.assignment_outlined,
+											label: 'Solicitudes',
+											count: pendingCampaigns,
+										)),
+										const SizedBox(width: 6),
+										Expanded(child: _PendingChip(
+											icon: Icons.receipt_long_outlined,
+											label: 'Donaciones',
+											count: pendingDonations,
+										)),
+										const SizedBox(width: 6),
+										Expanded(child: _PendingChip(
+											icon: Icons.approval_outlined,
+											label: 'Orgs',
+											count: pendingOrganizations,
+										)),
+									],
+								),
+							],
+						),
+					),
+				],
+			),
 			),
 		);
 	}
 
 	String _buildGreeting() {
 		final hour = DateTime.now().hour;
-		if (hour < 12) {
-			return 'Buenos días';
-		}
-		if (hour < 19) {
-			return 'Buenas tardes';
-		}
+		if (hour < 12) return 'Buenos días';
+		if (hour < 19) return 'Buenas tardes';
 		return 'Buenas noches';
+	}
+}
+
+class _PendingChip extends StatelessWidget {
+	const _PendingChip({
+		required this.icon,
+		required this.label,
+		required this.count,
+	});
+
+	final IconData icon;
+	final String label;
+	final int count;
+
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+			decoration: BoxDecoration(
+				color: Colors.white.withValues(alpha: 0.15),
+				borderRadius: BorderRadius.circular(999),
+			),
+			child: Row(
+				mainAxisSize: MainAxisSize.max,
+				mainAxisAlignment: MainAxisAlignment.center,
+				children: [
+					Icon(icon, color: Colors.white, size: 12),
+					const SizedBox(width: 4),
+					Flexible(
+						child: Text(
+							'$label: $count',
+							overflow: TextOverflow.ellipsis,
+							style: const TextStyle(
+								color: Colors.white,
+								fontSize: 10,
+								fontWeight: FontWeight.w600,
+							),
+						),
+					),
+				],
+			),
+		);
 	}
 }
 
@@ -243,6 +393,7 @@ class AdminInfoBadge extends StatelessWidget {
 			),
 			child: Row(
 				mainAxisSize: MainAxisSize.min,
+				mainAxisAlignment: MainAxisAlignment.center,
 				crossAxisAlignment: CrossAxisAlignment.start,
 				children: [
 					Icon(icon, size: 18, color: AppColors.bluePrimary),

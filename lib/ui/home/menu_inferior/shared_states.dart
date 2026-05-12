@@ -10,8 +10,16 @@ class HomeTabLoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(),
+    return ListView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      itemCount: 3,
+      itemBuilder: (context, index) {
+        return const Padding(
+          padding: EdgeInsets.only(bottom: 20),
+          child: _CampaignCardSkeleton(),
+        );
+      },
     );
   }
 }
@@ -48,7 +56,6 @@ class _CampaignCardSkeletonState extends State<_CampaignCardSkeleton>
       animation: _shimmerController,
       builder: (context, child) {
         return Container(
-          height: 320,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),

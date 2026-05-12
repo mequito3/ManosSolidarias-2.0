@@ -23,10 +23,12 @@ class _CommentsSection extends StatelessWidget {
 
     return _SectionCard(
       title: 'Comentarios',
+      icon: Icons.chat_bubble_rounded,
+      iconColor: AppColors.blueSecondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _CommentsSectionCompactHeader(total: visibleComments.length),
+          _CommentsHeader(total: visibleComments.length),
           const SizedBox(height: 20),
           canComment
               ? _CommentComposer(
@@ -46,21 +48,53 @@ class _CommentsSection extends StatelessWidget {
   }
 }
 
-class _CommentsSectionCompactHeader extends StatelessWidget {
-  const _CommentsSectionCompactHeader({required this.total});
-
+class _CommentsHeader extends StatelessWidget {
+  const _CommentsHeader({required this.total});
   final int total;
 
   @override
   Widget build(BuildContext context) {
-    final label = total == 1 ? 'comentario' : 'comentarios';
-
-    return Text(
-      '$total $label',
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: AppColors.darkText.withValues(alpha: 0.7),
-        fontWeight: FontWeight.w600,
-      ),
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.blueSecondary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: AppColors.blueSecondary.withValues(alpha: 0.25),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded,
+                  size: 12, color: AppColors.blueSecondary),
+              const SizedBox(width: 5),
+              Text(
+                '$total ${total == 1 ? 'comentario' : 'comentarios'}',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.blueSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Text(
+            total == 0
+                ? 'Sé la primera persona en comentar'
+                : 'Únete a la conversación',
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.darkText.withValues(alpha: 0.45),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -78,14 +112,12 @@ class _CommentComposer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     Future<void> handleSubmit() async {
       final trimmed = controller.text.trim();
       if (trimmed.length < 3 || isSubmitting) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Escribe al menos 3 caracteres para publicar.')),
+          const SnackBar(
+              content: Text('Escribe al menos 3 caracteres para publicar.')),
         );
         return;
       }
@@ -96,72 +128,140 @@ class _CommentComposer extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withOpacity(0.5)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppColors.bluePrimary.withValues(alpha: 0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: controller,
-            enabled: !isSubmitting,
-            minLines: 2,
-            maxLines: 4,
-            maxLength: 400,
-            style: textTheme.bodySmall?.copyWith(
-              color: scheme.onSurface,
-              fontSize: 13,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Comparte tu apoyo y palabras de aliento...',
-              hintStyle: TextStyle(fontSize: 13),
-              counterText: '',
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.outlineVariant.withOpacity(0.5)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: scheme.primary, width: 1.2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
+          // Input row
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Avatar placeholder
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.bluePrimary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.person_rounded,
+                    color: AppColors.bluePrimary, size: 20),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'Mantén la conversación respetuosa y evita datos personales.',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant.withOpacity(0.75),
-                    fontSize: 11,
+                child: TextField(
+                  controller: controller,
+                  enabled: !isSubmitting,
+                  minLines: 2,
+                  maxLines: 5,
+                  maxLength: 400,
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: 14,
+                    height: 1.45,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Escribe tu mensaje de apoyo...',
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.darkText.withValues(alpha: 0.35),
+                    ),
+                    counterText: '',
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 0, vertical: 4),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              FilledButton.icon(
-                onPressed: isSubmitting ? null : () async => handleSubmit(),
-                icon: isSubmitting
-                    ? SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(scheme.onPrimary),
-                        ),
-                      )
-                    : const Icon(Icons.send_outlined, size: 14),
-                label: const Text(
-                  'Publicar',
-                  style: TextStyle(fontSize: 13),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Divider(
+              height: 1,
+              color: AppColors.dividerColor.withValues(alpha: 0.6)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.shield_outlined,
+                  size: 13,
+                  color: AppColors.darkText.withValues(alpha: 0.35)),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  'Sé respetuoso y no compartas datos personales.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.darkText.withValues(alpha: 0.4),
+                  ),
                 ),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  minimumSize: const Size(100, 36),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              const SizedBox(width: 10),
+              // Botón publicar
+              GestureDetector(
+                onTap: isSubmitting ? null : handleSubmit,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: isSubmitting
+                        ? null
+                        : AppColors.actionGradient,
+                    color: isSubmitting
+                        ? AppColors.grayNeutral.withValues(alpha: 0.2)
+                        : null,
+                    borderRadius: BorderRadius.circular(99),
+                    boxShadow: isSubmitting
+                        ? null
+                        : [
+                            BoxShadow(
+                              color:
+                                  AppColors.orangeAction.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isSubmitting)
+                        const SizedBox(
+                          width: 13,
+                          height: 13,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      else
+                        const Icon(Icons.send_rounded,
+                            size: 14, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        isSubmitting ? 'Enviando...' : 'Publicar',
+                        style: TextStyle(
+                          color: isSubmitting
+                              ? AppColors.grayNeutral
+                              : Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -177,40 +277,46 @@ class _CommentLoginPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     return Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withOpacity(0.5)),
+        color: AppColors.bluePrimary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: AppColors.bluePrimary.withValues(alpha: 0.15), width: 1.5),
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, color: scheme.primary, size: 18),
-          const SizedBox(width: 12),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.lock_person_rounded,
+                color: AppColors.bluePrimary, size: 20),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'Inicia sesión para comentar',
-                  style: textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: scheme.onSurface,
-                        fontSize: 13,
-                      ),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                    fontSize: 13.5,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
-                  'Solo los usuarios autenticados pueden participar en la conversación.',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant.withOpacity(0.8),
-                    height: 1.4,
+                  'Los usuarios registrados pueden unirse a la conversación.',
+                  style: TextStyle(
                     fontSize: 12,
+                    height: 1.4,
+                    color: AppColors.darkText.withValues(alpha: 0.55),
                   ),
                 ),
               ],
@@ -242,11 +348,9 @@ class _CommentsListState extends State<_CommentsList> {
   @override
   void initState() {
     super.initState();
-    // Crear keys para cada comentario
     for (final comment in widget.comments) {
       _commentKeys[comment.id] = GlobalKey();
     }
-    // Scroll al comentario resaltado después de que se construya
     if (widget.highlightCommentId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToHighlightedComment();
@@ -263,12 +367,11 @@ class _CommentsListState extends State<_CommentsList> {
   void _scrollToHighlightedComment() {
     final key = _commentKeys[widget.highlightCommentId];
     if (key?.currentContext != null) {
-      final context = key!.currentContext!;
       Scrollable.ensureVisible(
-        context,
+        key!.currentContext!,
         duration: const Duration(milliseconds: 600),
         curve: Curves.easeInOut,
-        alignment: 0.2, // Posicionar cerca del top
+        alignment: 0.2,
       );
     }
   }
@@ -277,66 +380,69 @@ class _CommentsListState extends State<_CommentsList> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
     if (comments.isEmpty) {
       return Container(
         width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
         decoration: BoxDecoration(
-          color: scheme.surfaceVariant.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: scheme.outlineVariant.withOpacity(0.5)),
+          color: AppColors.grayNeutral.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.grayNeutral.withValues(alpha: 0.18),
+            width: 1.5,
+          ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.forum_outlined, size: 24, color: scheme.onSurfaceVariant.withOpacity(0.7)),
-            const SizedBox(height: 12),
-            Text(
-              'Todavía no hay comentarios',
-              style: textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
-                fontSize: 13,
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: AppColors.blueSecondary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
               ),
-              textAlign: TextAlign.center,
+              child: const Icon(Icons.forum_outlined,
+                  color: AppColors.blueSecondary, size: 24),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Sé la primera persona en dejar tu mensaje de apoyo.',
-              style: textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant.withOpacity(0.8),
-                fontSize: 12,
+            const SizedBox(height: 12),
+            const Text(
+              'Todavía no hay comentarios',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.darkText,
+                fontSize: 14,
               ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'Sé la primera persona en dejar un mensaje de apoyo.',
               textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.45,
+                color: AppColors.darkText.withValues(alpha: 0.45),
+              ),
             ),
           ],
         ),
       );
     }
 
-    return SizedBox(
-      height: 300,
-      child: Scrollbar(
-        controller: _scrollController,
-        child: ListView.separated(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(),
-          itemCount: comments.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final comment = comments[index];
-            final shouldHighlight = widget.highlightCommentId == comment.id;
-            return _CommentTile(
-              key: _commentKeys[comment.id],
-              comment: comment,
-              shouldHighlight: shouldHighlight,
-            );
-          },
-        ),
-      ),
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: comments.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final comment = comments[index];
+        return _CommentTile(
+          key: _commentKeys[comment.id],
+          comment: comment,
+          shouldHighlight: widget.highlightCommentId == comment.id,
+          isFirst: index == 0,
+        );
+      },
     );
   }
 }
@@ -346,30 +452,77 @@ class _CommentTile extends StatelessWidget {
     super.key,
     required this.comment,
     this.shouldHighlight = false,
+    this.isFirst = false,
   });
 
   final CampaignComment comment;
   final bool shouldHighlight;
+  final bool isFirst;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final author = comment.authorName.trim().isNotEmpty ? comment.authorName.trim() : 'Usuario solidario';
-    final message = comment.message.trim().isNotEmpty ? comment.message.trim() : 'Comentario no disponible.';
+    final author = comment.authorName.trim().isNotEmpty
+        ? comment.authorName.trim()
+        : 'Usuario solidario';
+    final message = comment.message.trim().isNotEmpty
+        ? comment.message.trim()
+        : 'Comentario no disponible.';
     final avatarUrl = comment.authorAvatarUrl?.trim();
+    final initials =
+        author.isNotEmpty ? author.characters.first.toUpperCase() : '?';
 
-    final commentWidget = Container(
+    Widget tile = Container(
       decoration: BoxDecoration(
-        color: scheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant.withOpacity(0.6)),
+        color: shouldHighlight
+            ? AppColors.blueSecondary.withValues(alpha: 0.06)
+            : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: shouldHighlight
+              ? AppColors.blueSecondary.withValues(alpha: 0.3)
+              : AppColors.dividerColor.withValues(alpha: 0.5),
+          width: shouldHighlight ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAvatar(context, avatarUrl, author),
+          // Avatar
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.blueSecondary.withValues(alpha: 0.25),
+                width: 2,
+              ),
+            ),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor:
+                  AppColors.blueSecondary.withValues(alpha: 0.1),
+              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                  ? NetworkImage(avatarUrl)
+                  : null,
+              child: (avatarUrl == null || avatarUrl.isEmpty)
+                  ? Text(
+                      initials,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.blueSecondary,
+                        fontSize: 14,
+                      ),
+                    )
+                  : null,
+            ),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -382,41 +535,30 @@ class _CommentTile extends StatelessWidget {
                         author,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                          fontSize: 13,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkText,
+                          fontSize: 13.5,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 12,
-                          color: scheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _relativeTimeLabel(comment.createdAt),
-                          style: textTheme.bodySmall?.copyWith(
-                            color: scheme.onSurfaceVariant.withOpacity(0.8),
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 6),
+                    Text(
+                      _relativeTimeLabel(comment.createdAt),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.darkText.withValues(alpha: 0.4),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   message,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurface.withOpacity(0.85),
+                  style: TextStyle(
+                    fontSize: 13.5,
                     height: 1.5,
-                    fontSize: 13,
+                    color: AppColors.darkText.withValues(alpha: 0.82),
                   ),
                 ),
               ],
@@ -426,35 +568,9 @@ class _CommentTile extends StatelessWidget {
       ),
     );
 
-    // Envolver en HighlightWrapper si debe resaltarse
     return HighlightWrapper(
       shouldHighlight: shouldHighlight,
-      child: commentWidget,
-    );
-  }
-
-  Widget _buildAvatar(BuildContext context, String? avatarUrl, String author) {
-    final scheme = Theme.of(context).colorScheme;
-    final initials = author.isNotEmpty ? author.characters.first.toUpperCase() : '?';
-
-    if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      return CircleAvatar(
-        radius: 18,
-        backgroundImage: NetworkImage(avatarUrl),
-      );
-    }
-
-    return CircleAvatar(
-      radius: 18,
-      backgroundColor: scheme.primary.withOpacity(0.12),
-      child: Text(
-        initials,
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: scheme.primary,
-          fontSize: 14,
-        ),
-      ),
+      child: tile,
     );
   }
 }

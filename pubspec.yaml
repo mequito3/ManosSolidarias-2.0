@@ -1,5 +1,5 @@
 name: manos_solidarias
-description: "A new Flutter project."
+description: "Aplicación de crowdfunding solidario para Bolivia."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -48,6 +48,10 @@ dependencies:
   saver_gallery: ^3.0.6
   pdf: ^3.11.1
   printing: ^5.13.2
+  shared_preferences: ^2.3.0
+  google_fonts: ^6.2.1
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +76,9 @@ flutter:
   uses-material-design: true
 
   assets:
+    # NOTA DE SEGURIDAD: El archivo .env se incluye solo para desarrollo local.
+    # En producción usa: flutter build apk --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+    # Asegúrate de que .env esté en .gitignore y NO contenga claves de producción.
     - .env
 
   # To add assets to your application, add an assets section, like this:

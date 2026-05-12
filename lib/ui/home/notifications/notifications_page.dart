@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../controllers/notification_controller.dart';
 import '../../../models/notification_entry.dart';
@@ -66,10 +67,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        title: const Text('Notificaciones'),
-        elevation: 0,
-      ),
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
@@ -96,12 +93,50 @@ class _NotificationsPageState extends State<NotificationsPage> {
           final sections = _groupNotifications(notifications);
 
           final children = <Widget>[
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24, top: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                        color: AppColors.darkText,
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ).animate().fade(duration: 400.ms).scale(curve: Curves.easeOutBack),
+                    const SizedBox(width: 16),
+                    const Text(
+                      'Notificaciones',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                        color: AppColors.darkText,
+                      ),
+                    ).animate().fade(duration: 400.ms).slideX(begin: 0.1, curve: Curves.easeOutQuad),
+                  ],
+                ),
+              ),
+            ),
             _NotificationsHeroBanner(
               unreadCount: _controller.unreadCount,
               totalCount: notifications.length,
               isProcessingMarkAll: _controller.isMarkingAll,
               onMarkAll: _controller.unreadCount > 0 ? _handleMarkAll : null,
-            ),
+            ).animate().fade(delay: 100.ms).slideY(begin: 0.1, curve: Curves.easeOutQuad),
           ];
 
           if (error != null) {
@@ -140,7 +175,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             onRefresh: _handleRefresh,
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               children: children,
             ),
           );
@@ -186,35 +221,27 @@ class _PayloadPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: AppColors.bluePrimary.withValues(alpha: 0.15),
-          width: 1,
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(right: 14, bottom: 6, top: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            label,
+            label.contains(RegExp(r'\p{Emoji}', unicode: true)) ? label : '• $label:',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.bluePrimary,
-              fontWeight: FontWeight.w700,
+              color: AppColors.darkText.withValues(alpha: 0.5),
+              fontWeight: FontWeight.w600,
               fontSize: 11,
-              letterSpacing: 0.3,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 5),
           Flexible(
             child: Text(
               value,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.darkText,
-                fontWeight: FontWeight.w600,
+                color: AppColors.darkText.withValues(alpha: 0.8),
+                fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
               overflow: TextOverflow.ellipsis,
@@ -423,10 +450,10 @@ class _NotificationsHeroBanner extends StatelessWidget {
         : 'No hay notificaciones nuevas';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: hasUnread 
             ? AppColors.bluePrimary.withValues(alpha: 0.2)
@@ -444,37 +471,37 @@ class _NotificationsHeroBanner extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: hasUnread 
                 ? AppColors.bluePrimary.withValues(alpha: 0.12)
                 : AppColors.grayNeutral.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               hasUnread ? Icons.notifications_active : Icons.notifications_none,
               color: hasUnread ? AppColors.bluePrimary : AppColors.grayNeutral,
-              size: 28,
+              size: 24,
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleMedium?.copyWith(
                     color: AppColors.darkText,
                     fontWeight: FontWeight.w700,
                     height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.darkText.withValues(alpha: 0.65),
                     height: 1.3,
                   ),
@@ -543,6 +570,9 @@ class _NotificationTile extends StatelessWidget {
       'recompensa_id',
       'created_at',
       'updated_at',
+      'slug',
+      'section',
+      'posicion',
     };
     
     for (final entryData in entry.payload.entries) {
@@ -588,19 +618,29 @@ class _NotificationTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 300),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isUnread 
-                ? accentColor.withValues(alpha: 0.04)
-                : Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              color: isUnread ? accentColor.withValues(alpha: 0.03) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: (isUnread ? accentColor : Colors.black).withValues(alpha: isUnread ? 0.08 : 0.04),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.01),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
               border: Border.all(
-                color: isUnread
-                    ? accentColor.withValues(alpha: 0.15)
-                    : AppColors.grayNeutral.withValues(alpha: 0.12),
+                color: isUnread 
+                    ? accentColor.withValues(alpha: 0.2) 
+                    : AppColors.dividerColor.withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -611,24 +651,40 @@ class _NotificationTile extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(
+                      colors: [
+                        accentColor,
+                        accentColor.withValues(alpha: 0.75),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: Icon(iconData, color: accentColor, size: 24),
+                  child: Icon(iconData, color: Colors.white, size: 24),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: Text(
                               entry.typeLabel,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                color: accentColor,
-                                fontWeight: FontWeight.w700,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: isUnread ? accentColor : AppColors.darkText,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13,
                                 letterSpacing: 0.2,
                               ),
                             ),
@@ -636,39 +692,47 @@ class _NotificationTile extends StatelessWidget {
                           Text(
                             formatRelativeTime(entry.createdAt),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppColors.darkText.withValues(alpha: 0.5),
-                              fontSize: 12,
+                              color: AppColors.darkText.withValues(alpha: 0.45),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           if (isUnread) ...[
                             const SizedBox(width: 8),
                             Container(
-                              width: 8,
-                              height: 8,
+                              width: 10,
+                              height: 10,
                               decoration: BoxDecoration(
                                 color: accentColor,
                                 shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accentColor.withValues(alpha: 0.4),
+                                    blurRadius: 6,
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         entry.message,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText,
-                          fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
+                          color: AppColors.darkText.withValues(alpha: 0.9),
+                          fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
                           height: 1.4,
+                          fontSize: 14,
                         ),
-                        maxLines: 3,
+                        maxLines: 4,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (payloadPills.isNotEmpty) ...[
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
+                          spacing: 4,
+                          runSpacing: 0,
                           children: payloadPills,
                         ),
                       ],
@@ -679,7 +743,7 @@ class _NotificationTile extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      ).animate().fade(duration: 400.ms).slideY(begin: 0.1, curve: Curves.easeOutQuad),
     );
   }
 }

@@ -145,7 +145,7 @@ class UserProfile {
       'banco_tipo_cuenta': bankAccountType,
       'banco_numero_cuenta': bankAccountNumber,
       'donacion_qr_url': donationQrUrl,
-      'is_admin': isAdmin,
+      // SEGURIDAD: 'is_admin' se omite intencionalmente — solo puede modificarse desde la BD
       'perfil_completo': meetsCompletionCriteria,
     }..removeWhere((_, value) => value == null);
   }

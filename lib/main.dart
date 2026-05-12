@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'controllers/profile_controller.dart';
@@ -15,30 +16,42 @@ import 'ui/home/home_page.dart';
 import 'ui/onboarding/onboarding_flow.dart';
 import 'ui/widgets/app_buttons.dart';
 import 'ui/widgets/app_logo.dart';
+import 'utils/text_scale_manager.dart';
 
 const _fallbackSupabaseUrl = 'https://gvdlsypoqstbifdbhafv.supabase.co';
 const _fallbackSupabaseAnonKey = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
 
+// Valores inyectados en tiempo de compilación (producción)
+// Uso: flutter build apk --dart-define=SUPABASE_URL=... --dart-define=SUPABASE_ANON_KEY=...
+const _dartDefineUrl = String.fromEnvironment('SUPABASE_URL');
+const _dartDefineKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (error) {
-    debugPrint('ℹ️  No .env file found. Continuing with fallback Supabase configuration.');
-  }
+  // Prioridad: --dart-define (producción) > .env (desarrollo local) > fallback
+  String supabaseUrl = _dartDefineUrl;
+  String supabaseAnonKey = _dartDefineKey;
 
-  final supabaseUrl =
-      dotenv.env['SUPABASE_URL'] ?? _fallbackSupabaseUrl;
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ??
-      const String.fromEnvironment(
-        'SUPABASE_ANON_KEY',
-        defaultValue: _fallbackSupabaseAnonKey,
-      );
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    try {
+      await dotenv.load(fileName: '.env');
+      supabaseUrl = supabaseUrl.isEmpty
+          ? (dotenv.env['SUPABASE_URL'] ?? _fallbackSupabaseUrl)
+          : supabaseUrl;
+      supabaseAnonKey = supabaseAnonKey.isEmpty
+          ? (dotenv.env['SUPABASE_ANON_KEY'] ?? _fallbackSupabaseAnonKey)
+          : supabaseAnonKey;
+    } catch (error) {
+      debugPrint('ℹ️  No .env file found. Continuing with fallback Supabase configuration.');
+      supabaseUrl = supabaseUrl.isEmpty ? _fallbackSupabaseUrl : supabaseUrl;
+      supabaseAnonKey = supabaseAnonKey.isEmpty ? _fallbackSupabaseAnonKey : supabaseAnonKey;
+    }
+  }
 
   if (supabaseAnonKey == _fallbackSupabaseAnonKey) {
     debugPrint(
-      '⚠️  Define SUPABASE_URL and SUPABASE_ANON_KEY in .env or pass them with --dart-define.',
+      '⚠️  Define SUPABASE_URL y SUPABASE_ANON_KEY en .env (desarrollo) o con --dart-define (producción).',
     );
   }
 
@@ -53,14 +66,26 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final TextScaleManager _textScaleManager = TextScaleManager();
+
+  @override
+  void dispose() {
+    _textScaleManager.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final baseTheme = ThemeData(brightness: Brightness.light);
-    final baseTextTheme = baseTheme.textTheme.apply(
+    final baseTextTheme = GoogleFonts.interTextTheme(baseTheme.textTheme).apply(
           bodyColor: AppColors.darkText,
           displayColor: AppColors.darkText,
         );
@@ -77,55 +102,61 @@ class MyApp extends StatelessWidget {
       surface: Colors.white,
     );
 
-    return MaterialApp(
-      title: 'Manos Solidarias',
-      theme: ThemeData(
-        colorScheme: colorScheme,
-        scaffoldBackgroundColor: AppColors.lightBackground,
-        useMaterial3: true,
-        textTheme: baseTextTheme,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          foregroundColor: AppColors.darkText,
-          centerTitle: false,
-        ),
-        cardTheme: CardThemeData(
-          color: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        ),
-        chipTheme: ChipThemeData(
-          backgroundColor: AppColors.greenSoft.withValues(alpha: 0.3),
-          disabledColor: AppColors.grayNeutral.withValues(alpha: 0.2),
-          selectedColor: AppColors.bluePrimary.withValues(alpha: 0.15),
-          secondarySelectedColor: AppColors.bluePrimary.withValues(alpha: 0.25),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          labelStyle: const TextStyle(
-            color: AppColors.darkText,
-            fontWeight: FontWeight.w600,
+    return TextScaleWrapper(
+      textScaleManager: _textScaleManager,
+      child: MaterialApp(
+        title: 'Manos Solidarias',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: colorScheme,
+          scaffoldBackgroundColor: AppColors.lightBackground,
+          useMaterial3: true,
+          textTheme: baseTextTheme,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            foregroundColor: AppColors.darkText,
+            centerTitle: false,
           ),
-          secondaryLabelStyle: const TextStyle(
-            color: AppColors.bluePrimary,
-            fontWeight: FontWeight.w600,
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          brightness: Brightness.light,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w600),
+          chipTheme: ChipThemeData(
+            backgroundColor: AppColors.greenSoft.withValues(alpha: 0.3),
+            disabledColor: AppColors.grayNeutral.withValues(alpha: 0.2),
+            selectedColor: AppColors.bluePrimary.withValues(alpha: 0.15),
+            secondarySelectedColor: AppColors.bluePrimary.withValues(alpha: 0.25),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            labelStyle: const TextStyle(
+              color: AppColors.darkText,
+              fontWeight: FontWeight.w600,
+            ),
+            secondaryLabelStyle: const TextStyle(
+              color: AppColors.bluePrimary,
+              fontWeight: FontWeight.w600,
+            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            brightness: Brightness.light,
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              textStyle: const TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
         ),
+        home: AppEntryShell(textScaleManager: _textScaleManager),
       ),
-      home: const AppEntryShell(),
     );
   }
 }
 
 class AppEntryShell extends StatefulWidget {
-  const AppEntryShell({super.key});
+  const AppEntryShell({super.key, required this.textScaleManager});
+
+  final TextScaleManager textScaleManager;
 
   @override
   State<AppEntryShell> createState() => _AppEntryShellState();

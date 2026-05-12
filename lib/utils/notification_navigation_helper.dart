@@ -4,8 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/campaign_service.dart';
 import '../services/organization_service.dart';
 import '../services/profile_service.dart';
+import '../services/donor_trophy_service.dart';
+import '../controllers/donor_trophy_controller.dart';
 import '../ui/home/menu_inferior/campaign_detail/campaign_detail_page.dart';
 import '../pages/organization_detail_page.dart';
+import '../ui/rewards/donor_trophies_page.dart';
 
 /// Helper para navegar desde notificaciones a la pantalla correspondiente
 class NotificationNavigationHelper {
@@ -15,11 +18,11 @@ class NotificationNavigationHelper {
     required String notificationType,
     required Map<String, dynamic> payload,
   }) async {
-    debugPrint('🔔 ========================================');
-    debugPrint('🔔 NAVEGACIÓN DESDE NOTIFICACIÓN');
-    debugPrint('🔔 Tipo: "$notificationType"');
-    debugPrint('� Payload: $payload');
-    debugPrint('🔔 ========================================');
+    debugPrint('========================================');
+    debugPrint('NAVEGACION DESDE NOTIFICACION');
+    debugPrint('Tipo: "$notificationType"');
+    debugPrint('Payload: $payload');
+    debugPrint('========================================');
 
     // Normalizar el tipo (eliminar espacios, convertir a minúsculas)
     final normalizedType = notificationType.trim().toLowerCase().replaceAll(' ', '_');
@@ -107,6 +110,17 @@ class NotificationNavigationHelper {
       case 'trofeo_desbloqueado':
       case 'logro':
         await _navigateToProfile(context, payload);
+        break;
+
+      // Notificaciones de ranking -> abrir ranking
+      case 'ranking_entrada':
+      case 'ranking_mejora':
+      case 'ranking_podio':
+      case 'ranking_top_1':
+      case 'ranking_top_2':
+      case 'ranking_top_3':
+        debugPrint('🏆 Navegando a ranking');
+        await _navigateToRanking(context, payload);
         break;
 
       default:
@@ -391,6 +405,60 @@ class NotificationNavigationHelper {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  /// Navega a la página de ranking
+  static Future<void> _navigateToRanking(
+    BuildContext context,
+    Map<String, dynamic> payload,
+  ) async {
+    debugPrint('🏆 Navegando al ranking solidario');
+
+    if (!context.mounted) return;
+
+    // Mostrar indicador de carga
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // Crear servicios necesarios
+      final client = Supabase.instance.client;
+      final donorTrophyService = DonorTrophyService(client);
+      final controller = DonorTrophyController(donorTrophyService);
+
+      // Pre-cargar el ranking
+      await controller.loadLeaderboard();
+
+      if (!context.mounted) return;
+      
+      // Cerrar indicador de carga
+      Navigator.of(context).pop();
+
+      // Navegar a la página de ranking
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => DonorTrophiesPage(
+            controller: controller,
+            scrollToRanking: true,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('❌ Error al cargar ranking: $error');
+      if (!context.mounted) return;
+      
+      // Cerrar indicador de carga
+      try {
+        Navigator.of(context).pop();
+      } catch (e) {
+        debugPrint('⚠️ No se pudo cerrar el loading dialog: $e');
+      }
+      
+      _showErrorSnackbar(context, 'No se pudo cargar el ranking');
+    }
   }
 
   /// Muestra un error al usuario

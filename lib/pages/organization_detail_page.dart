@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/organization.dart';
 import '../theme/app_colors.dart';
 import '../ui/widgets/highlight_wrapper.dart';
@@ -23,10 +22,15 @@ class OrganizationDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final localizations = MaterialLocalizations.of(context);
+    // memberSince: Desde enero 2025
     String? memberSince;
     if (organization.createdAt != null) {
-      memberSince = localizations.formatMediumDate(organization.createdAt!.toLocal());
+      final d = organization.createdAt!.toLocal();
+      const _months = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      ];
+      memberSince = 'Desde ${_months[d.month - 1]} ${d.year}';
     }
 
     // Extraer galería de documentos
@@ -72,6 +76,7 @@ class OrganizationDetailPage extends StatelessWidget {
           ),
         ),
         centerTitle: false,
+        scrolledUnderElevation: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -87,10 +92,10 @@ class OrganizationDetailPage extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.bluePrimary.withOpacity(0.1),
+                      color: AppColors.bluePrimary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.bluePrimary.withOpacity(0.3),
+                        color: AppColors.bluePrimary.withValues(alpha: 0.3),
                         width: 1.5,
                       ),
                     ),
@@ -117,7 +122,7 @@ class OrganizationDetailPage extends StatelessWidget {
                               Text(
                                 'Esta organización ha sido aprobada y verificada',
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: AppColors.bluePrimary.withOpacity(0.8),
+                                      color: AppColors.bluePrimary.withValues(alpha: 0.8),
                                     ),
                               ),
                             ],
@@ -128,17 +133,14 @@ class OrganizationDetailPage extends StatelessWidget {
                   ),
                 ),
               ),
-            // Header con gradiente sutil
+            // Header con gradiente bold
             Container(
               width: double.infinity,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.bluePrimary.withValues(alpha: 0.05),
-                    Colors.white,
-                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.bluePrimary, AppColors.blueSecondary],
                 ),
               ),
               padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
@@ -150,9 +152,9 @@ class OrganizationDetailPage extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.bluePrimary.withValues(alpha: 0.15),
+                          color: Colors.black.withValues(alpha: 0.20),
                           blurRadius: 20,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -166,7 +168,7 @@ class OrganizationDetailPage extends StatelessWidget {
                     organization.name,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: AppColors.darkText,
+                      color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       height: 1.2,
@@ -181,43 +183,44 @@ class OrganizationDetailPage extends StatelessWidget {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.bluePrimary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Icon(
-                              Icons.verified_rounded,
-                              color: Colors.white,
-                              size: 14,
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              'Verificada',
-                              style: TextStyle(
+                      if (organization.isVerified)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.verified_rounded,
                                 color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                                size: 14,
                               ),
-                            ),
-                          ],
+                              SizedBox(width: 5),
+                              Text(
+                                'Verificada',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                       if (organization.type != null)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
-                            color: AppColors.darkText.withValues(alpha: 0.08),
+                            color: Colors.white.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             organization.type!,
-                            style: TextStyle(
-                              color: AppColors.darkText.withValues(alpha: 0.7),
+                            style: const TextStyle(
+                              color: Colors.white,
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                             ),
@@ -234,13 +237,13 @@ class OrganizationDetailPage extends StatelessWidget {
                         Icon(
                           Icons.calendar_today_rounded,
                           size: 14,
-                          color: AppColors.darkText.withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.75),
                         ),
                         const SizedBox(width: 6),
-                        Text(
-                          'Miembro desde $memberSince',
+                      Text(
+                          memberSince,
                           style: TextStyle(
-                            color: AppColors.darkText.withValues(alpha: 0.6),
+                            color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -251,69 +254,6 @@ class OrganizationDetailPage extends StatelessWidget {
                 ],
               ),
             ),
-            
-            // Acciones rápidas
-            if (organization.hasDirectContact || organization.hasWebsite)
-              Container(
-                width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Contacto rápido',
-                      style: TextStyle(
-                        color: AppColors.darkText,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      children: [
-                        if (organization.phone != null && organization.phone!.isNotEmpty)
-                          Expanded(
-                            child: _QuickActionButton(
-                              label: 'Llamar',
-                              icon: Icons.phone_rounded,
-                              color: AppColors.greenSuccess,
-                              onTap: onCall,
-                            ),
-                          ),
-                        if (organization.phone != null && organization.phone!.isNotEmpty && 
-                            organization.email != null && organization.email!.isNotEmpty)
-                          const SizedBox(width: 10),
-                        if (organization.email != null && organization.email!.isNotEmpty)
-                          Expanded(
-                            child: _QuickActionButton(
-                              label: 'Email',
-                              icon: Icons.email_rounded,
-                              color: AppColors.bluePrimary,
-                              onTap: onEmail,
-                            ),
-                          ),
-                        if ((organization.phone != null && organization.phone!.isNotEmpty || 
-                            organization.email != null && organization.email!.isNotEmpty) &&
-                            organization.website != null && organization.website!.isNotEmpty)
-                          const SizedBox(width: 10),
-                        if (organization.website != null && organization.website!.isNotEmpty)
-                          Expanded(
-                            child: _QuickActionButton(
-                              label: 'Web',
-                              icon: Icons.language_rounded,
-                              color: AppColors.orangeAction,
-                              onTap: onOpenWebsite,
-                            ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            
-            if (organization.hasDirectContact || organization.hasWebsite)
-              const SizedBox(height: 8),
             
             // Descripción mejorada
             Container(
@@ -389,7 +329,7 @@ class OrganizationDetailPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Nuestra misión',
+                                    'Descripción',
                                     style: TextStyle(
                                       color: AppColors.bluePrimary,
                                       fontSize: 12,
@@ -594,117 +534,86 @@ class OrganizationDetailPage extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Dirección con icono
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.orangeAction.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: AppColors.orangeAction,
-                            size: 20,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Dirección',
-                                style: TextStyle(
-                                  color: AppColors.darkText,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                organization.address!,
-                                style: TextStyle(
-                                  color: AppColors.darkText.withValues(alpha: 0.7),
-                                  fontSize: 14,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    
                     const SizedBox(height: 16),
-                    
-                    // Mapa
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: SizedBox(
-                        height: 200,
-                        width: double.infinity,
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialCenter: const LatLng(-16.5000, -68.1500), // La Paz, Bolivia
-                            initialZoom: 15,
-                            interactionOptions: const InteractionOptions(
-                              flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+
+                    // Mapa decorativo con dirección destacada
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.orangeAction.withValues(alpha: 0.08),
+                            AppColors.orangeAction.withValues(alpha: 0.04),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.orangeAction.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.orangeAction.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.location_on_rounded,
+                              color: AppColors.orangeAction,
+                              size: 26,
                             ),
                           ),
-                          children: [
-                            TileLayer(
-                              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              userAgentPackageName: 'com.manossolidarias.app',
-                            ),
-                            MarkerLayer(
-                              markers: [
-                                Marker(
-                                  point: const LatLng(-16.5000, -68.1500),
-                                  width: 40,
-                                  height: 40,
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: AppColors.orangeAction,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 3,
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.orangeAction.withValues(alpha: 0.4),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: const Icon(
-                                      Icons.business_rounded,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Dirección',
+                                  style: TextStyle(
+                                    color: AppColors.orangeAction,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  organization.address!,
+                                  style: TextStyle(
+                                    color: AppColors.darkText.withValues(alpha: 0.8),
+                                    fontSize: 14,
+                                    height: 1.4,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
-                    // Botón para abrir en mapa
+
+                    // Botón para abrir en Google Maps
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () {
-                          // TODO: Abrir en Google Maps
+                        onPressed: () async {
+                          final encoded = Uri.encodeComponent(organization.address!);
+                          final uri = Uri.parse(
+                            'https://www.google.com/maps/search/?api=1&query=$encoded',
+                          );
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
                         },
-                        icon: const Icon(Icons.map_outlined, size: 18),
+                        icon: const Icon(Icons.map_rounded, size: 18),
                         label: const Text('Abrir en Google Maps'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.orangeAction,
@@ -970,51 +879,3 @@ class _ContactItem extends StatelessWidget {
   }
 }
 
-// Widget para botones de acción rápida
-class _QuickActionButton extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _QuickActionButton({
-    required this.label,
-    required this.icon,
-    required this.color,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: color,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 20,
-                color: Colors.white,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

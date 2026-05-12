@@ -22,6 +22,8 @@ class _OrganizerSection extends StatelessWidget {
 
     return _SectionCard(
       title: 'Quién está detrás',
+      icon: Icons.people_alt_rounded,
+      iconColor: AppColors.blueSecondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -172,6 +174,8 @@ class _RewardsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionCard(
       title: 'Recompensas',
+      icon: Icons.card_giftcard_rounded,
+      iconColor: AppColors.orangeAction,
       child: Column(
         children: rewards
             .map(
@@ -360,6 +364,8 @@ class _UpdatesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionCard(
       title: 'Actualizaciones',
+      icon: Icons.campaign_rounded,
+      iconColor: AppColors.bluePrimary,
       child: Column(
         children: updates
             .map(
@@ -436,6 +442,8 @@ class _VideoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SectionCard(
       title: 'Video de la campaña',
+      icon: Icons.play_circle_rounded,
+      iconColor: AppColors.error,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
