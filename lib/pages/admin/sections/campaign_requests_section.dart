@@ -352,10 +352,46 @@ class CampaignRequestCard extends StatelessWidget {
 								_WaitTimeBadge(createdAt: item.createdAt),
 							],
 						),
-						if (item.solicitudTipo != null)
+						if (item.solicitudTipo != null || item.esAnonimo)
 							Padding(
 								padding: const EdgeInsets.only(top: 10),
-								child: SolicitudTypeBadge(tipo: item.solicitudTipo!),
+								child: Wrap(
+									spacing: 8,
+									runSpacing: 8,
+									children: [
+										if (item.solicitudTipo != null)
+											SolicitudTypeBadge(tipo: item.solicitudTipo!),
+										if (item.esAnonimo)
+											Container(
+												padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+												decoration: BoxDecoration(
+													color: AppColors.orangeAction.withValues(alpha: 0.12),
+													borderRadius: BorderRadius.circular(20),
+													border: Border.all(
+														color: AppColors.orangeAction.withValues(alpha: 0.4),
+														width: 1,
+													),
+												),
+												child: const Row(
+													mainAxisSize: MainAxisSize.min,
+													children: [
+														Icon(Icons.lock_rounded,
+																size: 12, color: AppColors.orangeAction),
+														SizedBox(width: 4),
+														Text(
+															'Anónimo',
+															style: TextStyle(
+																color: AppColors.orangeAction,
+																fontWeight: FontWeight.w700,
+																fontSize: 11,
+																letterSpacing: 0.2,
+															),
+														),
+													],
+												),
+											),
+									],
+								),
 							),
 						if (subtitle != null && subtitle.isNotEmpty) ...[
 							const SizedBox(height: 10),

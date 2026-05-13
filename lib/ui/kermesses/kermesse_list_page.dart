@@ -88,9 +88,14 @@ class _KermesseListPageState extends State<KermesseListPage> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class KermesseTabView extends StatefulWidget {
-  const KermesseTabView({super.key, required this.controller});
+  const KermesseTabView({
+    super.key,
+    required this.controller,
+    this.onCreateKermesse,
+  });
 
   final KermesseController controller;
+  final VoidCallback? onCreateKermesse;
 
   @override
   State<KermesseTabView> createState() => _KermesseTabViewState();
@@ -134,7 +139,7 @@ class _KermesseTabViewState extends State<KermesseTabView> {
         }
 
         if (controller.kermesses.isEmpty) {
-          return const _EmptyKermesses();
+          return _EmptyKermesses(onCreate: widget.onCreateKermesse);
         }
 
         final featured = controller.kermesses.first;
@@ -705,7 +710,9 @@ class _TabMetaRow extends StatelessWidget {
 }
 
 class _EmptyKermesses extends StatelessWidget {
-  const _EmptyKermesses();
+  const _EmptyKermesses({this.onCreate});
+
+  final VoidCallback? onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -757,6 +764,7 @@ class _EmptyKermesses extends StatelessWidget {
     );
   }
 }
+
 
 class _KermesseErrorState extends StatelessWidget {
   const _KermesseErrorState({required this.message, required this.onRetry});

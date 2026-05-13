@@ -31,7 +31,6 @@ class _RegisterPageState extends State<RegisterPage>
 
   bool _acceptsPolicies = false;
   bool _submitting = false;
-  bool _googleLoading = false;
   String? _error;
 
   @override
@@ -58,11 +57,29 @@ class _RegisterPageState extends State<RegisterPage>
 
   String _mapSignupAuthError(AuthException error) {
     final lower = error.message.toLowerCase();
+
+    // Errores de red (Supabase los envuelve dentro de AuthException)
+    if (lower.contains('socketexception') ||
+        lower.contains('clientexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('no address associated') ||
+        lower.contains('connection failed') ||
+        lower.contains('connection refused') ||
+        lower.contains('connection timed out') ||
+        lower.contains('handshakeexception') ||
+        lower.contains('network is unreachable')) {
+      return 'Sin conexión a internet. Verifica tu Wi-Fi o datos móviles e inténtalo de nuevo.';
+    }
+
     if (lower.contains('signups not allowed')) {
       return 'Los registros están deshabilitados temporalmente. Ponte en contacto con el administrador de la plataforma.';
     }
     if (lower.contains('email rate limit')) {
-      return 'Has realizado demasiados intentos con este correo. Espera unos minutos y vuelve a intentarlo.';
+      return 'Has realizado demasiados intentos. Espera unos minutos y vuelve a intentarlo.';
+    }
+    if (lower.contains('user already registered') ||
+        lower.contains('already been registered')) {
+      return 'Ya existe una cuenta con este correo. Inicia sesión o usa otro correo.';
     }
     if (lower.contains('invalid email') ||
         lower.contains('invalid login credentials')) {
@@ -71,7 +88,8 @@ class _RegisterPageState extends State<RegisterPage>
     if (lower.contains('password')) {
       return 'La contraseña no cumple los requisitos de seguridad. Asegúrate de que tenga al menos 8 caracteres.';
     }
-    return error.message;
+
+    return 'No pudimos completar el registro. Revisa tus datos e inténtalo nuevamente.';
   }
 
   Future<void> _submit() async {
@@ -137,50 +155,6 @@ class _RegisterPageState extends State<RegisterPage>
         _error = 'Ocurrió un error inesperado al crear tu cuenta. Intenta más tarde o verifica tu conexión.';
         _submitting = false;
       });
-    }
-  }
-
-  Future<void> _signUpWithGoogle() async {
-    if (_googleLoading || _submitting) return;
-    setState(() {
-      _error = null;
-      _googleLoading = true;
-    });
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: SupabaseRedirects.oauthRedirectUri,
-        scopes: 'email profile',
-      );
-      if (!mounted) return;
-      final session = supabase.auth.currentSession;
-      if (session != null) {
-        Navigator.of(context).pop(AuthFlowResult.signedIn);
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Continúa el flujo en la ventana de Google y regresa a la app cuando finalices.'),
-        ),
-      );
-    } on AuthException catch (error) {
-      final lower = error.message.toLowerCase();
-      String friendlyMessage;
-      if (lower.contains('provider is not enabled')) {
-        friendlyMessage = 'El inicio de sesión con Google no está habilitado. Contacta al administrador.';
-      } else if (lower.contains('network') || lower.contains('connection')) {
-        friendlyMessage = 'Error de conexión. Verifica tu internet e intenta nuevamente.';
-      } else {
-        friendlyMessage = 'No pudimos iniciar sesión con Google. Intenta más tarde.';
-      }
-      setState(() => _error = friendlyMessage);
-    } catch (error, stackTrace) {
-      debugPrint('Google sign-in error: $error');
-      debugPrintStack(stackTrace: stackTrace);
-      setState(() => _error = 'No pudimos iniciar sesión con Google. Intenta más tarde.');
-    } finally {
-      if (mounted) setState(() => _googleLoading = false);
     }
   }
 

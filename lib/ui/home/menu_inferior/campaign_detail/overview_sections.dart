@@ -17,7 +17,10 @@ class _OrganizerSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final organizerName = detail.summary.organizerName ?? 'Equipo organizador';
+    final isAnonymous = detail.summary.isAnonymous;
+    final organizerName = isAnonymous
+        ? 'Beneficiario anónimo'
+        : (detail.summary.organizerName ?? 'Equipo organizador');
     final location = detail.location?.trim();
 
     return _SectionCard(
@@ -48,17 +51,22 @@ class _OrganizerSection extends StatelessWidget {
                 child: CircleAvatar(
                   radius: 32,
                   backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.15),
-                  backgroundImage: hasOrganizerAvatar ? NetworkImage(detail.organizerAvatarUrl!) : null,
-                  child: hasOrganizerAvatar
-                      ? null
-                      : Text(
-                          organizerName.characters.first.toUpperCase(),
-                          style: const TextStyle(
-                            color: AppColors.bluePrimary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
+                  backgroundImage: (!isAnonymous && hasOrganizerAvatar)
+                      ? NetworkImage(detail.organizerAvatarUrl!)
+                      : null,
+                  child: isAnonymous
+                      ? const Icon(Icons.lock_rounded,
+                          color: AppColors.bluePrimary, size: 28)
+                      : (hasOrganizerAvatar
+                          ? null
+                          : Text(
+                              organizerName.characters.first.toUpperCase(),
+                              style: const TextStyle(
+                                color: AppColors.bluePrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                              ),
+                            )),
                 ),
               ),
               const SizedBox(width: 16),
@@ -66,14 +74,35 @@ class _OrganizerSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      organizerName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkText,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            organizerName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.darkText,
+                                ),
                           ),
+                        ),
+                        if (isAnonymous) ...[
+                          const SizedBox(width: 6),
+                          Icon(Icons.verified_user_rounded,
+                              size: 16,
+                              color: AppColors.bluePrimary.withValues(alpha: 0.7)),
+                        ],
+                      ],
                     ),
-                    if (hasOrganizerBio) ...[
+                    if (isAnonymous) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Identidad protegida — verificada por el equipo administrador.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.darkText.withValues(alpha: 0.6),
+                              fontStyle: FontStyle.italic,
+                            ),
+                      ),
+                    ] else if (hasOrganizerBio) ...[
                       const SizedBox(height: 6),
                       Text(
                         detail.organizerBio!,

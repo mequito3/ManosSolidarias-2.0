@@ -20,6 +20,7 @@ class CampaignSummary {
     this.creatorId,
     this.status,
     this.requestId,
+    this.isAnonymous = false,
   });
 
   factory CampaignSummary.fromPublicView(Map<String, dynamic> json) {
@@ -49,6 +50,7 @@ class CampaignSummary {
       creatorId: json['creador_id'] as String? ?? json['creator_id'] as String?,
       status: json['estado'] as String? ?? json['status'] as String?,
       requestId: json['solicitud_id'] as String? ?? json['request_id'] as String?,
+      isAnonymous: (json['es_anonimo'] as bool?) ?? (json['is_anonymous'] as bool?) ?? false,
     );
   }
 
@@ -70,6 +72,14 @@ class CampaignSummary {
   final String? creatorId;
   final String? status;
   final String? requestId;
+  final bool isAnonymous;
+
+  /// Nombre del beneficiario/organizador a mostrar en vista publica.
+  /// Si la campania es anonima, se reemplaza por "Beneficiario anonimo".
+  String? get publicOrganizerName {
+    if (isAnonymous) return 'Beneficiario anónimo';
+    return organizerName;
+  }
 
   double get normalizedProgress => goalAmount <= 0 ? 0 : (raisedAmount / goalAmount).clamp(0, 1);
 
@@ -131,6 +141,7 @@ class CampaignSummary {
       creatorId: creatorId,
       status: status ?? this.status,
       requestId: requestId,
+      isAnonymous: isAnonymous,
     );
   }
 

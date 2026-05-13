@@ -52,6 +52,7 @@ class Solicitud {
 		this.portadaUrl,
 		this.qrOriginalUrl,
 		this.motivoRechazo,
+		this.esAnonimo = false,
 	});
 
 	final String id;
@@ -68,6 +69,7 @@ class Solicitud {
 	final String? portadaUrl;
 	final String? qrOriginalUrl;
 	final String? motivoRechazo;
+	final bool esAnonimo;
 
 	bool get isPending => estado == 'pendiente';
 	bool get isApproved => estado == 'aprobada';
@@ -89,6 +91,7 @@ class Solicitud {
 			portadaUrl: json['portada_url'] as String?,
 			qrOriginalUrl: json['qr_original_url'] as String?,
 			motivoRechazo: json['motivo_rechazo'] as String?,
+			esAnonimo: (json['es_anonimo'] as bool?) ?? false,
 		);
 	}
 
@@ -108,6 +111,7 @@ class Solicitud {
 			'portada_url': portadaUrl,
 			'qr_original_url': qrOriginalUrl,
 			'motivo_rechazo': motivoRechazo,
+			'es_anonimo': esAnonimo,
 		}..removeWhere((_, value) => value == null);
 	}
 
@@ -148,6 +152,7 @@ class SolicitudDraft {
 		this.organizationId,
 		this.portadaUrl,
 		this.qrOriginalUrl,
+		this.esAnonimo = false,
 	});
 
 	final String titulo;
@@ -158,6 +163,7 @@ class SolicitudDraft {
 	final String? organizationId;
 	final String? portadaUrl;
 	final String? qrOriginalUrl;
+	final bool esAnonimo;
 
 	Map<String, dynamic> toInsertMap({required String userId}) {
 		return {
@@ -170,6 +176,7 @@ class SolicitudDraft {
 			'organizacion_id': organizationId,
 			'portada_url': portadaUrl,
 			'qr_original_url': qrOriginalUrl,
+			'es_anonimo': esAnonimo,
 		}..removeWhere((_, value) => value == null);
 	}
 }

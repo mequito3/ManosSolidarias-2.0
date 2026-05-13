@@ -22,10 +22,15 @@ class CreateSolicitudPage extends StatefulWidget {
     super.key,
     required this.profile,
     this.startAtTypeSelection = false,
+    this.initialTipo,
   });
 
   final UserProfile profile;
   final bool startAtTypeSelection;
+
+  /// Si se provee, la pagina inicia con este tipo preseleccionado y salta el
+  /// paso de seleccion de tipo. Util para flujos dedicados como "Crear kermesse".
+  final SolicitudTipo? initialTipo;
 
   @override
   State<CreateSolicitudPage> createState() => _CreateSolicitudPageState();
@@ -52,6 +57,8 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   late _SolicitudFlowStep _currentStep;
   SolicitudTipo _selectedTipo = SolicitudTipo.campania;
   bool _acceptsGuidelines = false;
+  bool _esAnonimo = false;
+  bool _anonymousWarningShown = false;
   bool _showValidation = false;
   bool _isUploadingEvidence = false;
   final List<SolicitudEvidenceUpload> _evidenceUploads = [];
@@ -80,9 +87,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     _service = SolicitudService(Supabase.instance.client);
     _controller = SolicitudController(_service);
     _beneficiaryRelationship = _relationshipOptions.first;
-    _currentStep = widget.startAtTypeSelection
-        ? _SolicitudFlowStep.typeSelection
-        : _SolicitudFlowStep.landing;
+    // initialTipo tiene prioridad: pre-selecciona el tipo y salta a profileReview
+    if (widget.initialTipo != null) {
+      _selectedTipo = widget.initialTipo!;
+      _currentStep = _SolicitudFlowStep.profileReview;
+    } else {
+      _currentStep = widget.startAtTypeSelection
+          ? _SolicitudFlowStep.typeSelection
+          : _SolicitudFlowStep.landing;
+    }
     _controller.addListener(_handleControllerChange);
     _controller.loadInitialData();
   }
@@ -276,10 +289,11 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   }
 
   Widget _buildTypeSelectionStep() {
+    // Solo campanas se crean por este flujo. Las kermesses tienen su propio
+    // boton en el tab de Kermesses del Home (CreateSolicitudPage(initialTipo: kermesse)).
     return SolicitudTypeStep(
       configs: [
         solicitudTypeConfigs[SolicitudTipo.campania]!,
-        solicitudTypeConfigs[SolicitudTipo.kermesse]!,
       ],
       selectedTipo: _selectedTipo,
       onTipoChanged: _onTipoChanged,
@@ -322,6 +336,8 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       acceptsGuidelines: _acceptsGuidelines,
       onAcceptGuidelinesChanged: (value) =>
           setState(() => _acceptsGuidelines = value ?? false),
+      esAnonimo: _esAnonimo,
+      onEsAnonimoChanged: _handleEsAnonimoChanged,
       onBack: () => _goToStep(_SolicitudFlowStep.profileReview),
       onSubmit: _submitSolicitud,
       onCancel: () => Navigator.of(context).maybePop(),
@@ -363,6 +379,89 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       ctrl.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _handleEsAnonimoChanged(bool value) async {
+    if (!value) {
+      setState(() => _esAnonimo = false);
+      return;
+    }
+    setState(() => _esAnonimo = true);
+    if (_anonymousWarningShown) return;
+    _anonymousWarningShown = true;
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        icon: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.orangeAction.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.privacy_tip_rounded,
+              color: AppColors.orangeAction, size: 32),
+        ),
+        title: const Text(
+          'Tu solicitud será anónima',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tu nombre, contacto y dirección NO aparecerán en la vista pública. '
+              'Solo el equipo administrador podrá verlos para validar la solicitud.',
+              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.45),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      color: AppColors.warning, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Antes de subir fotos o facturas:\n'
+                      '• Tapa rostros con cinta o papel\n'
+                      '• Cubre nombres, cédulas y direcciones\n'
+                      '• Cubre fechas u otros datos personales\n\n'
+                      'No procesamos imágenes automáticamente — tú decides qué se publica.',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: AppColors.darkText,
+                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.bluePrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _handleControllerChange() {
@@ -432,6 +531,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       tipo: _selectedTipo,
       montoObjetivo: goal,
       portadaUrl: _uploadedCoverUrl,
+      esAnonimo: _esAnonimo,
     );
 
     final solicitud = await _controller.submitSolicitud(draft);

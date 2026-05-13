@@ -34,6 +34,8 @@ class SolicitudFormStep extends StatelessWidget {
     required this.onRemoveEvidence,
     required this.acceptsGuidelines,
     required this.onAcceptGuidelinesChanged,
+    required this.esAnonimo,
+    required this.onEsAnonimoChanged,
     required this.onBack,
     required this.onSubmit,
     required this.onCancel,
@@ -78,6 +80,8 @@ class SolicitudFormStep extends StatelessWidget {
   final void Function(int index) onRemoveEvidence;
   final bool acceptsGuidelines;
   final ValueChanged<bool?> onAcceptGuidelinesChanged;
+  final bool esAnonimo;
+  final ValueChanged<bool> onEsAnonimoChanged;
   final VoidCallback onBack;
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
@@ -445,6 +449,50 @@ class SolicitudFormStep extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: AppColors.darkText,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              // ─ Switch de privacidad: publicar como anónimo
+              Container(
+                decoration: BoxDecoration(
+                  color: esAnonimo
+                      ? AppColors.orangeAction.withValues(alpha: 0.08)
+                      : AppColors.grayLight.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: esAnonimo
+                        ? AppColors.orangeAction.withValues(alpha: 0.35)
+                        : AppColors.dividerColor,
+                  ),
+                ),
+                child: SwitchListTile.adaptive(
+                  value: esAnonimo,
+                  onChanged: isSubmitting ? null : onEsAnonimoChanged,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  activeColor: AppColors.orangeAction,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  secondary: Icon(
+                    esAnonimo ? Icons.lock_rounded : Icons.lock_outline_rounded,
+                    color: esAnonimo
+                        ? AppColors.orangeAction
+                        : AppColors.darkText.withValues(alpha: 0.5),
+                  ),
+                  title: Text(
+                    'Publicar como anónimo',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    esAnonimo
+                        ? 'Tu nombre y contacto no aparecerán en la vista pública. Solo el equipo admin podrá verlos.'
+                        : 'Tu nombre aparecerá como creador de la solicitud.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppColors.darkText.withValues(alpha: 0.7),
                       height: 1.4,
                     ),
                   ),

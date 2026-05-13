@@ -55,6 +55,21 @@ class _LoginPageState extends State<LoginPage>
 
   String _mapLoginAuthError(AuthException error) {
     final lower = error.message.toLowerCase();
+
+    // Errores de red (Supabase los envuelve dentro de AuthException)
+    if (lower.contains('socketexception') ||
+        lower.contains('clientexception') ||
+        lower.contains('failed host lookup') ||
+        lower.contains('no address associated') ||
+        lower.contains('connection failed') ||
+        lower.contains('connection refused') ||
+        lower.contains('connection timed out') ||
+        lower.contains('handshakeexception') ||
+        lower.contains('network is unreachable') ||
+        lower.contains('network')) {
+      return 'Sin conexión a internet. Verifica tu Wi-Fi o datos móviles e inténtalo de nuevo.';
+    }
+
     if (lower.contains('invalid login credentials') ||
         lower.contains('invalid email or password')) {
       return 'Correo o contraseña incorrectos. Verifica tus credenciales.';
@@ -67,9 +82,6 @@ class _LoginPageState extends State<LoginPage>
     }
     if (lower.contains('too many requests')) {
       return 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.';
-    }
-    if (lower.contains('network')) {
-      return 'Error de conexión. Verifica tu internet e intenta nuevamente.';
     }
     return 'Error al iniciar sesión. Verifica tus datos e intenta nuevamente.';
   }

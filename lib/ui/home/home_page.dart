@@ -12,6 +12,7 @@ import '../../controllers/organization_controller.dart';
 import '../../controllers/donor_trophy_controller.dart';
 import '../../models/campaign.dart';
 import '../../models/organization.dart';
+import '../../models/solicitud.dart';
 import '../../models/user_profile.dart';
 import '../../services/campaign_service.dart';
 import '../../services/donation_history_service.dart';
@@ -247,6 +248,29 @@ class _HomePageState extends State<HomePage> {
       );
     }
     return false;
+  }
+
+  Future<void> _openCreateKermesse() async {
+    if (!mounted) return;
+    final ready = await _ensureProfileReady();
+    if (!ready || !mounted) return;
+
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CreateSolicitudPage(
+          profile: _profile,
+          initialTipo: SolicitudTipo.kermesse,
+        ),
+      ),
+    );
+
+    if (created == true && mounted) {
+      _kermesseController.loadKermesses();
+      AppSnackBar.showSuccess(
+        context,
+        'Tu kermesse fue registrada. La estamos revisando.',
+      );
+    }
   }
 
   Future<void> _openCreateSolicitud() async {
@@ -508,8 +532,27 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       case 1:
-        // Kermeses — sin FAB
-        return null;
+        // Kermesses — FAB para crear nueva kermesse (consistencia con otros tabs)
+        return Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.actionGradient,
+            borderRadius: BorderRadius.circular(AppColors.radiusRound),
+            boxShadow: AppColors.shadowLg,
+          ),
+          child: FloatingActionButton.extended(
+            onPressed: _openCreateKermesse,
+            icon: const Icon(Icons.festival_rounded, size: 24),
+            label: const Text(
+              'Crear kermesse',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.0,
+              ),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+          ),
+        );
       case 2:
         // MEJORA: FAB con gradiente primary
         return Container(
@@ -728,6 +771,7 @@ class _HomePageState extends State<HomePage> {
             ),
             KermesseTabView(
               controller: _kermesseController,
+              onCreateKermesse: _openCreateKermesse,
             ),
             AnimatedBuilder(
               animation: _organizationController,

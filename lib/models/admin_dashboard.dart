@@ -65,6 +65,7 @@ class AdminPendingItem {
     this.kermessePurpose,
     this.kermesseMenu,
     this.kermesseShows,
+    this.esAnonimo = false,
   });
 
   final String id;
@@ -86,6 +87,7 @@ class AdminPendingItem {
   final String? kermessePurpose;
   final String? kermesseMenu;
   final String? kermesseShows;
+  final bool esAnonimo;
 }
 
 class AdminActiveCampaign {

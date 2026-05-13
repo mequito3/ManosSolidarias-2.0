@@ -425,12 +425,6 @@ class OrganizationEmptyState extends StatelessWidget {
                       height: 1.4,
                     ),
               ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: onCreateOrganization,
-                icon: const Icon(Icons.add_business_outlined),
-                label: const Text('Registrar organización'),
-              ),
             ],
           ),
         ),

@@ -1,9 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+
+// ─── Helpers compartidos por las 3 variantes de card ──────────────
+String _thousandSep(int value) {
+  final isNegative = value < 0;
+  final str = value.abs().toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < str.length; i++) {
+    if (i > 0 && (str.length - i) % 3 == 0) buf.write('.');
+    buf.write(str[i]);
+  }
+  return isNegative ? '-${buf.toString()}' : buf.toString();
+}
+
+String _formatBs(double value) {
+  if (value >= 1000000) return 'Bs ${(value / 1000000).toStringAsFixed(1)}M';
+  return 'Bs ${_thousandSep(value.round())}';
+}
+
+Widget _imageShimmer({double? width, double? height}) {
+  return Shimmer.fromColors(
+    baseColor: AppColors.bluePrimary.withValues(alpha: 0.06),
+    highlightColor: AppColors.bluePrimary.withValues(alpha: 0.14),
+    child: Container(
+      width: width,
+      height: height,
+      color: Colors.white,
+    ),
+  );
+}
 
 // ────────────────────────────────────────────────────────────
 //  Card principal
@@ -62,9 +93,10 @@ class CampaignCard extends StatelessWidget {
                 heroTagPrefix: heroTagPrefix,
                 imageUrl: campaign.coverUrl,
                 title: campaign.title,
-                organizerName: campaign.organizerName?.isNotEmpty == true
-                    ? campaign.organizerName
+                organizerName: campaign.publicOrganizerName?.isNotEmpty == true
+                    ? campaign.publicOrganizerName
                     : null,
+                isAnonymous: campaign.isAnonymous,
                 category:
                     campaign.category.isNotEmpty ? campaign.category : 'Campaña',
                 isCompleted: campaign.isCompleted,
@@ -178,11 +210,7 @@ class CampaignCard extends StatelessWidget {
     return AppColors.orangeAction;
   }
 
-  String _formatCurrency(double value) {
-    if (value >= 1000000) return 'Bs ${(value / 1000000).toStringAsFixed(1)}M';
-    if (value >= 1000) return 'Bs ${(value / 1000).toStringAsFixed(1)}K';
-    return 'Bs ${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}';
-  }
+  String _formatCurrency(double value) => _formatBs(value);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -200,6 +228,7 @@ class _CampaignHeroImage extends StatelessWidget {
     required this.isFavorite,
     required this.onToggleFavorite,
     this.organizerName,
+    this.isAnonymous = false,
   });
 
   final String campaignId;
@@ -211,6 +240,7 @@ class _CampaignHeroImage extends StatelessWidget {
   final bool isCompleted;
   final bool isVerified;
   final bool isFavorite;
+  final bool isAnonymous;
   final VoidCallback? onToggleFavorite;
 
   @override
@@ -269,8 +299,13 @@ class _CampaignHeroImage extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(Icons.person_rounded,
-                            size: 11, color: Colors.white70),
+                        Icon(
+                          isAnonymous
+                              ? Icons.lock_rounded
+                              : Icons.person_rounded,
+                          size: 11,
+                          color: Colors.white70,
+                        ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
@@ -356,19 +391,7 @@ class _CampaignHeroImage extends StatelessWidget {
       fit: BoxFit.cover,
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
-        return Container(
-          color: AppColors.bluePrimary.withValues(alpha: 0.06),
-          child: Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-              color: AppColors.bluePrimary,
-            ),
-          ),
-        );
+        return _imageShimmer();
       },
       errorBuilder: (_, __, ___) => Container(
         decoration: BoxDecoration(
@@ -396,7 +419,12 @@ class _FavoriteButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: onPressed == null
+          ? null
+          : () {
+              HapticFeedback.selectionClick();
+              onPressed!();
+            },
       child: Container(
         width: 36,
         height: 36,
@@ -455,41 +483,6 @@ class _CategoryChip extends StatelessWidget {
               fontSize: 11,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.label, required this.color});
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(99),
-        boxShadow: [
-          BoxShadow(
-              color: color.withValues(alpha: 0.4),
-              blurRadius: 8,
-              offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_rounded, size: 12, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 11)),
         ],
       ),
     );
@@ -566,39 +559,67 @@ class _StatDivider extends StatelessWidget {
   }
 }
 
-class _SupportButton extends StatelessWidget {
+class _SupportButton extends StatefulWidget {
   const _SupportButton({required this.onPressed});
   final VoidCallback? onPressed;
 
   @override
+  State<_SupportButton> createState() => _SupportButtonState();
+}
+
+class _SupportButtonState extends State<_SupportButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColors.actionGradient,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: AppColors.orangeAction.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4)),
-        ],
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton.icon(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: Colors.white,
-            shadowColor: Colors.transparent,
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14)),
-            elevation: 0,
+    final isEnabled = widget.onPressed != null;
+    return Listener(
+      onPointerDown: isEnabled ? (_) => _setPressed(true) : null,
+      onPointerUp: (_) => _setPressed(false),
+      onPointerCancel: (_) => _setPressed(false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.actionGradient,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                  color: AppColors.orangeAction.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4)),
+            ],
           ),
-          onPressed: onPressed,
-          icon: const Icon(Icons.volunteer_activism_rounded, size: 18),
-          label: const Text('Apoyar esta causa',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5)),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shadowColor: Colors.transparent,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              onPressed: isEnabled
+                  ? () {
+                      HapticFeedback.mediumImpact();
+                      widget.onPressed!();
+                    }
+                  : null,
+              icon: const Icon(Icons.volunteer_activism_rounded, size: 18),
+              label: const Text('Apoyar esta causa',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5)),
+            ),
+          ),
         ),
       ),
     );
@@ -666,23 +687,7 @@ class CampaignProgressTile extends StatelessWidget {
                           fit: BoxFit.cover,
                           loadingBuilder: (_, child, progress) {
                             if (progress == null) return child;
-                            return Container(
-                              color: AppColors.bluePrimary.withValues(alpha: 0.08),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.bluePrimary,
-                                    value: progress.expectedTotalBytes != null
-                                        ? progress.cumulativeBytesLoaded /
-                                            progress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            );
+                            return _imageShimmer(width: 72, height: 72);
                           },
                           errorBuilder: (_, __, ___) => Container(
                             color: AppColors.error.withValues(alpha: 0.08),
@@ -794,11 +799,7 @@ class CampaignProgressTile extends StatelessWidget {
     );
   }
 
-  String _fmt(double v) {
-    if (v >= 1000000) return 'Bs ${(v / 1000000).toStringAsFixed(1)}M';
-    if (v >= 1000) return 'Bs ${(v / 1000).toStringAsFixed(1)}K';
-    return 'Bs ${v.toStringAsFixed(0)}';
-  }
+  String _fmt(double v) => _formatBs(v);
 }
 
 // ────────────────────────────────────────────────────────────
@@ -860,23 +861,7 @@ class CampaignHeadlineTile extends StatelessWidget {
                           fit: BoxFit.cover,
                           loadingBuilder: (_, child, progress) {
                             if (progress == null) return child;
-                            return Container(
-                              color: AppColors.greenSuccess.withValues(alpha: 0.08),
-                              child: Center(
-                                child: SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: AppColors.greenSuccess,
-                                    value: progress.expectedTotalBytes != null
-                                        ? progress.cumulativeBytesLoaded /
-                                            progress.expectedTotalBytes!
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                            );
+                            return _imageShimmer(width: 60, height: 60);
                           },
                           errorBuilder: (_, __, ___) => Container(
                             color: AppColors.error.withValues(alpha: 0.08),

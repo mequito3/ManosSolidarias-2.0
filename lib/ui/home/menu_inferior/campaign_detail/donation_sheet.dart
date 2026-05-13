@@ -964,7 +964,9 @@ class _DonationSheetState extends State<_DonationSheet> {
         }
         break;
       default:
-        final phone = widget.detail.organizerContactPhone;
+        // En campañas anónimas no exponemos el teléfono del organizador al público.
+        final isAnonymous = widget.detail.summary.isAnonymous;
+        final phone = isAnonymous ? null : widget.detail.organizerContactPhone;
         final hasPhone = phone?.trim().isNotEmpty == true;
         content = [
           _buildInfoMessage(
