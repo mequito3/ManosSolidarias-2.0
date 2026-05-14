@@ -43,121 +43,68 @@ class _ShareSheetState extends State<_ShareSheet>
     return SafeArea(
       top: false,
       child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: maxHeight),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    blurRadius: 20,
-                    spreadRadius: -5,
-                  ),
-                ],
-              ),
-              child: SingleChildScrollView(
-            physics: const ClampingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Acento degradado superior
-                Container(
-                  height: 3,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(32)),
-                  ),
-                ),
-                // Handle
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.only(top: 10),
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.grayNeutral.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(2),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10),
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.darkText.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                ),
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          borderRadius: BorderRadius.circular(13),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  AppColors.bluePrimary.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
+                  // Header sobrio · solo tipografía
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Compartir campaña',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.darkText,
+                            fontSize: 20,
+                            letterSpacing: -0.5,
+                            height: 1.2,
+                          ),
                         ),
-                        child: const Icon(Icons.share_rounded,
-                            color: Colors.white, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Compartir campaña',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.darkText,
-                                fontSize: 18,
-                                letterSpacing: -0.4,
-                                height: 1.1,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Difunde esta causa y ayuda a alcanzar la meta',
-                              style: TextStyle(
-                                color: AppColors.darkText.withValues(alpha: 0.5),
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Preview card con título de campaña
-                _SharePreviewCard(title: widget.campaignTitle),
-                // Separador invisible sin lineas duras
-                const SizedBox(height: 10),
-                // Lista de opciones con stagger
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.bluePrimary.withValues(alpha: 0.03),
-                          blurRadius: 32,
-                          offset: const Offset(0, 8),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.campaignTitle.isNotEmpty
+                              ? widget.campaignTitle
+                              : 'Difundí esta causa',
+                          maxLines: 2,
+                          style: TextStyle(
+                            color: AppColors.darkText.withValues(alpha: 0.55),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w500,
+                            height: 1.4,
+                          ),
                         ),
                       ],
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.5), width: 1.5),
                     ),
+                  ),
+                  const SizedBox(height: 18),
+                  // Lista de opciones · flujo limpio sin card ornamental
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 18),
                     child: Column(
                       children: [
                         for (var i = 0; i < widget.options.length; i++) ...[
@@ -174,137 +121,25 @@ class _ShareSheetState extends State<_ShareSheet>
                           if (i < widget.options.length - 1)
                             Divider(
                               height: 1,
-                              indent: 74,
-                              color:
-                                  AppColors.dividerColor.withValues(alpha: 0.6),
+                              thickness: 1,
+                              indent: 70,
+                              endIndent: 16,
+                              color: AppColors.darkText.withValues(alpha: 0.06),
                             ),
                         ],
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Preview card ──────────────────────────────────────────────────────────────
-
-class _SharePreviewCard extends StatelessWidget {
-  const _SharePreviewCard({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.bluePrimary.withValues(alpha: 0.08),
-              AppColors.blueSecondary.withValues(alpha: 0.04),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.bluePrimary.withValues(alpha: 0.04),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.8),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.volunteer_activism_rounded,
-                color: AppColors.bluePrimary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title.isNotEmpty ? title : 'Campaña solidaria',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                      fontSize: 14,
-                      height: 1.3,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color:
-                              AppColors.bluePrimary.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.phone_android_rounded,
-                              size: 10,
-                              color: AppColors.bluePrimary
-                                  .withValues(alpha: 0.7),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Manos Solidarias · App',
-                              style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.bluePrimary
-                                    .withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
 
 // ─── Staggered row wrapper ────────────────────────────────────────────────────
 // Per flutter-animations skill: cache Tween/CurvedAnimation in State,

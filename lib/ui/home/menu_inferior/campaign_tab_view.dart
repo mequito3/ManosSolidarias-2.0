@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../controllers/campaign_controller.dart';
-import '../../../controllers/donor_trophy_controller.dart';
 import '../../../models/campaign.dart';
-import '../../../models/donor_trophy_entry.dart';
 import '../../../models/user_profile.dart';
 import '../../../theme/app_colors.dart';
 import '../../widgets/app_buttons.dart';
 import '../widgets/campaign_card.dart';
-import '../widgets/home_section.dart';
+import '../widgets/campaign_near_goal_card.dart';
+import '../widgets/campaign_story_strip.dart';
+import '../widgets/featured_campaign_hero.dart';
+import '../widgets/promoted_campaign_banner.dart';
 import 'shared_states.dart';
 
 class CampaignTabView extends StatelessWidget {
@@ -23,8 +24,6 @@ class CampaignTabView extends StatelessWidget {
     required this.onOpenCampaign,
     required this.onSupportCampaign,
     required this.onCompleteProfile,
-    this.donorTrophyController,
-    this.onViewLeaderboard,
     this.categoryFilter,
     this.onClearCategoryFilter,
   });
@@ -38,8 +37,6 @@ class CampaignTabView extends StatelessWidget {
   final ValueChanged<CampaignSummary> onOpenCampaign;
   final ValueChanged<CampaignSummary> onSupportCampaign;
   final RetryCallback onCompleteProfile;
-  final DonorTrophyController? donorTrophyController;
-  final VoidCallback? onViewLeaderboard;
   final String? categoryFilter;
   final VoidCallback? onClearCategoryFilter;
 
@@ -67,12 +64,10 @@ class CampaignTabView extends StatelessWidget {
       ).where((c) => !featuredIds.contains(c.id))
     );
     final seenIds = {...featuredIds, ...nearGoal.map((c) => c.id)};
-    final recent = (categoryFilter != null 
+    final recent = (categoryFilter != null
         ? controller.recentCampaigns.where((c) => c.category == categoryFilter).toList()
         : controller.recentCampaigns
-    ).where((c) => !seenIds.contains(c.id)).take(2).toList();
-
-    final featuredCarouselHeight = (MediaQuery.of(context).size.height * 0.45).clamp(365.0, 420.0);
+    ).where((c) => !seenIds.contains(c.id)).take(8).toList();
 
     if (isLoading && campaigns.isEmpty) {
       return const HomeTabLoadingState();
@@ -125,115 +120,64 @@ class CampaignTabView extends StatelessWidget {
               onSelected: onSortSelected,
             ),
           ),
-          if (donorTrophyController != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: _DonorLeaderboardPreview(
-                controller: donorTrophyController!,
-                onViewLeaderboard: onViewLeaderboard,
-              ),
-            ),
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: HomeTabInlineError(message: error, onRetry: onRefresh),
             ),
-          if (featured.isNotEmpty)
-            HomeSection(
-              title: 'Campañas destacadas',
-              subtitle: 'Proyectos verificados con alto impacto comunitario.',
-              icon: Icons.star_rounded,
-              iconColor: AppColors.orangeAction,
-              child: SizedBox(
-                height: featuredCarouselHeight,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: featured.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final campaign = featured[index];
-                    return SizedBox(
-                      width: 320,
-                      child: CampaignCard(
-                        campaign: campaign,
-                        heroTagPrefix: 'featured',
-                        onTap: () => onOpenCampaign(campaign),
-                        onSupport: () => onSupportCampaign(campaign),
-                        onToggleFavorite: () => onToggleFavorite(campaign),
-                        showSupportButton: false,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          if (nearGoal.isNotEmpty)
-            HomeSection(
-              title: 'Cerca de la meta',
-              subtitle: 'Estas campañas están a punto de alcanzar su objetivo.',
-              icon: Icons.local_fire_department_rounded,
-              iconColor: AppColors.greenSuccess,
-              child: Column(
-                children: nearGoal
-                    .take(4)
-                    .map(
-                      (campaign) => Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: CampaignProgressTile(
-                          campaign: campaign,
-                          onTap: () => onOpenCampaign(campaign),
-                          onSupport: () => onSupportCampaign(campaign),
-                          onToggleFavorite: () => onToggleFavorite(campaign),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          if (recent.isNotEmpty)
-            HomeSection(
+          // ── 1. RECIÉN LANZADAS · Story strip estilo Instagram ──────
+          if (recent.isNotEmpty) ...[
+            const _PlainSectionHeader(
               title: 'Recién lanzadas',
-              subtitle: 'Ideas frescas que necesitan sus primeros aliados.',
-              icon: Icons.rocket_launch_rounded,
-              iconColor: AppColors.bluePrimary,
-              child: Column(
-                children: recent
-                    .map(
-                      (campaign) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: CampaignHeadlineTile(
-                          campaign: campaign,
-                          onTap: () => onOpenCampaign(campaign),
-                          onToggleFavorite: () => onToggleFavorite(campaign),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
+              subtitle: 'Ideas frescas que buscan sus primeros aliados.',
             ),
-          if (visibleCampaigns.isNotEmpty)
-            HomeSection(
+            const SizedBox(height: 12),
+            CampaignStoryStrip(
+              campaigns: recent,
+              onOpenCampaign: onOpenCampaign,
+            ),
+            const SizedBox(height: 28),
+          ],
+
+          // ── 2. CAMPAÑA DESTACADA · Hero protagonista ───────────────
+          if (featured.isNotEmpty) ...[
+            FeaturedCampaignHero(
+              campaign: featured.first,
+              onTap: () => onOpenCampaign(featured.first),
+              onSupport: () => onSupportCampaign(featured.first),
+              onToggleFavorite: () => onToggleFavorite(featured.first),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // ── 3. CERCA DE LA META · Cards premium ────────────────────
+          if (nearGoal.isNotEmpty) ...[
+            const _PlainSectionHeader(
+              title: 'Cerca de la meta',
+              subtitle: 'Estas campañas están a punto de lograrlo.',
+            ),
+            const SizedBox(height: 12),
+            ...nearGoal.take(4).map(
+                  (campaign) => Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: CampaignNearGoalCard(
+                      campaign: campaign,
+                      onTap: () => onOpenCampaign(campaign),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 24),
+          ],
+
+          // ── 4. TODAS LAS CAMPAÑAS · Listado con ads nativas ────────
+          if (visibleCampaigns.isNotEmpty) ...[
+            const _PlainSectionHeader(
               title: 'Todas las campañas',
               subtitle: 'Explora la base completa de iniciativas activas.',
-              icon: Icons.grid_view_rounded,
-              iconColor: AppColors.grayNeutral,
-              child: Column(
-                children: visibleCampaigns
-                    .map(
-                      (campaign) => Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: CampaignCard(
-                          campaign: campaign,
-                          heroTagPrefix: 'all',
-                          onTap: () => onOpenCampaign(campaign),
-                          onSupport: () => onSupportCampaign(campaign),
-                          onToggleFavorite: () => onToggleFavorite(campaign),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
             ),
+            const SizedBox(height: 12),
+            ..._buildAllCampaignsWithAds(visibleCampaigns, featured),
+          ],
           if (visibleCampaigns.isNotEmpty && campaigns.length > visibleCampaigns.length)
             Center(
               child: Text(
@@ -383,699 +327,74 @@ class CampaignTabView extends StatelessWidget {
     if (campaign.isFavorite) {
       score += 50.0; // Boost significativo para favoritos
     }
-    
+
     return score;
   }
-}
 
-class _DonorLeaderboardPreview extends StatelessWidget {
-  const _DonorLeaderboardPreview({
-    required this.controller,
-    this.onViewLeaderboard,
-  });
+  /// Intercala un PromotedCampaignBanner cada 4 cards orgánicas.
+  /// Las campañas promovidas se toman de `featured` (saltando la primera, que
+  /// ya está como hero arriba). Los sponsors rotan para variedad visual.
+  List<Widget> _buildAllCampaignsWithAds(
+    List<CampaignSummary> visible,
+    List<CampaignSummary> featured,
+  ) {
+    const sponsors = <_SponsorTag>[
+      _SponsorTag('Banco Andino', Color(0xFFC8102E)),
+      _SponsorTag('ConectaBolivia', Color(0xFF0066CC)),
+      _SponsorTag('Cooperativa Sucre', Color(0xFF27AE60)),
+      _SponsorTag('Industria Valle', Color(0xFFE67E22)),
+    ];
 
-  final DonorTrophyController controller;
-  final VoidCallback? onViewLeaderboard;
+    final sponsoredPool = featured.length > 1
+        ? featured.skip(1).toList()
+        : (featured.isNotEmpty ? [featured.first] : <CampaignSummary>[]);
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final widgets = <Widget>[];
+    var adIndex = 0;
 
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, _) {
-        if (controller.isLoading && controller.entries.isEmpty) {
-          return _LeaderboardContainer(
-            child: Row(
-              children: [
-                const SizedBox(
-                  width: 32,
-                  height: 32,
-                  child: CircularProgressIndicator(strokeWidth: 2.5),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    'Cargando ranking solidario…',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.darkText.withValues(alpha: 0.75),
-                    ),
-                  ),
-                ),
-              ],
+    for (var i = 0; i < visible.length; i++) {
+      final campaign = visible[i];
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: CampaignCard(
+            campaign: campaign,
+            heroTagPrefix: 'all',
+            onTap: () => onOpenCampaign(campaign),
+            onSupport: () => onSupportCampaign(campaign),
+            onToggleFavorite: () => onToggleFavorite(campaign),
+          ),
+        ),
+      );
+
+      final isFourthCard = (i + 1) % 4 == 0;
+      final hasMoreCards = i < visible.length - 1;
+      if (isFourthCard && hasMoreCards && sponsoredPool.isNotEmpty) {
+        final sponsoredCampaign =
+            sponsoredPool[adIndex % sponsoredPool.length];
+        final sponsor = sponsors[adIndex % sponsors.length];
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: PromotedCampaignBanner(
+              campaign: sponsoredCampaign,
+              sponsorName: sponsor.name,
+              sponsorColor: sponsor.color,
+              onTap: () => onOpenCampaign(sponsoredCampaign),
             ),
-          );
-        }
-
-        if (controller.errorMessage != null && controller.entries.isEmpty) {
-          return _LeaderboardContainer(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'No pudimos cargar el ranking',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkText,
-                      ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  controller.errorMessage!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkText.withValues(alpha: 0.7),
-                      ),
-                ),
-                TextButton.icon(
-                  onPressed: controller.refresh,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Reintentar'),
-                ),
-              ],
-            ),
-          );
-        }
-
-        final topEntries = controller.topThree;
-        if (topEntries.isEmpty) {
-          return _LeaderboardContainer(
-            child: Column(
-              children: [
-                // Podio vacío ilustrado
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        AppColors.orangeAction.withValues(alpha: 0.08),
-                        AppColors.bluePrimary.withValues(alpha: 0.05),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.orangeAction.withValues(alpha: 0.15),
-                      width: 2,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Trofeo grande
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppColors.orangeAction.withValues(alpha: 0.2),
-                              AppColors.orangeAction.withValues(alpha: 0.1),
-                            ],
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.emoji_events_rounded,
-                          color: AppColors.orangeAction,
-                          size: 48,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        '¡Podio disponible!',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkText,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sé el primero en donar y tu nombre aparecerá en el ranking solidario',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.7),
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      // Mini podio ilustrativo
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _EmptyPodiumBar(
-                            height: 35,
-                            label: '2°',
-                            color: AppColors.bluePrimary,
-                          ),
-                          const SizedBox(width: 8),
-                          _EmptyPodiumBar(
-                            height: 50,
-                            label: '1°',
-                            color: AppColors.orangeAction,
-                          ),
-                          const SizedBox(width: 8),
-                          _EmptyPodiumBar(
-                            height: 25,
-                            label: '3°',
-                            color: AppColors.greenSuccess,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (onViewLeaderboard != null) ...[
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: onViewLeaderboard,
-                    icon: const Icon(Icons.leaderboard_rounded, size: 18),
-                    label: const Text('Ver ranking completo'),
-                  ),
-                ],
-              ],
-            ),
-          );
-        }
-
-        final profile = controller.profile;
-
-        return _LeaderboardContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header mejorado
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppColors.orangeAction.withValues(alpha: 0.15),
-                          AppColors.orangeAction.withValues(alpha: 0.05),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.emoji_events_rounded,
-                      color: AppColors.orangeAction,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ranking Solidario',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.darkText,
-                              ),
-                        ),
-                        Text(
-                          'Los más generosos del mes',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.darkText.withValues(alpha: 0.6),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (onViewLeaderboard != null)
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: AppColors.bluePrimary.withValues(alpha: 0.3),
-                        ),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: onViewLeaderboard,
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Ver todo',
-                                  style: TextStyle(
-                                    color: AppColors.bluePrimary,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.arrow_forward_rounded,
-                                  size: 16,
-                                  color: AppColors.bluePrimary,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              
-              const SizedBox(height: 20),
-              
-              // Podio horizontal simple
-              Row(
-                children: [
-                  // Segundo lugar (izquierda)
-                  if (topEntries.length > 1)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 4),
-                        child: _LeaderboardPreviewTile(entry: topEntries[1]),
-                      ),
-                    ),
-                  // Primer lugar (centro)
-                  if (topEntries.isNotEmpty)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: _LeaderboardPreviewTile(entry: topEntries[0]),
-                      ),
-                    ),
-                  // Tercer lugar (derecha)
-                  if (topEntries.length > 2)
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: _LeaderboardPreviewTile(entry: topEntries[2]),
-                      ),
-                    ),
-                ],
-              ),
-              
-              // Posición del usuario
-              if (profile != null) ...[
-                const SizedBox(height: 16),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final isNarrow = constraints.maxWidth < 320;
-                    
-                    return Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isNarrow ? 10 : 14,
-                        vertical: isNarrow ? 10 : 14,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            profile.hasRanking
-                                ? AppColors.bluePrimary.withValues(alpha: 0.08)
-                                : AppColors.grayNeutral.withValues(alpha: 0.06),
-                            Colors.transparent,
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: profile.hasRanking
-                              ? AppColors.bluePrimary.withValues(alpha: 0.2)
-                              : AppColors.grayNeutral.withValues(alpha: 0.15),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          // Avatar del usuario con borde
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.bluePrimary.withValues(alpha: 0.3),
-                                width: 2,
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              radius: isNarrow ? 22 : 26,
-                              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
-                              backgroundImage: profile.avatarUrl != null 
-                                ? NetworkImage(profile.avatarUrl!) 
-                                : null,
-                              child: profile.avatarUrl == null
-                                ? Icon(
-                                    Icons.person_rounded,
-                                    color: AppColors.bluePrimary,
-                                    size: isNarrow ? 24 : 28,
-                                  )
-                                : null,
-                            ),
-                          ),
-                          SizedBox(width: isNarrow ? 10 : 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Tu posición',
-                                  style: TextStyle(
-                                    color: AppColors.darkText.withValues(alpha: 0.6),
-                                    fontSize: isNarrow ? 10 : 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                if (profile.hasRanking)
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: isNarrow ? 6 : 8,
-                                          vertical: isNarrow ? 3 : 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.bluePrimary.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          '#${profile.position}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w900,
-                                            color: AppColors.bluePrimary,
-                                            fontSize: isNarrow ? 12 : 14,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: Text(
-                                          profile.level.label,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.darkText,
-                                            fontSize: isNarrow ? 11 : 13,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                else
-                                  Text(
-                                    'Sin ranking',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.darkText.withValues(alpha: 0.5),
-                                      fontSize: isNarrow ? 11 : 13,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: isNarrow ? 8 : 10),
-                          // Badge de monto
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isNarrow ? 10 : 14,
-                              vertical: isNarrow ? 8 : 10,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppColors.orangeAction,
-                                  AppColors.orangeActionLight,
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.orangeAction.withValues(alpha: 0.3),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Total',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: isNarrow ? 8 : 9,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  profile.hasRanking
-                                      ? _formatPreviewAmount(profile.totalDonated)
-                                      : 'Bs 0',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: isNarrow ? 13 : 16,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ],
           ),
         );
-      },
-    );
-  }
-
-  String _formatPreviewAmount(double value) {
-    if (value >= 1000) {
-      return 'Bs. ${value.toStringAsFixed(0)}';
+        adIndex++;
+      }
     }
-    return 'Bs. ${value.toStringAsFixed(1)}';
+    return widgets;
   }
 }
 
-class _LeaderboardPreviewTile extends StatelessWidget {
-  const _LeaderboardPreviewTile({required this.entry});
-
-  final DonorTrophyEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final podiumData = _getPodiumData(entry.position);
-    final Color color = podiumData['color'];
-    final double avatarSize = podiumData['avatarSize'];
-    
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 2,
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Badge de posición arriba
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: podiumData['gradientColors'] as List<Color>,
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.3),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Center(
-              child: entry.position == 1
-                  ? const Icon(
-                      Icons.emoji_events_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    )
-                  : Text(
-                      '${entry.position}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        height: 1.0,
-                      ),
-                    ),
-            ),
-          ),
-          
-          const SizedBox(height: 10),
-          
-          // Avatar con borde
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: color.withValues(alpha: 0.3),
-                width: 2,
-              ),
-            ),
-            child: CircleAvatar(
-              radius: avatarSize,
-              backgroundColor: color.withValues(alpha: 0.15),
-              backgroundImage: entry.avatarUrl != null 
-                ? NetworkImage(entry.avatarUrl!) 
-                : null,
-              child: entry.avatarUrl == null
-                  ? Icon(
-                      Icons.person_rounded,
-                      size: avatarSize * 1.1,
-                      color: color,
-                    )
-                  : null,
-            ),
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Nombre (máximo 2 líneas, bien centrado)
-          SizedBox(
-            height: 30, // Altura fija para alinear todas las tarjetas
-            child: Center(
-              child: Text(
-                entry.displayName,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                  fontSize: 11,
-                  height: 1.2,
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 6),
-          
-          // Monto destacado
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              _formatContribution(entry.totalDonated),
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 4),
-          
-          // Nivel pequeño
-          Text(
-            entry.level.label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: AppColors.darkText.withValues(alpha: 0.6),
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Map<String, dynamic> _getPodiumData(int position) {
-    switch (position) {
-      case 1:
-        return {
-          'color': AppColors.orangeAction,
-          'gradientColors': [AppColors.orangeAction, AppColors.orangeActionLight],
-          'avatarSize': 28.0,
-        };
-      case 2:
-        return {
-          'color': AppColors.bluePrimary,
-          'gradientColors': [AppColors.bluePrimary, AppColors.blueSecondary],
-          'avatarSize': 26.0,
-        };
-      case 3:
-        return {
-          'color': AppColors.greenSuccess,
-          'gradientColors': [AppColors.greenSuccess, AppColors.greenHope],
-          'avatarSize': 26.0,
-        };
-      default:
-        return {
-          'color': AppColors.darkText,
-          'gradientColors': [AppColors.darkText, AppColors.grayNeutral],
-          'avatarSize': 24.0,
-        };
-    }
-  }
-
-  String _formatContribution(double value) {
-    if (value >= 1000) {
-      final k = value / 1000;
-      return 'Bs ${k.toStringAsFixed(k >= 10 ? 0 : 1)}K';
-    }
-    return 'Bs ${value.toStringAsFixed(0)}';
-  }
-}
-
-class _LeaderboardContainer extends StatelessWidget {
-  const _LeaderboardContainer({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.grayNeutral.withValues(alpha: 0.12),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
+class _SponsorTag {
+  const _SponsorTag(this.name, this.color);
+  final String name;
+  final Color color;
 }
 
 enum CampaignSortOption {
@@ -1115,7 +434,6 @@ class SortToggleBar extends StatelessWidget {
           children: CampaignSortOption.values.map((option) {
             final isSelected = option == selectedOption;
             return _SortChip(
-              icon: option.icon,
               label: option.label,
               isSelected: isSelected,
               onTap: () => onSelected(option),
@@ -1129,13 +447,11 @@ class SortToggleBar extends StatelessWidget {
 
 class _SortChip extends StatelessWidget {
   const _SortChip({
-    required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
   });
 
-  final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
@@ -1166,19 +482,11 @@ class _SortChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isSelected 
-                  ? AppColors.bluePrimary 
-                  : AppColors.darkText.withValues(alpha: 0.5),
-            ),
-            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: isSelected 
-                    ? AppColors.darkText 
+                color: isSelected
+                    ? AppColors.darkText
                     : AppColors.darkText.withValues(alpha: 0.6),
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
@@ -1759,68 +1067,6 @@ class ProfileIncompleteBanner extends StatelessWidget {
   }
 }
 
-class _EmptyPodiumBar extends StatelessWidget {
-  const _EmptyPodiumBar({
-    required this.height,
-    required this.label,
-    required this.color,
-  });
-
-  final double height;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 50,
-          height: height,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                color.withValues(alpha: 0.3),
-                color.withValues(alpha: 0.15),
-              ],
-            ),
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(8),
-            ),
-            border: Border(
-              top: BorderSide(
-                color: color,
-                width: 3,
-              ),
-              left: BorderSide(
-                color: color.withValues(alpha: 0.3),
-                width: 1,
-              ),
-              right: BorderSide(
-                color: color.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class CampaignEmptyState extends StatelessWidget {
   const CampaignEmptyState({super.key, required this.sortOption});
 
@@ -1951,6 +1197,45 @@ class _CategoryFilterChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PlainSectionHeader extends StatelessWidget {
+  const _PlainSectionHeader({
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: AppColors.darkText,
+            letterSpacing: -0.3,
+            height: 1.2,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.darkText.withValues(alpha: 0.6),
+            height: 1.4,
+          ),
+        ),
+      ],
     );
   }
 }

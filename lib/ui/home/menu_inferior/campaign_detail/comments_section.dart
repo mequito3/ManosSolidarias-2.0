@@ -7,6 +7,7 @@ class _CommentsSection extends StatelessWidget {
     required this.commentController,
     required this.onSubmitComment,
     required this.isSubmittingComment,
+    required this.userProfile,
     this.highlightCommentId,
   });
 
@@ -15,6 +16,7 @@ class _CommentsSection extends StatelessWidget {
   final TextEditingController commentController;
   final Future<void> Function(String message) onSubmitComment;
   final bool isSubmittingComment;
+  final UserProfile userProfile;
   final String? highlightCommentId;
 
   @override
@@ -29,15 +31,15 @@ class _CommentsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _CommentsHeader(total: visibleComments.length),
-          const SizedBox(height: 20),
+          const SizedBox(height: 14),
           canComment
               ? _CommentComposer(
                   controller: commentController,
                   onSubmit: onSubmitComment,
                   isSubmitting: isSubmittingComment,
+                  userProfile: userProfile,
                 )
               : const _CommentLoginPrompt(),
-          const SizedBox(height: 20),
           _CommentsList(
             comments: visibleComments,
             highlightCommentId: highlightCommentId,
@@ -54,47 +56,16 @@ class _CommentsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.blueSecondary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(99),
-            border: Border.all(
-              color: AppColors.blueSecondary.withValues(alpha: 0.25),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.chat_bubble_outline_rounded,
-                  size: 12, color: AppColors.blueSecondary),
-              const SizedBox(width: 5),
-              Text(
-                '$total ${total == 1 ? 'comentario' : 'comentarios'}',
-                style: TextStyle(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.blueSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            total == 0
-                ? 'Sé la primera persona en comentar'
-                : 'Únete a la conversación',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.darkText.withValues(alpha: 0.45),
-            ),
-          ),
-        ),
-      ],
+    return Text(
+      total == 0
+          ? 'Sé la primera persona en comentar'
+          : '$total ${total == 1 ? 'persona ha comentado' : 'personas han comentado'}',
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w500,
+        color: AppColors.darkText.withValues(alpha: 0.6),
+        height: 1.4,
+      ),
     );
   }
 }
@@ -104,11 +75,19 @@ class _CommentComposer extends StatelessWidget {
     required this.controller,
     required this.onSubmit,
     required this.isSubmitting,
+    required this.userProfile,
   });
 
   final TextEditingController controller;
   final Future<void> Function(String message) onSubmit;
   final bool isSubmitting;
+  final UserProfile userProfile;
+
+  String get _initial {
+    final name = userProfile.displayName?.trim() ?? '';
+    if (name.isEmpty) return '?';
+    return name.characters.first.toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,148 +105,117 @@ class _CommentComposer extends StatelessWidget {
       FocusScope.of(context).unfocus();
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: AppColors.bluePrimary.withValues(alpha: 0.15), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluePrimary.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Input row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar placeholder
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
+    final avatarUrl = userProfile.avatarUrl?.trim();
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.10),
+          backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+          child: hasAvatar
+              ? null
+              : Text(
+                  _initial,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.bluePrimary,
+                    fontSize: 15,
+                  ),
                 ),
-                child: const Icon(Icons.person_rounded,
-                    color: AppColors.bluePrimary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.darkText.withValues(alpha: 0.03),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppColors.darkText.withValues(alpha: 0.08),
+                width: 1,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
+            ),
+            padding: const EdgeInsets.fromLTRB(14, 10, 6, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
                   controller: controller,
                   enabled: !isSubmitting,
-                  minLines: 2,
+                  minLines: 1,
                   maxLines: 5,
                   maxLength: 400,
                   style: const TextStyle(
                     color: AppColors.darkText,
                     fontSize: 14,
-                    height: 1.45,
+                    height: 1.5,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Escribe tu mensaje de apoyo...',
+                    hintText: '¿Qué le querés decir al organizador?',
                     hintStyle: TextStyle(
                       fontSize: 14,
-                      color: AppColors.darkText.withValues(alpha: 0.35),
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.darkText.withValues(alpha: 0.4),
                     ),
                     counterText: '',
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 0, vertical: 4),
+                    helperText: null,
+                    errorText: null,
+                    errorStyle: const TextStyle(height: 0),
+                    helperStyle: const TextStyle(height: 0),
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                    isCollapsed: true,
                     border: InputBorder.none,
                     enabledBorder: InputBorder.none,
                     focusedBorder: InputBorder.none,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Divider(
-              height: 1,
-              color: AppColors.dividerColor.withValues(alpha: 0.6)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Icon(Icons.shield_outlined,
-                  size: 13,
-                  color: AppColors.darkText.withValues(alpha: 0.35)),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  'Sé respetuoso y no compartas datos personales.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppColors.darkText.withValues(alpha: 0.4),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              // Botón publicar
-              GestureDetector(
-                onTap: isSubmitting ? null : handleSubmit,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 18, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: isSubmitting
-                        ? null
-                        : AppColors.actionGradient,
-                    color: isSubmitting
-                        ? AppColors.grayNeutral.withValues(alpha: 0.2)
-                        : null,
-                    borderRadius: BorderRadius.circular(99),
-                    boxShadow: isSubmitting
-                        ? null
-                        : [
-                            BoxShadow(
-                              color:
-                                  AppColors.orangeAction.withValues(alpha: 0.35),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isSubmitting)
-                        const SizedBox(
-                          width: 13,
-                          height: 13,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      else
-                        const Icon(Icons.send_rounded,
-                            size: 14, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text(
-                        isSubmitting ? 'Enviando...' : 'Publicar',
-                        style: TextStyle(
-                          color: isSubmitting
-                              ? AppColors.grayNeutral
-                              : Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: isSubmitting ? null : handleSubmit,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 18,
+                          vertical: 8,
                         ),
+                        decoration: BoxDecoration(
+                          color: isSubmitting
+                              ? AppColors.darkText.withValues(alpha: 0.15)
+                              : AppColors.orangeAction,
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: isSubmitting
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text(
+                                'Publicar',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13,
+                                  letterSpacing: 0.1,
+                                ),
+                              ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -279,47 +227,34 @@ class _CommentLoginPrompt extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.darkText.withValues(alpha: 0.025),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-            color: AppColors.bluePrimary.withValues(alpha: 0.15), width: 1.5),
+          color: AppColors.darkText.withValues(alpha: 0.08),
+          width: 1,
+        ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+          const Text(
+            'Iniciá sesión para comentar',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: AppColors.darkText,
+              fontSize: 14,
+              letterSpacing: -0.2,
             ),
-            child: const Icon(Icons.lock_person_rounded,
-                color: AppColors.bluePrimary, size: 20),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Inicia sesión para comentar',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.darkText,
-                    fontSize: 13.5,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  'Los usuarios registrados pueden unirse a la conversación.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
-                    color: AppColors.darkText.withValues(alpha: 0.55),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 4),
+          Text(
+            'Los usuarios registrados pueden unirse a la conversación.',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+              color: AppColors.darkText.withValues(alpha: 0.55),
             ),
           ),
         ],
@@ -383,45 +318,28 @@ class _CommentsListState extends State<_CommentsList> {
     if (comments.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-        decoration: BoxDecoration(
-          color: AppColors.grayNeutral.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.grayNeutral.withValues(alpha: 0.18),
-            width: 1.5,
-          ),
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: AppColors.blueSecondary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.forum_outlined,
-                  color: AppColors.blueSecondary, size: 24),
-            ),
-            const SizedBox(height: 12),
             const Text(
               'Todavía no hay comentarios',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 color: AppColors.darkText,
                 fontSize: 14,
+                letterSpacing: -0.2,
               ),
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 6),
             Text(
               'Sé la primera persona en dejar un mensaje de apoyo.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
+                fontWeight: FontWeight.w500,
                 height: 1.45,
-                color: AppColors.darkText.withValues(alpha: 0.45),
+                color: AppColors.darkText.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -431,9 +349,14 @@ class _CommentsListState extends State<_CommentsList> {
 
     return ListView.separated(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: comments.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        thickness: 1,
+        color: AppColors.darkText.withValues(alpha: 0.06),
+      ),
       itemBuilder: (context, index) {
         final comment = comments[index];
         return _CommentTile(
@@ -471,94 +394,72 @@ class _CommentTile extends StatelessWidget {
     final initials =
         author.isNotEmpty ? author.characters.first.toUpperCase() : '?';
 
-    Widget tile = Container(
-      decoration: BoxDecoration(
-        color: shouldHighlight
-            ? AppColors.blueSecondary.withValues(alpha: 0.06)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: shouldHighlight
-              ? AppColors.blueSecondary.withValues(alpha: 0.3)
-              : AppColors.dividerColor.withValues(alpha: 0.5),
-          width: shouldHighlight ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    final tile = Container(
+      color: shouldHighlight
+          ? AppColors.bluePrimary.withValues(alpha: 0.05)
+          : null,
+      padding: EdgeInsets.only(
+        top: isFirst ? 18 : 14,
+        bottom: 14,
       ),
-      padding: const EdgeInsets.all(14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.blueSecondary.withValues(alpha: 0.25),
-                width: 2,
-              ),
-            ),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor:
-                  AppColors.blueSecondary.withValues(alpha: 0.1),
-              backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
-                  ? NetworkImage(avatarUrl)
-                  : null,
-              child: (avatarUrl == null || avatarUrl.isEmpty)
-                  ? Text(
-                      initials,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.blueSecondary,
-                        fontSize: 14,
-                      ),
-                    )
-                  : null,
-            ),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.10),
+            backgroundImage: (avatarUrl != null && avatarUrl.isNotEmpty)
+                ? NetworkImage(avatarUrl)
+                : null,
+            child: (avatarUrl == null || avatarUrl.isEmpty)
+                ? Text(
+                    initials,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.bluePrimary,
+                      fontSize: 15,
+                    ),
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        author,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                RichText(
+                  text: TextSpan(
+                    style: const TextStyle(color: AppColors.darkText),
+                    children: [
+                      TextSpan(
+                        text: author,
                         style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.darkText,
+                          fontWeight: FontWeight.w800,
                           fontSize: 13.5,
+                          letterSpacing: -0.1,
+                          height: 1.3,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _relativeTimeLabel(comment.createdAt),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.darkText.withValues(alpha: 0.4),
+                      TextSpan(
+                        text: '   ${_relativeTimeLabel(comment.createdAt)}',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.darkText.withValues(alpha: 0.45),
+                          height: 1.3,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   message,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14,
                     height: 1.5,
-                    color: AppColors.darkText.withValues(alpha: 0.82),
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkText.withValues(alpha: 0.85),
                   ),
                 ),
               ],

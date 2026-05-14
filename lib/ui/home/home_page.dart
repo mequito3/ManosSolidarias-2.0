@@ -454,8 +454,6 @@ class _HomePageState extends State<HomePage> {
       onOpenCampaign: _openCampaignDetail,
       onSupportCampaign: _handleSupport,
       onCompleteProfile: () => _openProfileSettings(),
-      donorTrophyController: _donorTrophyController,
-      onViewLeaderboard: _openRewards,
       categoryFilter: _selectedCategory, // Filtro de categoría
       onClearCategoryFilter: _clearCategoryFilter,
     );

@@ -12,6 +12,7 @@ class _CampaignDetailView extends StatelessWidget {
     required this.commentController,
     required this.onSubmitComment,
     required this.isSubmittingComment,
+    required this.userProfile,
     this.highlightCommentId,
     this.highlightDonationId,
   });
@@ -26,6 +27,7 @@ class _CampaignDetailView extends StatelessWidget {
   final TextEditingController commentController;
   final Future<void> Function(String message) onSubmitComment;
   final bool isSubmittingComment;
+  final UserProfile userProfile;
   final String? highlightCommentId;
   final String? highlightDonationId;
 
@@ -60,7 +62,7 @@ class _CampaignDetailView extends StatelessWidget {
             ],
           ),
           ...[
-            const SizedBox(height: 46),
+            const SizedBox(height: 44),
           // Título de la campaña — visible y nunca tapado
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -141,6 +143,7 @@ class _CampaignDetailView extends StatelessWidget {
             commentController: commentController,
             onSubmitComment: onSubmitComment,
             isSubmittingComment: isSubmittingComment,
+            userProfile: userProfile,
             highlightCommentId: highlightCommentId,
           ),
             const SizedBox(height: 24),
@@ -196,23 +199,15 @@ class _CoverHeader extends StatelessWidget {
                       ],
                     ),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.volunteer_activism_rounded,
-                      color: AppColors.blueSecondary,
-                      size: 72,
-                    ),
-                  ),
                 ),
             ),
           ),
         ),
-        // Gradiente decorativo inferior (sin título — queda abajo del creador)
         Positioned(
           left: 0,
           right: 0,
           bottom: 0,
-          height: 80,
+          height: 60,
           child: DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -220,51 +215,32 @@ class _CoverHeader extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.45),
+                  Colors.black.withValues(alpha: 0.30),
                 ],
               ),
             ),
           ),
         ),
-        // Badge de categoría
         Positioned(
-          right: AppColors.space12,
-          top: AppColors.space12,
+          right: 14,
+          top: MediaQuery.of(context).padding.top + 64,
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 12,
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(AppColors.radiusRound),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.bluePrimary.withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Colors.white.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(99),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.category_rounded,
-                  color: Colors.white,
-                  size: 14,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  summary.category,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-              ],
+            child: Text(
+              summary.category.toUpperCase(),
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontWeight: FontWeight.w800,
+                fontSize: 10.5,
+                letterSpacing: 0.8,
+              ),
             ),
           ),
         ),
@@ -296,307 +272,206 @@ class _SummaryStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final progressColor = _barColor(summary.completionPercentage);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🎯 Banner de notificación de donación
         if (highlightDonation) ...[
-          HighlightWrapper(
-            shouldHighlight: true,
-            highlightColor: const Color(0xFF4CAF50),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF4CAF50).withValues(alpha: 0.3),
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.volunteer_activism_rounded,
-                    color: const Color(0xFF4CAF50),
-                    size: 28,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '¡Donación recibida!',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF2E7D32),
-                              ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Tu generosidad está haciendo la diferencia',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: const Color(0xFF2E7D32).withValues(alpha: 0.8),
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.greenSuccess.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.greenSuccess.withValues(alpha: 0.25),
+                width: 1,
               ),
             ),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.greenSuccess.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: AppColors.greenSuccess,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Donación recibida. Gracias por aportar.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkText.withValues(alpha: 0.85),
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
         ],
-        // Status & organizer row
+
+        // Status row · sin íconos, solo texto sobrio
         Row(
           children: [
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: summary.isCompleted
-                    ? AppColors.greenHope.withValues(alpha: 0.12)
-                    : AppColors.bluePrimary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(AppColors.radiusRound),
-                border: Border.all(
-                  color: summary.isCompleted
-                      ? AppColors.greenHope.withValues(alpha: 0.4)
-                      : AppColors.bluePrimary.withValues(alpha: 0.3),
-                  width: 1,
-                ),
+                    ? AppColors.greenSuccess.withValues(alpha: 0.10)
+                    : AppColors.bluePrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(99),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    summary.isCompleted
-                        ? Icons.check_circle_rounded
-                        : Icons.campaign_rounded,
-                    size: 12,
-                    color: summary.isCompleted
-                        ? AppColors.greenHope
-                        : AppColors.bluePrimary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    summary.isCompleted ? 'Completada' : 'Activa',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: summary.isCompleted
-                          ? AppColors.greenHope
-                          : AppColors.bluePrimary,
-                    ),
-                  ),
-                ],
+              child: Text(
+                summary.isCompleted ? 'Completada' : 'Activa',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.6,
+                  color: summary.isCompleted
+                      ? AppColors.greenSuccess
+                      : AppColors.bluePrimary,
+                ),
               ),
             ),
-            if (!summary.isCompleted && summary.endDate != null) ...[const SizedBox(width: 8), _DaysChip(endDate: summary.endDate!)],
-            if (summary.organizerName != null && summary.organizerName!.isNotEmpty) ...[
+            if (!summary.isCompleted && summary.endDate != null) ...[
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'por ${summary.organizerName}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkText.withValues(alpha: 0.6),
-                        fontWeight: FontWeight.w500,
-                      ),
-                ),
-              ),
+              _DaysChip(endDate: summary.endDate!),
             ],
           ],
         ),
-        const SizedBox(height: AppColors.space16),
+        const SizedBox(height: 18),
+
+        // Card de progreso · estilo GoFundMe emocional
         Container(
           decoration: BoxDecoration(
-            gradient: AppColors.cardGradient,
-            borderRadius: BorderRadius.circular(AppColors.radiusLg),
-            boxShadow: AppColors.shadowLg,
-            border: Border.all(
-              color: AppColors.bluePrimary.withValues(alpha: 0.1),
-              width: 1,
-            ),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.07),
+                blurRadius: 24,
+                offset: const Offset(0, 6),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 1),
+              ),
+            ],
           ),
-          padding: const EdgeInsets.all(AppColors.space24),
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Monto recaudado · número HUGE
+              Text(
+                _formatCurrency(summary.raisedAmount),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.darkText,
+                  letterSpacing: -1.2,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                summary.donorCount == 0
+                    ? 'recaudados hasta ahora'
+                    : 'recaudados gracias a ${summary.donorCount} ${summary.donorCount == 1 ? "persona" : "personas"}',
+                style: TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.darkText.withValues(alpha: 0.55),
+                  height: 1.3,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Progress bar con hitos
+              _MilestoneProgressBar(
+                progress: summary.normalizedProgress,
+                color: progressColor,
+              ),
+
+              const SizedBox(height: 18),
+
+              // Meta + faltante
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Progreso de la meta',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.darkText.withValues(alpha: 0.7),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'META',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                            color: AppColors.darkText.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(summary.goalAmount),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.darkText,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    '${summary.completionPercentage.toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: _barColor(summary.completionPercentage),
+                  if (!summary.isCompleted &&
+                      summary.raisedAmount < summary.goalAmount)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'FALTAN',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                            color: AppColors.darkText.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatCurrency(
+                              summary.goalAmount - summary.raisedAmount),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: progressColor,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ],
                     ),
-                  ).animate().fade().scale(curve: Curves.easeOutBack, duration: 600.ms),
                 ],
               ),
-              const SizedBox(height: 10),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _barColor(summary.completionPercentage).withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
-                  child: LinearProgressIndicator(
-                    value: summary.normalizedProgress,
-                    minHeight: 12,
-                    color: _barColor(summary.completionPercentage),
-                    backgroundColor: _barColor(summary.completionPercentage).withValues(alpha: 0.15),
-                  ).animate().custom(
-                    duration: 1200.ms,
-                    curve: Curves.easeOutCubic,
-                    builder: (context, value, child) {
-                      return LinearProgressIndicator(
-                        value: summary.normalizedProgress * value,
-                        minHeight: 12,
-                        color: _barColor(summary.completionPercentage),
-                        backgroundColor: _barColor(summary.completionPercentage).withValues(alpha: 0.15),
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (!summary.isCompleted && summary.raisedAmount < summary.goalAmount)
-                Text(
-                  'Faltan ${_formatCurrency(summary.goalAmount - summary.raisedAmount)} para alcanzar la meta',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _barColor(summary.completionPercentage),
-                  ),
-                ),
-              const SizedBox(height: AppColors.space16),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final spacing = AppColors.space12;
-                  int columns;
-                  if (constraints.maxWidth >= 520) {
-                    columns = 4;
-                  } else if (constraints.maxWidth >= 380) {
-                    columns = 3;
-                  } else {
-                    columns = 2;
-                  }
-                  final itemWidth =
-                      (constraints.maxWidth - spacing * (columns - 1)) / columns;
-
-                  return Wrap(
-                    spacing: spacing,
-                    runSpacing: spacing,
-                    children: [
-                      SizedBox(
-                        width: itemWidth,
-                        child: _StatBlock(
-                          icon: Icons.savings_outlined,
-                          label: 'Recaudado',
-                          value: _formatCurrency(summary.raisedAmount),
-                          isPrimary: true,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _StatBlock(
-                          icon: Icons.flag_outlined,
-                          label: 'Meta',
-                          value: _formatCurrency(summary.goalAmount),
-                          isPrimary: true,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _StatBlock(
-                          icon: Icons.groups_rounded,
-                          label: 'Donadores',
-                          value: '${summary.donorCount}',
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _StatBlock(
-                          icon: Icons.trending_up_rounded,
-                          label: 'Aporte prom.',
-                          value: summary.donorCount > 0
-                              ? _formatCurrency(
-                                  summary.raisedAmount / summary.donorCount)
-                              : '—',
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              if (canSupport && onSupportTap != null) ...[
-                const SizedBox(height: AppColors.space24),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: AppColors.successGradient,
-                    borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.greenHope.withValues(alpha: 0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: onSupportTap,
-                      icon: const Icon(Icons.volunteer_activism_rounded, size: 22),
-                      label: const Text(
-                        'Apoyar ahora',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                        ),
-                      ),
-                    ),
-                  ),
-                ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                 .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut)
-                 .shimmer(duration: 3.seconds, color: Colors.white.withValues(alpha: 0.2)),
-              ],
             ],
           ),
         ),
       ],
     );
   }
-
 }
 
 class _DaysChip extends StatelessWidget {
@@ -609,31 +484,34 @@ class _DaysChip extends StatelessWidget {
     final Color color;
     final String label;
     if (days < 0) {
-      color = AppColors.grayNeutral;
-      label = 'Finalizado';
+      color = AppColors.darkText.withValues(alpha: 0.5);
+      label = 'Finalizada';
     } else if (days == 0) {
       color = AppColors.error;
-      label = '\u23f0 Último día';
+      label = 'Último día';
+    } else if (days == 1) {
+      color = AppColors.orangeAction;
+      label = 'Termina mañana';
     } else if (days <= 7) {
       color = AppColors.orangeAction;
-      label = '\u23f3 $days días';
+      label = '$days días restantes';
     } else {
-      color = AppColors.bluePrimary;
-      label = '\ud83d\udcc5 $days días';
+      color = AppColors.darkText.withValues(alpha: 0.55);
+      label = '$days días restantes';
     }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
         ),
       ),
     );
@@ -650,12 +528,14 @@ class _SectionCard extends StatelessWidget {
 
   final String title;
   final Widget child;
+  // `icon` se mantiene por compatibilidad con las invocaciones existentes
+  // pero ya no se renderiza — la jerarquía es solo tipográfica + barra de acento.
   final IconData? icon;
   final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    final c = iconColor ?? AppColors.bluePrimary;
+    final accent = iconColor ?? AppColors.bluePrimary;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppColors.space24,
@@ -665,126 +545,55 @@ class _SectionCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppColors.space24),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: AppColors.bluePrimary.withValues(alpha: 0.05),
-              blurRadius: 36,
-              offset: const Offset(0, 12),
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 24,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
+            // Header: barra vertical de acento + título grande sin ícono
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 4,
                     decoration: BoxDecoration(
-                      color: c.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
+                      color: accent,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                    child: Icon(icon, color: c, size: 17),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.darkText,
+                        letterSpacing: -0.4,
+                        height: 1.25,
+                      ),
+                    ),
+                  ),
                 ],
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkText,
-                          fontSize: 17,
-                          letterSpacing: -0.3,
-                        ),
-                  ),
-                ),
-              ],
+              ),
             ),
-            const SizedBox(height: AppColors.space16),
+            const SizedBox(height: AppColors.space20),
             child,
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _StatBlock extends StatelessWidget {
-  const _StatBlock({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.isPrimary = false,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool isPrimary;
-
-  @override
-  Widget build(BuildContext context) {
-    final iconSize = isPrimary ? 22.0 : 18.0;
-    final iconColor = isPrimary ? AppColors.greenHope : AppColors.bluePrimary;
-    final bgColor = isPrimary 
-        ? AppColors.greenHope.withValues(alpha: 0.12)
-        : AppColors.bluePrimary.withValues(alpha: 0.12);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppColors.space16,
-        vertical: AppColors.space12,
-      ),
-      decoration: BoxDecoration(
-        color: isPrimary 
-            ? AppColors.greenHope.withValues(alpha: 0.05)
-            : AppColors.bluePrimary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(AppColors.radiusLg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
-            ),
-            child: Icon(
-              icon,
-              size: iconSize,
-              color: iconColor,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.darkText,
-                  letterSpacing: -0.2,
-                  fontSize: isPrimary ? 17 : null,
-                ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkText.withValues(alpha: 0.65),
-                  fontWeight: FontWeight.w600,
-                ),
-          ),
-        ],
       ),
     );
   }
@@ -799,6 +608,12 @@ class _CreatorProfile extends StatelessWidget {
   final String name;
   final String? avatarUrl;
 
+  String get _initial {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return '?';
+    return trimmed.characters.first.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasAvatar = avatarUrl?.trim().isNotEmpty == true;
@@ -808,37 +623,36 @@ class _CreatorProfile extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 20,
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 24,
             offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.bluePrimary.withValues(alpha: 0.25),
-                width: 2.5,
-              ),
-            ),
-            child: CircleAvatar(
-              radius: 24,
-              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.1),
-              backgroundImage: hasAvatar ? NetworkImage(avatarUrl!) : null,
-              child: hasAvatar
-                  ? null
-                  : const Icon(
-                      Icons.person_rounded,
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.10),
+            backgroundImage: hasAvatar ? NetworkImage(avatarUrl!) : null,
+            child: hasAvatar
+                ? null
+                : Text(
+                    _initial,
+                    style: const TextStyle(
                       color: AppColors.bluePrimary,
-                      size: 26,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
                     ),
-            ),
+                  ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -848,25 +662,167 @@ class _CreatorProfile extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.darkText,
-                      ),
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                    letterSpacing: -0.1,
+                    height: 1.3,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'Organizador',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkText.withValues(alpha: 0.6),
-                        fontSize: 12,
-                      ),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.darkText.withValues(alpha: 0.5),
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Barra de progreso con hitos visibles (25/50/75/100%).
+/// Cada hito alcanzado se muestra como diamante relleno; los no alcanzados
+/// como diamante vacío. Inspirado en GoFundMe / Patreon.
+class _MilestoneProgressBar extends StatelessWidget {
+  const _MilestoneProgressBar({
+    required this.progress,
+    required this.color,
+  });
+
+  final double progress;
+  final Color color;
+
+  static const _milestones = [0.25, 0.50, 0.75, 1.0];
+
+  @override
+  Widget build(BuildContext context) {
+    final clamped = progress.clamp(0.0, 1.0);
+    final bgColor = AppColors.darkText.withValues(alpha: 0.06);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Barra base + barra de progreso + diamantes superpuestos
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            return SizedBox(
+              height: 18,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.centerLeft,
+                children: [
+                  // Track base
+                  Container(
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
+                  ),
+                  // Fill
+                  FractionallySizedBox(
+                    widthFactor: clamped,
+                    child: Container(
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ),
+                  // Hitos
+                  for (final m in _milestones)
+                    Positioned(
+                      left: (width * m) - 9,
+                      child: _MilestoneDiamond(
+                        reached: clamped >= m,
+                        color: color,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 10),
+        // Labels de hitos
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            return SizedBox(
+              height: 14,
+              child: Stack(
+                children: [
+                  for (final m in _milestones)
+                    Positioned(
+                      left: (width * m) - 16,
+                      child: SizedBox(
+                        width: 32,
+                        child: Text(
+                          '${(m * 100).toInt()}%',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight:
+                                clamped >= m ? FontWeight.w800 : FontWeight.w600,
+                            color: clamped >= m
+                                ? color
+                                : AppColors.darkText.withValues(alpha: 0.4),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _MilestoneDiamond extends StatelessWidget {
+  const _MilestoneDiamond({required this.reached, required this.color});
+
+  final bool reached;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: 0.785398, // 45 grados
+      child: Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: reached ? color : Colors.white,
+          border: Border.all(
+            color: reached ? color : AppColors.darkText.withValues(alpha: 0.25),
+            width: reached ? 0 : 2,
+          ),
+          borderRadius: BorderRadius.circular(2),
+          boxShadow: reached
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.4),
+                    blurRadius: 6,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
+        ),
       ),
     );
   }

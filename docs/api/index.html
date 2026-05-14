@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manos Solidarias — API REST</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui.css" />
+  <style>
+    html, body { margin: 0; padding: 0; background: #fafafa; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .topbar { display: none; }
+    .swagger-ui .info .title { color: #1976D2; }
+    #loading {
+      padding: 32px;
+      text-align: center;
+      color: #666;
+    }
+    #error {
+      padding: 32px;
+      color: #c62828;
+      background: #ffebee;
+      border-left: 4px solid #c62828;
+      margin: 24px;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui">
+    <div id="loading">Cargando documentación…</div>
+  </div>
+
+  <!--
+    Especificación OpenAPI 3.1 embebida.
+    Para editar: modificá el contenido del <script> de abajo, guardá y recargá la página (F5).
+    Es la misma copia que openapi.yaml; las dos se mantienen en paralelo.
+  -->
+  <script id="openapi-spec" type="text/yaml">
+openapi: 3.1.0
+info:
+  title: Manos Solidarias — API REST
+  version: "1.0.0"
+  description: |
+    Documentación interactiva de la API REST de **Manos Solidarias**, una plataforma
+    de crowdfunding solidario para Bolivia.
+
+    La API está construida sobre **Supabase** (PostgreSQL + PostgREST + GoTrue):
+
+    - **`/auth/v1/*`** — autenticación y gestión de sesión (GoTrue)
+    - **`/rest/v1/*`** — operaciones CRUD sobre las tablas públicas (PostgREST)
+    - **`/rest/v1/rpc/*`** — funciones SQL invocables como endpoints
+    - **`/storage/v1/object/*`** — almacenamiento de archivos (comprobantes, evidencias, portadas)
+
+    ## Cómo autenticarse
+
+    1. Hacé un `POST /auth/v1/signup` o `POST /auth/v1/token?grant_type=password`.
+    2. Copiá el `access_token` del response.
+    3. Tocá el botón **Authorize** arriba a la derecha y pegalo en `bearerAuth`.
+    4. Todos los endpoints protegidos pasarán a enviar `Authorization: Bearer <token>`.
+
+    > El header `apikey` (con la anon key pública) **siempre** debe ir presente.
+    > El `Authorization: Bearer ...` se agrega encima cuando hay usuario logueado.
+
+    ## Seguridad
+
+    - Sólo se usa la **anon key** (clave pública del cliente). La `service_role` JAMÁS
+      se expone aquí — eso violaría el modelo de seguridad de Supabase.
+    - Toda escritura está controlada por **Row Level Security (RLS)** en Postgres.
+    - Sin token válido, los endpoints protegidos responden **401**.
+
+servers:
+  - url: https://gvdlsypoqstbifdbhafv.supabase.co
+    description: Servidor de producción
+
+tags:
+  - name: Autenticación
+    description: Registro, login, logout y recuperación de contraseña (GoTrue).
+  - name: Campañas
+    description: Listado, detalle, búsqueda y RPCs públicas de campañas activas.
+  - name: Solicitudes
+    description: Solicitudes de ayuda creadas por beneficiarios (pendientes de aprobación admin).
+  - name: Donaciones
+    description: Registro e historial de donaciones de un usuario autenticado.
+  - name: Comentarios
+    description: Comentarios públicos sobre una campaña.
+  - name: Storage
+    description: Subida y lectura de archivos (comprobantes, evidencias, portadas).
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: apikey
+      description: Anon key pública de Supabase. Siempre obligatoria.
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT del usuario, obtenido del login. Se popula automáticamente cuando
+        usás "Authorize" después de hacer login.
+
+  parameters:
+    PreferReturn:
+      name: Prefer
+      in: header
+      description: Hacé que PostgREST devuelva la fila insertada/actualizada.
+      required: false
+      schema:
+        type: string
+        enum:
+          - return=representation
+          - return=minimal
+        default: return=representation
+
+  schemas:
+    SignupRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: tesis-demo@ejemplo.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "Tesis2026!"
+        data:
+          type: object
+          description: Metadata libre del usuario (va a `raw_user_meta_data`).
+          example:
+            display_name: "Demo Tesis"
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: tesis-demo@ejemplo.com
+        password:
+          type: string
+          format: password
+          example: "Tesis2026!"
+
+    RecoverRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          example: tesis-demo@ejemplo.com
+
+    AuthSession:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIs...
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          example: 3600
+        refresh_token:
+          type: string
+          example: 7f1b6e3c-...
+        user:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        user_metadata:
+          type: object
+
+    AuthError:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 400
+        error_code:
+          type: string
+          example: invalid_credentials
+        msg:
+          type: string
+          example: "Invalid login credentials"
+
+    Campania:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+          example: "ayuda-para-juan"
+        creador_id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+          example: "Ayuda médica para Juan"
+        descripcion_corta:
+          type: string
+          example: "Recaudación para una cirugía urgente."
+        descripcion_larga:
+          type: string
+        portada_url:
+          type: string
+          format: uri
+        monto_objetivo:
+          type: number
+          example: 5000
+        monto_actual:
+          type: number
+          example: 1250.50
+        estado:
+          type: string
+          enum: [activa, finalizada, cancelada, suspendida, borrador]
+        fecha_inicio:
+          type: string
+          format: date-time
+        fecha_fin:
+          type: string
+          format: date-time
+          nullable: true
+        es_anonimo:
+          type: boolean
+
+    SolicitudInsert:
+      type: object
+      required: [user_id, titulo, descripcion, tipo]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: |
+            UUID del usuario autenticado. **Debe coincidir con el `sub` del JWT**
+            (RLS lo valida con `auth.uid() = user_id`). Lo sacás del campo
+            `user.id` que devolvió el login.
+          example: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+        titulo:
+          type: string
+          example: "Necesito ayuda para tratamiento médico"
+        descripcion:
+          type: string
+          example: "Mi hijo necesita una operación urgente y no contamos con los recursos."
+        tipo:
+          type: string
+          enum: [campania, kermesse, rifa]
+          default: campania
+        categoria_id:
+          type: string
+          format: uuid
+          example: "8910ddc5-f70e-4984-95a3-2c7d367d7c0e"
+          description: "ID de la categoría (Salud, Educación, Alimentación, etc.)"
+        monto_objetivo:
+          type: number
+          example: 3000
+        organizacion_id:
+          type: string
+          format: uuid
+          nullable: true
+        portada_url:
+          type: string
+          format: uri
+          nullable: true
+        es_anonimo:
+          type: boolean
+          default: false
+
+    Solicitud:
+      allOf:
+        - $ref: "#/components/schemas/SolicitudInsert"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+            estado:
+              type: string
+              enum: [pendiente, aprobada, rechazada, retirada]
+            motivo_rechazo:
+              type: string
+              nullable: true
+            created_at:
+              type: string
+              format: date-time
+            updated_at:
+              type: string
+              format: date-time
+
+    DonacionInsert:
+      type: object
+      required: [user_id, campania_id, monto]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: UUID del donante autenticado. Debe coincidir con el `sub` del JWT.
+          example: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+        campania_id:
+          type: string
+          format: uuid
+        monto:
+          type: number
+          minimum: 0.01
+          example: 50
+        metodo:
+          type: string
+          enum: [qr, transferencia, otro]
+          default: qr
+        mensaje:
+          type: string
+          example: "¡Mucha fuerza! 💪"
+        referencia:
+          type: string
+          example: "TRX-2026-0513-001"
+        anonimo:
+          type: boolean
+          default: false
+        comprobante_url:
+          type: string
+          format: uri
+          description: URL del comprobante subido vía Storage (opcional).
+
+    Donacion:
+      allOf:
+        - $ref: "#/components/schemas/DonacionInsert"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+            estado:
+              type: string
+              enum: [pendiente, aprobada, rechazada]
+            created_at:
+              type: string
+              format: date-time
+
+    ComentarioInsert:
+      type: object
+      required: [user_id, campania_id, contenido]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: UUID del autor autenticado. Debe coincidir con el `sub` del JWT.
+          example: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+        campania_id:
+          type: string
+          format: uuid
+        contenido:
+          type: string
+          example: "¡Qué buena causa, compartiendo!"
+        autor_nombre:
+          type: string
+          example: "Demo Tesis"
+        autor_avatar_url:
+          type: string
+          format: uri
+
+    Comentario:
+      allOf:
+        - $ref: "#/components/schemas/ComentarioInsert"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            user_id:
+              type: string
+              format: uuid
+            estado:
+              type: string
+              enum: [visible, oculto, eliminado]
+            created_at:
+              type: string
+              format: date-time
+
+    PostgrestError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "42501"
+        message:
+          type: string
+          example: "permission denied for table donaciones"
+        details:
+          type: string
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+
+  responses:
+    Unauthorized:
+      description: |
+        Token faltante o inválido — RLS rechazó la operación. En PostgREST,
+        cuando un INSERT/UPDATE pega contra una policy que evalúa con el rol
+        anon, devuelve `code: 42501` ("violates row-level security policy").
+        Si lo que falta es el JWT mismo, ves `PGRST301`.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/PostgrestError"
+          examples:
+            insertSinToken:
+              summary: INSERT sin Bearer (RLS rechaza)
+              value:
+                code: "42501"
+                message: 'new row violates row-level security policy for table "donaciones"'
+                details: null
+                hint: null
+            jwtExpirado:
+              summary: JWT expirado o ausente en SELECT
+              value:
+                code: "PGRST301"
+                message: "JWT expired or missing"
+                hint: "Hacé login para obtener un access_token válido."
+
+    BadCredentials:
+      description: Credenciales incorrectas.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/AuthError"
+          examples:
+            passwordIncorrecta:
+              summary: Password incorrecta
+              value:
+                code: 400
+                error_code: invalid_credentials
+                msg: "Invalid login credentials"
+
+security:
+  - apiKey: []
+
+paths:
+  /auth/v1/signup:
+    post:
+      tags: [Autenticación]
+      summary: Registrar un nuevo usuario
+      description: |
+        Crea una cuenta en `auth.users`. Si las confirmaciones por email están
+        deshabilitadas en el proyecto, devuelve directamente `access_token`.
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+            examples:
+              registroBasico:
+                summary: Registro básico
+                value:
+                  email: tesis-demo@ejemplo.com
+                  password: "Tesis2026!"
+                  data:
+                    display_name: "Demo Tesis"
+      responses:
+        "200":
+          description: Usuario creado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+              example:
+                access_token: "eyJhbGciOiJIUzI1NiIs..."
+                token_type: bearer
+                expires_in: 3600
+                refresh_token: "7f1b6e3c-..."
+                user:
+                  id: "00000000-0000-0000-0000-000000000001"
+                  email: tesis-demo@ejemplo.com
+                  created_at: "2026-05-13T10:00:00Z"
+                  user_metadata:
+                    display_name: "Demo Tesis"
+        "400":
+          description: Email ya registrado o password muy corta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+              example:
+                code: 400
+                error_code: weak_password
+                msg: "Password should be at least 6 characters."
+        "422":
+          description: Email inválido.
+
+  /auth/v1/token:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión (login con email + password)
+      description: |
+        Endpoint de GoTrue para obtener `access_token` y `refresh_token`.
+        El parámetro `grant_type=password` es obligatorio.
+      security:
+        - apiKey: []
+      parameters:
+        - in: query
+          name: grant_type
+          required: true
+          schema:
+            type: string
+            enum: [password, refresh_token]
+            default: password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              loginOk:
+                summary: Login exitoso
+                value:
+                  email: tesis-demo@ejemplo.com
+                  password: "Tesis2026!"
+              loginPasswordIncorrecta:
+                summary: Password incorrecta
+                value:
+                  email: tesis-demo@ejemplo.com
+                  password: "estoEstaMal"
+      responses:
+        "200":
+          description: Login correcto. Copiá `access_token` y pegalo en "Authorize".
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+              example:
+                access_token: "eyJhbGciOiJIUzI1NiIs..."
+                token_type: bearer
+                expires_in: 3600
+                refresh_token: "ab12cd34..."
+                user:
+                  id: "00000000-0000-0000-0000-000000000001"
+                  email: tesis-demo@ejemplo.com
+                  created_at: "2026-05-13T10:00:00Z"
+        "400":
+          $ref: "#/components/responses/BadCredentials"
+
+  /auth/v1/logout:
+    post:
+      tags: [Autenticación]
+      summary: Cerrar sesión (revoca el refresh token)
+      description: Invalida el refresh token actual. El access token sigue siendo válido hasta su expiración natural.
+      security:
+        - apiKey: []
+          bearerAuth: []
+      responses:
+        "204":
+          description: Sesión cerrada.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/v1/recover:
+    post:
+      tags: [Autenticación]
+      summary: Solicitar recuperación de contraseña
+      description: |
+        Envía un email con un link para resetear la contraseña.
+        Devuelve `200` aunque el email no exista (para no exponer qué emails
+        están registrados).
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecoverRequest"
+            examples:
+              recuperar:
+                value:
+                  email: tesis-demo@ejemplo.com
+      responses:
+        "200":
+          description: Solicitud recibida (siempre, por seguridad).
+          content:
+            application/json:
+              schema:
+                type: object
+                example: {}
+
+  /rest/v1/campanias:
+    get:
+      tags: [Campañas]
+      summary: Listar campañas (filtrable por estado)
+      description: |
+        Listado plano de la tabla `campanias`. Para producción, la app usa el
+        RPC `list_public_campaigns` (incluye nombre de categoría, porcentaje, etc.),
+        pero este endpoint sirve para mostrar el patrón PostgREST básico.
+
+        Filtros típicos:
+        - `estado=eq.activa` → sólo campañas activas
+        - `select=*,categorias(nombre)` → embeber relación
+      security:
+        - apiKey: []
+      parameters:
+        - in: query
+          name: estado
+          schema:
+            type: string
+          example: eq.activa
+          description: "Filtro de estado. Sintaxis PostgREST: `eq.activa`, `in.(activa,finalizada)`, etc."
+        - in: query
+          name: select
+          schema:
+            type: string
+          example: "*"
+          description: "Columnas a devolver. `*` para todas."
+        - in: query
+          name: order
+          schema:
+            type: string
+          example: "created_at.desc"
+        - in: query
+          name: limit
+          schema:
+            type: integer
+          example: 20
+      responses:
+        "200":
+          description: Array de campañas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campania"
+              example:
+                - id: "11111111-1111-1111-1111-111111111111"
+                  slug: "ayuda-juan"
+                  titulo: "Ayuda médica para Juan"
+                  descripcion_corta: "Recaudación para una cirugía urgente."
+                  monto_objetivo: 5000
+                  monto_actual: 1250.50
+                  estado: activa
+                  fecha_inicio: "2026-04-01T12:00:00Z"
+                  es_anonimo: false
+
+  /rest/v1/campanias?id=eq.{id}:
+    get:
+      tags: [Campañas]
+      summary: Detalle de una campaña por ID
+      description: |
+        Patrón PostgREST para "buscar por id". El path real es `/rest/v1/campanias`
+        con el query param `id=eq.<uuid>`.
+      security:
+        - apiKey: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "11111111-1111-1111-1111-111111111111"
+      responses:
+        "200":
+          description: Campaña encontrada.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campania"
+
+  /rest/v1/rpc/list_public_campaigns:
+    post:
+      tags: [Campañas]
+      summary: "RPC: listar campañas públicas (la que usa la app)"
+      description: |
+        Función SQL `public.list_public_campaigns(p_category text, p_limit int)`.
+        Devuelve campañas activas con columnas pre-calculadas (porcentaje,
+        número de donadores, nombre de categoría y organización).
+      security:
+        - apiKey: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                p_category:
+                  type: string
+                  nullable: true
+                  example: "Salud"
+                p_limit:
+                  type: integer
+                  nullable: true
+                  example: 20
+            examples:
+              todas:
+                summary: Todas, sin filtro
+                value: {}
+              soloSalud:
+                summary: Filtrar por categoría
+                value:
+                  p_category: "Salud"
+                  p_limit: 10
+      responses:
+        "200":
+          description: Array con campañas y métricas calculadas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    slug: { type: string }
+                    titulo: { type: string }
+                    descripcion_corta: { type: string }
+                    portada_url: { type: string, format: uri }
+                    monto_objetivo: { type: number }
+                    monto_actual: { type: number }
+                    porcentaje: { type: number, example: 25.01 }
+                    estado: { type: string }
+                    categoria: { type: string, example: "Salud" }
+                    donadores: { type: integer, example: 12 }
+                    organizacion_nombre: { type: string, nullable: true }
+                    es_anonimo: { type: boolean }
+
+  /rest/v1/rpc/search_public_campaigns:
+    post:
+      tags: [Campañas]
+      summary: "RPC: búsqueda por término"
+      description: |
+        Función SQL `public.search_public_campaigns(p_term text, p_limit int)`.
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p_term]
+              properties:
+                p_term:
+                  type: string
+                  example: "operacion"
+                p_limit:
+                  type: integer
+                  example: 20
+      responses:
+        "200":
+          description: Array de coincidencias.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /rest/v1/solicitudes:
+    post:
+      tags: [Solicitudes]
+      summary: Crear una solicitud de ayuda
+      description: |
+        Crea una fila en `solicitudes` (estado inicial `pendiente`).
+        Requiere usuario autenticado. RLS valida que `user_id` coincida con
+        `auth.uid()`.
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PreferReturn"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SolicitudInsert"
+            examples:
+              solicitudSalud:
+                summary: Solicitud de ayuda médica
+                value:
+                  user_id: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+                  titulo: "Operación urgente para mi hija"
+                  descripcion: "Mi hija de 8 años necesita una cirugía. Adjunto documentación médica."
+                  tipo: "campania"
+                  categoria_id: "8910ddc5-f70e-4984-95a3-2c7d367d7c0e"
+                  monto_objetivo: 3000
+                  es_anonimo: false
+      responses:
+        "201":
+          description: Solicitud creada (queda en estado `pendiente`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Solicitud"
+              example:
+                - id: "22222222-2222-2222-2222-222222222222"
+                  user_id: "00000000-0000-0000-0000-000000000001"
+                  titulo: "Operación urgente para mi hija"
+                  descripcion: "Mi hija de 8 años necesita una cirugía..."
+                  tipo: "campania"
+                  categoria_id: "8910ddc5-f70e-4984-95a3-2c7d367d7c0e"
+                  monto_objetivo: 3000
+                  estado: "pendiente"
+                  created_at: "2026-05-13T10:30:00Z"
+                  updated_at: "2026-05-13T10:30:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rest/v1/solicitudes?user_id=eq.{user_id}:
+    get:
+      tags: [Solicitudes]
+      summary: Listar las solicitudes del usuario autenticado
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "00000000-0000-0000-0000-000000000001"
+        - in: query
+          name: select
+          schema: { type: string }
+          example: "*"
+        - in: query
+          name: order
+          schema: { type: string }
+          example: "created_at.desc"
+      responses:
+        "200":
+          description: Array con tus solicitudes (puede estar vacío).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Solicitud"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rest/v1/donaciones:
+    post:
+      tags: [Donaciones]
+      summary: Crear una donación
+      description: |
+        Registra una donación contra una campaña existente. Requiere usuario
+        autenticado. El estado inicial es `pendiente` hasta validación admin.
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PreferReturn"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DonacionInsert"
+            examples:
+              donacionBasica:
+                summary: Donación por QR de 50 BOB
+                value:
+                  user_id: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+                  campania_id: "11111111-1111-1111-1111-111111111111"
+                  monto: 50
+                  metodo: "qr"
+                  mensaje: "¡Mucha fuerza!"
+                  anonimo: false
+      responses:
+        "201":
+          description: Donación registrada (estado `pendiente`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Donacion"
+              example:
+                - id: "33333333-3333-3333-3333-333333333333"
+                  campania_id: "11111111-1111-1111-1111-111111111111"
+                  user_id: "00000000-0000-0000-0000-000000000001"
+                  monto: 50
+                  metodo: "qr"
+                  estado: "pendiente"
+                  anonimo: false
+                  created_at: "2026-05-13T10:40:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rest/v1/donaciones?user_id=eq.{user_id}:
+    get:
+      tags: [Donaciones]
+      summary: Historial de donaciones del usuario
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - in: path
+          name: user_id
+          required: true
+          schema: { type: string, format: uuid }
+          example: "00000000-0000-0000-0000-000000000001"
+        - in: query
+          name: select
+          schema: { type: string }
+          example: "*,campanias(titulo,portada_url)"
+        - in: query
+          name: order
+          schema: { type: string }
+          example: "created_at.desc"
+      responses:
+        "200":
+          description: Lista de donaciones del usuario.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Donacion"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /rest/v1/comentarios:
+    post:
+      tags: [Comentarios]
+      summary: Comentar una campaña
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/PreferReturn"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComentarioInsert"
+            examples:
+              comentario:
+                value:
+                  user_id: "da6993aa-6d96-4b9f-a153-1cec603ce415"
+                  campania_id: "11111111-1111-1111-1111-111111111111"
+                  contenido: "¡Qué buena causa, ya compartí en mis redes!"
+                  autor_nombre: "Demo Tesis"
+      responses:
+        "201":
+          description: Comentario publicado (estado `visible`).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comentario"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /storage/v1/object/comprobantes/{path}:
+    post:
+      tags: [Storage]
+      summary: Subir comprobante de donación
+      description: |
+        Sube un archivo al bucket público `comprobantes`. La convención de
+        path usada por la app es: `users/{user_id}/donaciones/{campania_id}/{timestamp}.{ext}`.
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema: { type: string }
+          example: "users/00000000-.../donaciones/11111111-.../1715600000.jpg"
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+          application/pdf:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Archivo subido.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /storage/v1/object/documentos/{path}:
+    post:
+      tags: [Storage]
+      summary: Subir portada o evidencia de una solicitud
+      description: |
+        Sube un archivo al bucket público `documentos`. Convención:
+        `users/{user_id}/solicitudes/covers/{ts}.{ext}` o `.../evidencias/...`.
+      security:
+        - apiKey: []
+          bearerAuth: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema: { type: string }
+          example: "users/00000000-.../solicitudes/covers/1715600000.jpg"
+      requestBody:
+        required: true
+        content:
+          image/jpeg:
+            schema: { type: string, format: binary }
+          image/png:
+            schema: { type: string, format: binary }
+      responses:
+        "200":
+          description: Archivo subido.
+
+  /storage/v1/object/public/comprobantes/{path}:
+    get:
+      tags: [Storage]
+      summary: Descargar comprobante (lectura pública)
+      security: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema: { type: string }
+          example: "users/00000000-.../donaciones/11111111-.../1715600000.jpg"
+      responses:
+        "200":
+          description: Archivo binario.
+        "404":
+          description: No existe.
+
+  /storage/v1/object/public/evidencias/{path}:
+    get:
+      tags: [Storage]
+      summary: Descargar evidencia pública de una campaña
+      description: |
+        Lectura pública del bucket `evidencias`. Sirve para mostrar a los
+        donadores el comprobante de que el dinero fue usado correctamente.
+      security: []
+      parameters:
+        - in: path
+          name: path
+          required: true
+          schema: { type: string }
+          example: "campanias/11111111-1111-1111-1111-111111111111/evidencia-01.jpg"
+      responses:
+        "200":
+          description: Archivo binario.
+        "404":
+          description: No existe.
+  </script>
+
+  <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
+  <script src="https://unpkg.com/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js"></script>
+  <script>
+    // Anon key pública de Supabase — se inyecta automáticamente como header `apikey`
+    // en todos los requests. No es la service_role; es la misma que usa la app Flutter.
+    const SUPABASE_ANON_KEY =
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." +
+      "eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2ZGxzeXBvcXN0YmlmZGJoYWZ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MjUxODcsImV4cCI6MjA3NjUwMTE4N30." +
+      "JYqNlbGkVSgAuTKhmGCNwsQYGkrk3y0d3z1-gmr91EY";
+
+    window.addEventListener("load", () => {
+      try {
+        const yamlText = document.getElementById("openapi-spec").textContent;
+        const specObj = jsyaml.load(yamlText);
+
+        window.ui = SwaggerUIBundle({
+          spec: specObj,
+          dom_id: "#swagger-ui",
+          deepLinking: true,
+          docExpansion: "list",
+          defaultModelsExpandDepth: 1,
+          defaultModelExpandDepth: 2,
+          displayRequestDuration: true,
+          filter: true,
+          tryItOutEnabled: true,
+          persistAuthorization: true,
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+          ],
+          layout: "BaseLayout",
+          onComplete: () => {
+            // Pre-autoriza el header `apikey` con la anon key, así los endpoints
+            // públicos funcionan sin que el usuario tenga que apretar Authorize.
+            // Para autenticarse (Bearer JWT), el usuario sí debe hacer login y
+            // pegar el access_token en Authorize manualmente.
+            try {
+              window.ui.preauthorizeApiKey("apiKey", SUPABASE_ANON_KEY);
+            } catch (e) {
+              console.warn("preauthorizeApiKey falló:", e);
+            }
+          }
+        });
+      } catch (err) {
+        document.getElementById("swagger-ui").innerHTML =
+          '<div id="error">Error cargando la spec OpenAPI:\n\n' + (err && err.message ? err.message : err) + '</div>';
+      }
+    });
+  </script>
+</body>
+</html>

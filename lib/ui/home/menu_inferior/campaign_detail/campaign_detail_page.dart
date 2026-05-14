@@ -309,13 +309,9 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
       return;
     }
 
-    final resolvedPreviewUrl = evidence.thumbnailUrl?.trim().isNotEmpty == true
-        ? evidence.thumbnailUrl!.trim()
-        : evidence.url.trim();
-    final hasImagePreview = resolvedPreviewUrl.isNotEmpty &&
-        (_isImageEvidenceType(evidence.type) || _looksLikeImageUrl(resolvedPreviewUrl));
-    final heroTag = hasImagePreview ? 'campaign-evidence-${evidence.id}' : null;
-    final normalizedDescription = _normalizeEvidenceDescription(evidence.description);
+    final allEvidences = _lastDetail?.evidences ?? [evidence];
+    final initialIndex =
+        allEvidences.indexWhere((e) => e.id == evidence.id).clamp(0, allEvidences.length - 1);
 
     await Navigator.of(context).push(PageRouteBuilder<void>(
       transitionDuration: const Duration(milliseconds: 220),
@@ -326,12 +322,8 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         return FadeTransition(
           opacity: CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
           child: _EvidenceViewerPage(
-            evidence: evidence,
-            previewUrl: hasImagePreview ? resolvedPreviewUrl : null,
-            hasImagePreview: hasImagePreview,
-            heroTag: heroTag,
-            description: normalizedDescription,
-            onOpenLink: _openExternalLink,
+            evidences: allEvidences,
+            initialIndex: initialIndex,
           ),
         );
       },
@@ -566,170 +558,77 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
-        flexibleSpace: ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.25),
-              ),
-            ),
-          ),
-        ),
         foregroundColor: Colors.white,
-        leading: Container(
-          margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.25),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, size: 22),
-            color: Colors.white,
-            padding: EdgeInsets.zero,
-            onPressed: () => Navigator.of(context).pop(),
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: _GlassCircleButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.of(context).pop(),
           ),
         ),
-        title: Text(
-          summary.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 17,
-            letterSpacing: -0.2,
-            color: Colors.white,
-          ),
-        ),
+        title: const SizedBox.shrink(),
         actions: [
-          // Botón eliminar (solo para el creador de solicitudes pendientes sin donaciones)
           if (_canDeleteCampaign(summary))
-            Container(
-              margin: const EdgeInsets.only(right: 6),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.4),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.4),
-                  width: 1,
-                ),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                color: Colors.white,
+            Padding(
+              padding: const EdgeInsets.only(right: 6, top: 10, bottom: 10),
+              child: _GlassCircleButton(
+                icon: Icons.delete_outline,
+                onTap: () => _handleDeleteRequest(summary),
                 tooltip: 'Eliminar solicitud',
-                onPressed: () => _handleDeleteRequest(summary),
               ),
             ),
-          Container(
-            margin: const EdgeInsets.only(right: AppColors.space12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.25),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 1,
-              ),
-            ),
-            child: IconButton(
-              icon: const Icon(Icons.share_rounded, size: 20),
-              color: Colors.white,
+          Padding(
+            padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
+            child: _GlassCircleButton(
+              icon: Icons.ios_share_rounded,
+              onTap: _handleShare,
               tooltip: 'Compartir campaña',
-              onPressed: _handleShare,
             ),
           ),
         ],
       ),
       bottomNavigationBar: canSupport
-          ? ClipRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16.0, sigmaY: 16.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.orangeAction.withValues(alpha: 0.08),
-                        blurRadius: 24,
-                        offset: const Offset(0, -6),
-                      ),
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 8,
-                        offset: const Offset(0, -1),
-                      ),
-                    ],
+          ? Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.darkText.withValues(alpha: 0.07),
+                    width: 1,
                   ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Top gradient accent line
-                  Container(
-                    height: 2,
-                    decoration: const BoxDecoration(
-                      gradient: AppColors.actionGradient,
-                    ),
-                  ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppColors.space20,
-                        AppColors.space12,
-                        AppColors.space20,
-                        AppColors.space16,
-                      ),
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          gradient: AppColors.actionGradient,
-                          borderRadius: BorderRadius.circular(AppColors.radiusLg),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.orangeAction.withValues(alpha: 0.45),
-                              blurRadius: 14,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: _handleSupportTap,
-                          icon: const Icon(Icons.favorite_rounded, size: 20),
-                          label: const Text(
-                            'Apoyar ahora',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                            ),
-                            backgroundColor: Colors.transparent,
-                            foregroundColor: Colors.white,
-                            shadowColor: Colors.transparent,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppColors.radiusLg),
-                            ),
-                          ),
-                        ),
-                      ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                       .scaleXY(begin: 1.0, end: 1.02, duration: 2.seconds, curve: Curves.easeInOut)
-                       .shimmer(duration: 3.seconds, color: Colors.white.withValues(alpha: 0.2)),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ) : null,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _handleSupportTap,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.orangeAction,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'Apoyar esta campaña',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          letterSpacing: 0.1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null,
       body: FutureBuilder<_CampaignDetailBundle>(
         future: _bundleFuture,
         builder: (context, snapshot) {
@@ -768,6 +667,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
             commentController: _commentController,
             onSubmitComment: _handleSubmitComment,
             isSubmittingComment: _isSubmittingComment,
+            userProfile: widget.userProfile,
             // 🎯 Pasar parámetros de highlight
             highlightCommentId: widget.highlightCommentId,
             highlightDonationId: widget.highlightDonationId,
@@ -783,6 +683,42 @@ class _CampaignDetailBundle {
 
   final CampaignDetail? detail;
   final List<CampaignComment> comments;
+}
+
+/// Botón circular tipo iOS: blur sutil + fondo semi-transparente.
+class _GlassCircleButton extends StatelessWidget {
+  const _GlassCircleButton({
+    required this.icon,
+    required this.onTap,
+    this.tooltip,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = ClipOval(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        child: Material(
+          color: Colors.black.withValues(alpha: 0.30),
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: SizedBox(
+              width: 38,
+              height: 38,
+              child: Icon(icon, color: Colors.white, size: 19),
+            ),
+          ),
+        ),
+      ),
+    );
+    return tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
+  }
 }
 
 bool _looksLikeImageUrl(String rawUrl) {
@@ -857,10 +793,18 @@ String _formatCurrency(double value) {
   if (value >= 1000000) {
     return 'Bs ${(value / 1000000).toStringAsFixed(1)}M';
   }
-  if (value >= 1000) {
-    return 'Bs ${(value / 1000).toStringAsFixed(1)}K';
+  return 'Bs ${_thousandSepDetail(value.round())}';
+}
+
+String _thousandSepDetail(int value) {
+  final isNegative = value < 0;
+  final str = value.abs().toString();
+  final buf = StringBuffer();
+  for (var i = 0; i < str.length; i++) {
+    if (i > 0 && (str.length - i) % 3 == 0) buf.write('.');
+    buf.write(str[i]);
   }
-  return 'Bs ${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 2)}';
+  return isNegative ? '-${buf.toString()}' : buf.toString();
 }
 
 String _formatDate(DateTime date) {
