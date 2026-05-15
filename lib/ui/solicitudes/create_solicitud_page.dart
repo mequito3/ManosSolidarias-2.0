@@ -6,9 +6,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../controllers/solicitud_controller.dart';
 import '../../models/solicitud.dart';
 import '../../models/user_profile.dart';
+import '../../services/face_redaction_service.dart';
 import '../../services/solicitud_service.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/app_buttons.dart';
+import '../widgets/face_redaction_preview.dart';
 import 'steps/kermesse_location_picker_page.dart';
 import 'steps/solicitud_form_step.dart';
 import 'steps/solicitud_profile_review_step.dart';
@@ -39,6 +41,7 @@ class CreateSolicitudPage extends StatefulWidget {
 class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   late final SolicitudService _service;
   late final SolicitudController _controller;
+  late final FaceRedactionService _faceService;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _titleCtrl = TextEditingController();
@@ -86,6 +89,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     );
     _service = SolicitudService(Supabase.instance.client);
     _controller = SolicitudController(_service);
+    _faceService = FaceRedactionService();
     _beneficiaryRelationship = _relationshipOptions.first;
     // initialTipo tiene prioridad: pre-selecciona el tipo y salta a profileReview
     if (widget.initialTipo != null) {
@@ -371,6 +375,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   void dispose() {
     _controller.removeListener(_handleControllerChange);
     _controller.dispose();
+    _faceService.close();
     _titleCtrl.dispose();
     _descriptionCtrl.dispose();
     _goalCtrl.dispose();
@@ -427,16 +432,18 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded,
+                  const Icon(Icons.auto_fix_high_rounded,
                       color: AppColors.warning, size: 20),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Antes de subir fotos o facturas:\n'
-                      '• Tapa rostros con cinta o papel\n'
-                      '• Cubre nombres, cédulas y direcciones\n'
-                      '• Cubre fechas u otros datos personales\n\n'
-                      'No procesamos imágenes automáticamente — tú decides qué se publica.',
+                      'Al subir cada foto, detectamos automáticamente los '
+                      'rostros y los tachamos antes de publicar. Vas a poder '
+                      'revisar y confirmar el resultado antes de subir.\n\n'
+                      'Recuerda cubrir manualmente:\n'
+                      '• Nombres, cédulas y direcciones visibles\n'
+                      '• Fechas u otros datos personales\n\n'
+                      'La detección automática solo cubre caras.',
                       style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                             color: AppColors.darkText,
                             height: 1.5,
@@ -607,19 +614,35 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       if (file == null) {
         return;
       }
-      final bytes = await file.readAsBytes();
-      if (!_validateImageSize(bytes.length)) {
+      final originalBytes = await file.readAsBytes();
+      if (!_validateImageSize(originalBytes.length)) {
         return;
       }
       if (!mounted) {
         return;
       }
+
+      var bytesToUpload = originalBytes;
+      if (_esAnonimo) {
+        final result = await FaceRedactionPreview.show(
+          context,
+          imageBytes: originalBytes,
+          imagePath: file.path,
+          service: _faceService,
+        );
+        if (!mounted) return;
+        if (result == null) {
+          return;
+        }
+        bytesToUpload = result.redactedBytes;
+      }
+
       setState(() => _uploadingCover = true);
 
       final extension = _resolveExtension(file.name);
       final contentType = _resolveContentType(extension);
       final uploadedUrl = await _controller.uploadCoverImage(
-        data: bytes,
+        data: bytesToUpload,
         contentType: contentType,
         fileExtension: extension,
       );
@@ -627,7 +650,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         return;
       }
       setState(() {
-        _coverPreviewBytes = bytes;
+        _coverPreviewBytes = bytesToUpload;
         _uploadedCoverUrl = uploadedUrl;
       });
       _showSnack('Imagen subida correctamente.');
@@ -754,18 +777,33 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   }
 
   Future<void> _handleEvidenceFile(XFile file) async {
-    final bytes = await file.readAsBytes();
-    if (!_validateImageSize(bytes.length)) {
+    final originalBytes = await file.readAsBytes();
+    if (!_validateImageSize(originalBytes.length)) {
       return;
     }
     if (!mounted) {
       return;
     }
 
+    var bytesToUpload = originalBytes;
+    if (_esAnonimo) {
+      final result = await FaceRedactionPreview.show(
+        context,
+        imageBytes: originalBytes,
+        imagePath: file.path,
+        service: _faceService,
+      );
+      if (!mounted) return;
+      if (result == null) {
+        return; // usuario canceló desde el preview
+      }
+      bytesToUpload = result.redactedBytes;
+    }
+
     final extension = _resolveExtension(file.name);
     final contentType = _resolveContentType(extension);
     final uploadedUrl = await _controller.uploadEvidenceImage(
-      data: bytes,
+      data: bytesToUpload,
       contentType: contentType,
       fileExtension: extension,
     );
@@ -773,7 +811,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       return;
     }
     setState(() {
-      _evidenceUploads.add(SolicitudEvidenceUpload(bytes: bytes, url: uploadedUrl));
+      _evidenceUploads.add(SolicitudEvidenceUpload(bytes: bytesToUpload, url: uploadedUrl));
     });
   }
 
