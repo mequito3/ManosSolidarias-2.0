@@ -104,12 +104,6 @@ class OrganizationDetailPage extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.business_rounded,
-                          color: AppColors.bluePrimary,
-                          size: 28,
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,36 +140,20 @@ class OrganizationDetailPage extends StatelessWidget {
                   // Logo grande con borde sutil + shadow
                   _buildLogo(),
                   const SizedBox(height: 16),
-                  // Nombre + verified inline
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          organization.name,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.darkText,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ),
-                      if (organization.isVerified) ...[
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.verified_rounded,
-                          color: AppColors.bluePrimary,
-                          size: 22,
-                        ),
-                      ],
-                    ],
+                  // Nombre (sin icono verified inline)
+                  Text(
+                    organization.name,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.darkText,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2,
+                      letterSpacing: -0.3,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  // Badges (tipo + miembro desde) — sutiles, tinte azul
+                  // Chips solo texto (tipo, verificada, miembro desde)
                   Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 8,
@@ -183,13 +161,16 @@ class OrganizationDetailPage extends StatelessWidget {
                     children: [
                       if (organization.type != null)
                         _HeaderChip(
-                          icon: Icons.domain_rounded,
                           label: organization.type!,
                           color: AppColors.bluePrimary,
                         ),
+                      if (organization.isVerified)
+                        _HeaderChip(
+                          label: 'Verificada',
+                          color: AppColors.greenSuccess,
+                        ),
                       if (memberSince != null)
                         _HeaderChip(
-                          icon: Icons.calendar_today_rounded,
                           label: memberSince,
                           color: AppColors.darkText.withValues(alpha: 0.55),
                         ),
@@ -409,46 +390,26 @@ class OrganizationDetailPage extends StatelessWidget {
                         ),
                       ),
                       padding: const EdgeInsets.all(16),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 48,
-                            height: 48,
-                            decoration: BoxDecoration(
-                              color: AppColors.orangeAction.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.location_on_rounded,
+                          const Text(
+                            'DIRECCIÓN',
+                            style: TextStyle(
                               color: AppColors.orangeAction,
-                              size: 26,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
                             ),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Dirección',
-                                  style: TextStyle(
-                                    color: AppColors.orangeAction,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.4,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  organization.address!,
-                                  style: TextStyle(
-                                    color: AppColors.darkText.withValues(alpha: 0.8),
-                                    fontSize: 14,
-                                    height: 1.4,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
+                          const SizedBox(height: 6),
+                          Text(
+                            organization.address!,
+                            style: TextStyle(
+                              color: AppColors.darkText.withValues(alpha: 0.8),
+                              fontSize: 14,
+                              height: 1.4,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ],
@@ -457,10 +418,10 @@ class OrganizationDetailPage extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // Botón para abrir en Google Maps (CTA solido)
+                    // Botón para abrir en Google Maps (CTA solido sin icono)
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: () async {
                           final encoded =
                               Uri.encodeComponent(organization.address!);
@@ -470,15 +431,6 @@ class OrganizationDetailPage extends StatelessWidget {
                           await launchUrl(uri,
                               mode: LaunchMode.externalApplication);
                         },
-                        icon: const Icon(Icons.map_rounded, size: 18),
-                        label: const Text(
-                          'Abrir en Google Maps',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.2,
-                          ),
-                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.orangeAction,
                           foregroundColor: Colors.white,
@@ -488,6 +440,14 @@ class OrganizationDetailPage extends StatelessWidget {
                               AppColors.orangeAction.withValues(alpha: 0.30),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Abrir en Google Maps',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ),
@@ -536,8 +496,7 @@ class OrganizationDetailPage extends StatelessWidget {
                     // Teléfono
                     if (organization.phone != null && organization.phone!.isNotEmpty)
                       _ContactItem(
-                        icon: Icons.phone_rounded,
-                        iconColor: AppColors.greenSuccess,
+                        accentColor: AppColors.greenSuccess,
                         label: 'Teléfono',
                         value: organization.phone!,
                         actionLabel: 'Llamar',
@@ -551,8 +510,7 @@ class OrganizationDetailPage extends StatelessWidget {
                     // Email
                     if (organization.email != null && organization.email!.isNotEmpty)
                       _ContactItem(
-                        icon: Icons.email_rounded,
-                        iconColor: AppColors.bluePrimary,
+                        accentColor: AppColors.bluePrimary,
                         label: 'Correo',
                         value: organization.email!,
                         actionLabel: 'Escribir',
@@ -567,8 +525,7 @@ class OrganizationDetailPage extends StatelessWidget {
                     // Website
                     if (organization.website != null && organization.website!.isNotEmpty)
                       _ContactItem(
-                        icon: Icons.language_rounded,
-                        iconColor: AppColors.orangeAction,
+                        accentColor: AppColors.orangeAction,
                         label: 'Sitio web',
                         value: organization.website!,
                         actionLabel: 'Visitar',
@@ -644,12 +601,10 @@ class OrganizationDetailPage extends StatelessWidget {
 
 class _HeaderChip extends StatelessWidget {
   const _HeaderChip({
-    required this.icon,
     required this.label,
     required this.color,
   });
 
-  final IconData icon;
   final String label;
   final Color color;
 
@@ -662,38 +617,29 @@ class _HeaderChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.2,
+        ),
       ),
     );
   }
 }
 
-// Widget simple para item de contacto
+// Item de contacto sin iconos: label + valor + CTA solido
 class _ContactItem extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
+  final Color accentColor;
   final String label;
   final String value;
   final String actionLabel;
   final VoidCallback? onTap;
 
   const _ContactItem({
-    required this.icon,
-    required this.iconColor,
+    required this.accentColor,
     required this.label,
     required this.value,
     required this.actionLabel,
@@ -709,17 +655,17 @@ class _ContactItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             border: Border.all(
-              color: iconColor.withValues(alpha: 0.20),
+              color: accentColor.withValues(alpha: 0.20),
               width: 1.2,
             ),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: iconColor.withValues(alpha: 0.08),
+                color: accentColor.withValues(alpha: 0.08),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -727,21 +673,6 @@ class _ContactItem extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Badge de icono grande
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
               // Info
               Expanded(
                 child: Column(
@@ -750,7 +681,7 @@ class _ContactItem extends StatelessWidget {
                     Text(
                       label.toUpperCase(),
                       style: TextStyle(
-                        color: iconColor,
+                        color: accentColor,
                         fontSize: 10.5,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0.6,
@@ -771,41 +702,30 @@ class _ContactItem extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              // CTA grande
+              const SizedBox(width: 12),
+              // CTA solido (sin icono ni flecha)
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
+                    horizontal: 16, vertical: 11),
                 decoration: BoxDecoration(
-                  color: iconColor,
+                  color: accentColor,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: [
                     BoxShadow(
-                      color: iconColor.withValues(alpha: 0.30),
+                      color: accentColor.withValues(alpha: 0.30),
                       blurRadius: 8,
                       offset: const Offset(0, 3),
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      actionLabel,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    const Icon(
-                      Icons.arrow_forward_rounded,
-                      color: Colors.white,
-                      size: 14,
-                    ),
-                  ],
+                child: Text(
+                  actionLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
             ],
@@ -1024,15 +944,9 @@ class _OrgCampaignTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Icon(
-                      Icons.people_rounded,
-                      size: 12,
-                      color: AppColors.darkText.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 12),
                     Text(
-                      '${campaign.donorCount}',
+                      '${campaign.donorCount} donadores',
                       style: TextStyle(
                         color: AppColors.darkText.withValues(alpha: 0.55),
                         fontSize: 11,

@@ -123,55 +123,52 @@ class _OrganizationHighlightCardState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Type pill + verified inline
+                                // Type pill + verified label inline
                                 Row(
                                   children: [
                                     if (org.type != null)
                                       Flexible(
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
+                                              horizontal: 9, vertical: 3),
                                           decoration: BoxDecoration(
                                             color: AppColors.bluePrimary
                                                 .withValues(alpha: 0.10),
                                             borderRadius:
                                                 BorderRadius.circular(6),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.domain_rounded,
-                                                size: 11,
-                                                color: AppColors.bluePrimary,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Flexible(
-                                                child: Text(
-                                                  org.type!,
-                                                  maxLines: 1,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                  style: const TextStyle(
-                                                    color:
-                                                        AppColors.bluePrimary,
-                                                    fontWeight:
-                                                        FontWeight.w700,
-                                                    fontSize: 11,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                          child: Text(
+                                            org.type!,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: AppColors.bluePrimary,
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 11,
+                                            ),
                                           ),
                                         ),
                                       ),
                                     if (org.type != null && org.isVerified)
                                       const SizedBox(width: 6),
                                     if (org.isVerified)
-                                      const Icon(
-                                        Icons.verified_rounded,
-                                        color: AppColors.bluePrimary,
-                                        size: 16,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.greenSuccess
+                                              .withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Verificada',
+                                          style: TextStyle(
+                                            color: AppColors.greenSuccess,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                          ),
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -209,26 +206,19 @@ class _OrganizationHighlightCardState
                         ),
                       ],
                       const SizedBox(height: 12),
-                      // Footer link
+                      // Footer link (solo texto, sin flecha)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           Text(
                             'Ver detalles',
                             style: TextStyle(
-                              color:
-                                  AppColors.bluePrimary.withValues(alpha: 0.85),
+                              color: AppColors.bluePrimary
+                                  .withValues(alpha: 0.85),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0.2,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 14,
-                            color:
-                                AppColors.bluePrimary.withValues(alpha: 0.85),
                           ),
                         ],
                       ),

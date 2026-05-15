@@ -143,7 +143,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
               HomeSection(
                 title: 'Organizaciones aliadas',
                 subtitle: 'Verificadas y activas en la comunidad',
-                icon: Icons.verified_user_rounded,
                 iconColor: AppColors.bluePrimary,
                 child: Column(
                   children: [
@@ -162,24 +161,15 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
             ),
           Padding(
             padding: const EdgeInsets.only(top: 8, bottom: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.verified_rounded,
-                  size: 14,
-                  color: AppColors.bluePrimary.withValues(alpha: 0.5),
+            child: Center(
+              child: Text(
+                '${organizations.length} organizaciones verificadas',
+                style: TextStyle(
+                  color: AppColors.darkText.withValues(alpha: 0.5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '${organizations.length} organizaciones verificadas',
-                  style: TextStyle(
-                    color: AppColors.darkText.withValues(alpha: 0.5),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 200),
@@ -316,71 +306,65 @@ class _FeaturedOrgHero extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Tipo pill
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.bluePrimary
-                                        .withValues(alpha: 0.10),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.domain_rounded,
-                                        size: 11,
-                                        color: AppColors.bluePrimary,
+                                // Tipo pill (sin icono) + verificada label
+                                Wrap(
+                                  spacing: 6,
+                                  runSpacing: 6,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 9, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.bluePrimary
+                                            .withValues(alpha: 0.10),
+                                        borderRadius:
+                                            BorderRadius.circular(6),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          typeLabel,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: AppColors.bluePrimary,
+                                      child: Text(
+                                        typeLabel,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: AppColors.bluePrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                    if (organization.isVerified)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 9, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.greenSuccess
+                                              .withValues(alpha: 0.12),
+                                          borderRadius:
+                                              BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'Verificada',
+                                          style: TextStyle(
+                                            color: AppColors.greenSuccess,
                                             fontWeight: FontWeight.w700,
                                             fontSize: 11,
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
-                                // Nombre + verificada
-                                Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        organization.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: AppColors.darkText,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 17,
-                                          height: 1.2,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ),
-                                    if (organization.isVerified) ...[
-                                      const SizedBox(width: 6),
-                                      const Padding(
-                                        padding: EdgeInsets.only(top: 3),
-                                        child: Icon(
-                                          Icons.verified_rounded,
-                                          size: 18,
-                                          color: AppColors.bluePrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
+                                // Nombre
+                                Text(
+                                  organization.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.darkText,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 17,
+                                    height: 1.2,
+                                    letterSpacing: -0.2,
+                                  ),
                                 ),
                               ],
                             ),
@@ -402,7 +386,7 @@ class _FeaturedOrgHero extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 14),
-                      // Footer link
+                      // Footer link (solo texto)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -413,15 +397,8 @@ class _FeaturedOrgHero extends StatelessWidget {
                                   .withValues(alpha: 0.85),
                               fontSize: 12.5,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0.2,
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 14,
-                            color: AppColors.bluePrimary
-                                .withValues(alpha: 0.85),
                           ),
                         ],
                       ),
