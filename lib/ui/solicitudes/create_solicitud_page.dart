@@ -311,7 +311,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     return SolicitudProfileReviewStep(
       profile: widget.profile,
       tipo: _selectedTipo,
-      onBack: () => _goToStep(_SolicitudFlowStep.typeSelection),
+      onBack: () => _goToStep(_SolicitudFlowStep.landing),
       onNext: () => _goToStep(_SolicitudFlowStep.form),
     );
   }
@@ -1438,8 +1438,8 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   }
 
   /// Si el usuario entró con un tipo preseleccionado (ej. FAB de kermesse),
-  /// el wizard arranca en profileReview saltando landing y typeSelection.
-  /// En ese caso mostramos un counter de 2 pasos en vez de 4.
+  /// el wizard arranca en profileReview saltando landing. En ese caso
+  /// mostramos un counter de 2 pasos en vez de 3.
   bool get _isShortFlow => widget.initialTipo != null;
 
   int get _displayStepIndex {
@@ -1458,15 +1458,14 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       case _SolicitudFlowStep.landing:
         return 0;
       case _SolicitudFlowStep.typeSelection:
-        return 1;
       case _SolicitudFlowStep.profileReview:
-        return 2;
+        return 1;
       case _SolicitudFlowStep.form:
-        return 3;
+        return 2;
     }
   }
 
-  int get _displayStepTotal => _isShortFlow ? 2 : 4;
+  int get _displayStepTotal => _isShortFlow ? 2 : 3;
 
   @override
   Widget build(BuildContext context) {
@@ -1487,7 +1486,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
                 boxShadow: AppColors.shadowLg,
               ),
               child: FloatingActionButton.extended(
-                onPressed: () => _goToStep(_SolicitudFlowStep.typeSelection),
+                onPressed: () => _goToStep(_SolicitudFlowStep.profileReview),
                 backgroundColor: Colors.transparent,
                 elevation: 0,
                 icon: const Icon(Icons.arrow_forward_rounded, size: 22),
@@ -1588,7 +1587,7 @@ class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
   final SolicitudTipo tipo;
   final bool isShortFlow;
 
-  static const _stepLabelsLong = ['Inicio', 'Tipo', 'Perfil', 'Formulario'];
+  static const _stepLabelsLong = ['Inicio', 'Perfil', 'Formulario'];
   static const _stepLabelsShort = ['Perfil', 'Formulario'];
 
   @override
