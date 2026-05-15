@@ -32,7 +32,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
   // Stagger animations: each section fades + slides in with an offset interval
   late final Animation<double> _fadeBanner;
   late final Animation<double> _fadeFeatured;
-  late final Animation<double> _fadeRecent;
   late final Animation<double> _fadeContact;
   late final Animation<double> _fadeAll;
 
@@ -51,10 +50,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     _fadeFeatured = CurvedAnimation(
       parent: _animController,
       curve: const Interval(0.12, 0.52, curve: Curves.easeOut),
-    );
-    _fadeRecent = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.25, 0.65, curve: Curves.easeOut),
     );
     _fadeContact = CurvedAnimation(
       parent: _animController,
@@ -113,10 +108,24 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
           onCreateOrganization: widget.onCreateOrganization);
     }
 
+    // Hero protagonista: la primera destacada (o reciente como fallback)
+    final OrganizationSummary? hero = featured.isNotEmpty
+        ? featured.first
+        : (recent.isNotEmpty ? recent.first : null);
+    final heroId = hero?.id;
+
+    // Combinar destacadas + recientes (sin el hero), dedup por id
+    final mergedIds = <String>{};
+    final mergedHighlights = <OrganizationSummary>[];
+    for (final org in [...featured, ...recent]) {
+      if (org.id == heroId) continue;
+      if (mergedIds.add(org.id)) mergedHighlights.add(org);
+    }
+
     final highlightedIds = <String>{
-      for (final item in featured) item.id,
+      if (heroId != null) heroId,
+      ...mergedIds,
       for (final item in contact) item.id,
-      for (final item in recent) item.id,
     };
 
     final remainingOrganizations = organizations
@@ -130,32 +139,36 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         children: [
-          _stagger(
-            _fadeBanner,
-            OrganizationIntroBanner(organizationCount: organizations.length),
-          ),
+          if (hero != null)
+            _stagger(
+              _fadeBanner,
+              _FeaturedOrgHero(
+                organization: hero,
+                onTap: () => widget.onSelectOrganization(hero),
+              ),
+            ),
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
               child: HomeTabInlineError(
                   message: error, onRetry: widget.onRefresh),
             ),
-          if (featured.isNotEmpty)
+          if (mergedHighlights.isNotEmpty)
             _stagger(
               _fadeFeatured,
               HomeSection(
-                title: 'Destacadas',
-                subtitle: 'Organizaciones con presencia activa',
+                title: 'Organizaciones aliadas',
+                subtitle: 'Verificadas y activas en la comunidad',
                 icon: Icons.verified_user_rounded,
                 iconColor: AppColors.bluePrimary,
                 child: SizedBox(
                   height: 240,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: featured.length,
+                    itemCount: mergedHighlights.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 16),
                     itemBuilder: (context, index) {
-                      final organization = featured[index];
+                      final organization = mergedHighlights[index];
                       return OrganizationHighlightCard(
                         organization: organization,
                         onTap: () => widget.onSelectOrganization(organization),
@@ -164,33 +177,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
                   ),
                 ),
                 padding: const EdgeInsets.only(top: 28, bottom: 24),
-              ),
-            ),
-          if (recent.isNotEmpty)
-            _stagger(
-              _fadeRecent,
-              HomeSection(
-                title: 'Recientes',
-                subtitle: 'Nuevas organizaciones registradas',
-                icon: Icons.fiber_new_rounded,
-                iconColor: AppColors.greenSuccess,
-                child: SizedBox(
-                  height: 200,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: recent.length > 8 ? 8 : recent.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      return OrganizationRecentCard(
-                        organization: recent[index],
-                        onTap: () =>
-                            widget.onSelectOrganization(recent[index]),
-                      );
-                    },
-                  ),
-                ),
-                padding: const EdgeInsets.only(top: 16, bottom: 20),
               ),
             ),
           if (contact.isNotEmpty)
@@ -268,103 +254,248 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
               ],
             ),
           ),
-          const SizedBox(height: 120),
+          const SizedBox(height: 160),
         ],
       ),
     );
   }
 }
 
-class OrganizationIntroBanner extends StatelessWidget {
-  const OrganizationIntroBanner({super.key, this.organizationCount = 0});
+/// Hero protagonista del tab Organizaciones: card limpia blanca con logo
+/// prominente a la izquierda, nombre/tipo/verificada a la derecha y descripcion
+/// breve abajo. Estilo profile-card profesional, sin gradient azul de fondo.
+class _FeaturedOrgHero extends StatelessWidget {
+  const _FeaturedOrgHero({
+    required this.organization,
+    required this.onTap,
+  });
 
-  final int organizationCount;
+  final OrganizationSummary organization;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppColors.bluePrimary, AppColors.blueSecondary],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluePrimary.withValues(alpha: 0.25),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
-        children: [
-          Positioned(
-            right: -24,
-            top: -24,
-            child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.07),
-              ),
+    final hasDescription =
+        organization.description != null && organization.description!.isNotEmpty;
+    final typeLabel = organization.type ?? 'Organización aliada';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 24,
+                  offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.03),
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
-          ),
-          Positioned(
-            right: 20,
-            bottom: -32,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.04),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Banda gradient sutil arriba (4px) — toque de marca, no fondo
                 Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.verified_user_rounded,
-                    color: Colors.white,
-                    size: 24,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        AppColors.bluePrimary,
+                        AppColors.blueSecondary,
+                      ],
+                    ),
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 14),
-                Expanded(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        'Organizaciones verificadas',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 15,
-                        ),
+                      // Fila superior: logo grande + info
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Logo 84x84 con borde sutil
+                          Container(
+                            width: 84,
+                            height: 84,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(
+                                color: AppColors.bluePrimary
+                                    .withValues(alpha: 0.10),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.bluePrimary
+                                      .withValues(alpha: 0.10),
+                                  blurRadius: 14,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(17),
+                              child: organization.hasLogo
+                                  ? Image.network(
+                                      organization.logoUrl!,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Container(
+                                        color: AppColors.bluePrimary
+                                            .withValues(alpha: 0.08),
+                                        child: const Icon(
+                                          Icons.business_rounded,
+                                          color: AppColors.bluePrimary,
+                                          size: 40,
+                                        ),
+                                      ),
+                                    )
+                                  : Container(
+                                      color: AppColors.bluePrimary
+                                          .withValues(alpha: 0.08),
+                                      child: const Icon(
+                                        Icons.business_rounded,
+                                        color: AppColors.bluePrimary,
+                                        size: 40,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Tipo pill
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.bluePrimary
+                                        .withValues(alpha: 0.10),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.domain_rounded,
+                                        size: 11,
+                                        color: AppColors.bluePrimary,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          typeLabel,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: AppColors.bluePrimary,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                // Nombre + verificada
+                                Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        organization.name,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: AppColors.darkText,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 17,
+                                          height: 1.2,
+                                          letterSpacing: -0.2,
+                                        ),
+                                      ),
+                                    ),
+                                    if (organization.isVerified) ...[
+                                      const SizedBox(width: 6),
+                                      const Padding(
+                                        padding: EdgeInsets.only(top: 3),
+                                        child: Icon(
+                                          Icons.verified_rounded,
+                                          size: 18,
+                                          color: AppColors.bluePrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        organizationCount > 0
-                            ? '$organizationCount aliados revisados por el equipo'
-                            : 'Aliados confiables revisados por el equipo',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                      // Descripcion
+                      if (hasDescription) ...[
+                        const SizedBox(height: 14),
+                        Text(
+                          organization.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            height: 1.45,
+                            color: AppColors.darkText.withValues(alpha: 0.68),
+                          ),
                         ),
+                      ],
+                      const SizedBox(height: 14),
+                      // Footer link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Ver perfil',
+                            style: TextStyle(
+                              color: AppColors.bluePrimary
+                                  .withValues(alpha: 0.85),
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 14,
+                            color: AppColors.bluePrimary
+                                .withValues(alpha: 0.85),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -372,7 +503,7 @@ class OrganizationIntroBanner extends StatelessWidget {
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

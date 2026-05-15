@@ -358,10 +358,29 @@ class _KermesseFeatureCard extends StatelessWidget {
                     locationName: kermesse.locationName,
                   ),
                 ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: _DetailsButton(onPressed: onTap),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Ver detalles',
+                      style: TextStyle(
+                        color: AppColors.bluePrimary.withValues(alpha: 0.85),
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.1,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 14,
+                      color: AppColors.bluePrimary.withValues(alpha: 0.85),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -437,81 +456,6 @@ class _EventStatItem extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _DetailsButton extends StatefulWidget {
-  const _DetailsButton({required this.onPressed});
-
-  final VoidCallback? onPressed;
-
-  @override
-  State<_DetailsButton> createState() => _DetailsButtonState();
-}
-
-class _DetailsButtonState extends State<_DetailsButton> {
-  bool _pressed = false;
-
-  void _setPressed(bool value) {
-    if (_pressed == value) return;
-    setState(() => _pressed = value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEnabled = widget.onPressed != null;
-    return Listener(
-      onPointerDown: isEnabled ? (_) => _setPressed(true) : null,
-      onPointerUp: (_) => _setPressed(false),
-      onPointerCancel: (_) => _setPressed(false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: AppColors.actionGradient,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.orangeAction.withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                shadowColor: Colors.transparent,
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-              onPressed: isEnabled
-                  ? () {
-                      HapticFeedback.mediumImpact();
-                      widget.onPressed!();
-                    }
-                  : null,
-              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
-              label: const Text(
-                'Ver detalles',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

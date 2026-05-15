@@ -215,50 +215,26 @@ class _OrganizationHighlightCardState
                           )
                         else
                           const Spacer(),
-                        // Feature pills
+                        // Footer link discreto
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            if (widget.organization.hasWebsite)
-                              _SmallPill(
-                                icon: Icons.language_rounded,
-                                label: 'Web',
-                                color: AppColors.bluePrimary,
-                              ),
-                            if (widget.organization.hasWebsite &&
-                                widget.organization.hasDirectContact)
-                              const SizedBox(width: 6),
-                            if (widget.organization.hasDirectContact)
-                              _SmallPill(
-                                icon: Icons.phone_rounded,
-                                label: 'Tel',
-                                color: AppColors.greenSuccess,
-                              ),
-                            if ((widget.organization.hasWebsite ||
-                                    widget.organization.hasDirectContact) &&
-                                widget.organization.hasAddress)
-                              const SizedBox(width: 6),
-                            if (widget.organization.hasAddress)
-                              _SmallPill(
-                                icon: Icons.location_on_rounded,
-                                label: 'Dir',
-                                color: AppColors.orangeAction,
-                              ),
-                            const Spacer(),
                             Text(
-                              'Ver más',
+                              'Ver detalles',
                               style: TextStyle(
                                 color: AppColors.bluePrimary
-                                    .withValues(alpha: 0.65),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                    .withValues(alpha: 0.85),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.1,
                               ),
                             ),
-                            const SizedBox(width: 2),
+                            const SizedBox(width: 4),
                             Icon(
-                              Icons.arrow_forward_ios_rounded,
-                              size: 10,
+                              Icons.arrow_forward_rounded,
+                              size: 14,
                               color: AppColors.bluePrimary
-                                  .withValues(alpha: 0.65),
+                                  .withValues(alpha: 0.85),
                             ),
                           ],
                         ),
@@ -819,44 +795,6 @@ class _OrgLogoBadge extends StatelessWidget {
           color: AppColors.bluePrimary,
           size: size * 0.42,
         ),
-      ),
-    );
-  }
-}
-
-class _SmallPill extends StatelessWidget {
-  const _SmallPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
       ),
     );
   }
