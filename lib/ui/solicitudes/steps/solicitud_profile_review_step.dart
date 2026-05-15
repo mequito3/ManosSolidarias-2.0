@@ -166,9 +166,8 @@ class _RequesterSummaryState extends State<RequesterSummary> {
     final qrUrl = _sanitize(profile.donationQrUrl);
 
     final initials = _initialsFor(name);
-    final tipoLabel = tipo.displayName.toUpperCase();
 
-    final rows = <_SpecEntry>[
+    final contactRows = <_SpecEntry>[
       if (phone.isNotEmpty) _SpecEntry(label: 'Teléfono', value: phone),
       if (city.isNotEmpty) _SpecEntry(label: 'Ciudad', value: city),
       if (address.isNotEmpty)
@@ -179,126 +178,110 @@ class _RequesterSummaryState extends State<RequesterSummary> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: AppColors.shadowSm,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Identidad ────────────────────────────────────────────────
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.bluePrimary.withValues(alpha: 0.08),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.bluePrimary.withValues(alpha: 0.18),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: AppColors.bluePrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 19,
-                      letterSpacing: -0.3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Banda hero con avatar overlapping ────────────────────
+            _IdentityHero(name: name, initials: initials, tipo: tipo),
+            const SizedBox(height: 16),
+            // ── Sección contacto ─────────────────────────────────────
+            _SectionHeader(label: 'Contacto', accent: AppColors.bluePrimary),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < contactRows.length; i++) ...[
+                    _SpecRow(
+                      label: contactRows[i].label,
+                      value: contactRows[i].value,
                     ),
-                  ),
-                ),
+                    if (i < contactRows.length - 1)
+                      Container(
+                        height: 1,
+                        color: AppColors.darkText.withValues(alpha: 0.06),
+                      ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 14),
-              Expanded(
+            ),
+            // ── Sección cobro (si aplica) ────────────────────────────
+            if (hasBankDetails || qrUrl.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _SectionHeader(
+                label: 'Forma de cobro',
+                accent: AppColors.orangeAction,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      tipoLabel,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.darkText.withValues(alpha: 0.45),
-                        letterSpacing: 1.2,
+                    if (hasBankDetails)
+                      _SensitiveSpecRow(
+                        label: 'Cuenta bancaria',
+                        isVisible: _showBankDetails,
+                        onToggle: () => setState(
+                          () => _showBankDetails = !_showBankDetails,
+                        ),
+                        value: _composeBankDetails(
+                          holder: bankHolder,
+                          bank: bankName,
+                          type: bankType,
+                          account: bankAccount,
+                        ),
+                        obscuredValue: _composeBankDetails(
+                          holder: bankHolder,
+                          bank: bankName,
+                          type: bankType,
+                          account: bankAccount.isNotEmpty
+                              ? _maskAccountNumber(bankAccount)
+                              : '',
+                        ),
+                        helperText:
+                            'Oculta tu número de cuenta para evitar capturas accidentales.',
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 18,
-                        color: AppColors.darkText,
-                        letterSpacing: -0.3,
-                        height: 1.2,
+                    if (hasBankDetails && qrUrl.isNotEmpty)
+                      Container(
+                        height: 1,
+                        color: AppColors.darkText.withValues(alpha: 0.06),
                       ),
-                    ),
+                    if (qrUrl.isNotEmpty)
+                      _SensitiveSpecRow(
+                        label: 'Código QR de pago',
+                        isVisible: _showQrDetails,
+                        onToggle: () => setState(
+                          () => _showQrDetails = !_showQrDetails,
+                        ),
+                        value: 'Listo para escanear',
+                        obscuredValue: 'Disponible para compartir',
+                        helperText:
+                            'Muestra el código solo cuando quieras que lo escaneen.',
+                        visibleChild: _QrPreview(url: qrUrl),
+                      ),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 18),
-          Container(
-            height: 1,
-            color: AppColors.darkText.withValues(alpha: 0.06),
-          ),
-          // ── Specs comunes ─────────────────────────────────────────────
-          for (var i = 0; i < rows.length; i++) ...[
-            _SpecRow(label: rows[i].label, value: rows[i].value),
-            if (i < rows.length - 1)
-              Container(
-                height: 1,
-                color: AppColors.darkText.withValues(alpha: 0.06),
-              ),
+            const SizedBox(height: 12),
           ],
-          // ── Cuenta bancaria (con toggle texto) ────────────────────────
-          if (hasBankDetails) ...[
-            Container(
-              height: 1,
-              color: AppColors.darkText.withValues(alpha: 0.06),
-            ),
-            _SensitiveSpecRow(
-              label: 'Cuenta para recibir donaciones',
-              isVisible: _showBankDetails,
-              onToggle: () => setState(() => _showBankDetails = !_showBankDetails),
-              value: _composeBankDetails(
-                holder: bankHolder,
-                bank: bankName,
-                type: bankType,
-                account: bankAccount,
-              ),
-              obscuredValue: _composeBankDetails(
-                holder: bankHolder,
-                bank: bankName,
-                type: bankType,
-                account: bankAccount.isNotEmpty ? _maskAccountNumber(bankAccount) : '',
-              ),
-              helperText: 'Oculta tu número de cuenta para evitar capturas accidentales.',
-            ),
-          ],
-          // ── QR (con toggle texto y preview) ───────────────────────────
-          if (qrUrl.isNotEmpty) ...[
-            Container(
-              height: 1,
-              color: AppColors.darkText.withValues(alpha: 0.06),
-            ),
-            _SensitiveSpecRow(
-              label: 'Canal QR registrado',
-              isVisible: _showQrDetails,
-              onToggle: () => setState(() => _showQrDetails = !_showQrDetails),
-              value: 'Código listo para escanear',
-              obscuredValue: 'Disponible para compartir',
-              helperText: 'Muestra el código solo cuando quieras que lo escaneen.',
-              visibleChild: _QrPreview(url: qrUrl),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -344,6 +327,159 @@ class _SpecEntry {
   const _SpecEntry({required this.label, required this.value});
   final String label;
   final String value;
+}
+
+class _IdentityHero extends StatelessWidget {
+  const _IdentityHero({
+    required this.name,
+    required this.initials,
+    required this.tipo,
+  });
+
+  final String name;
+  final String initials;
+  final SolicitudTipo tipo;
+
+  @override
+  Widget build(BuildContext context) {
+    final tipoLabel = tipo.displayName;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Banda gradient azul tipo cover hero (mismo lenguaje que org detail)
+        Container(
+          height: 92,
+          decoration: const BoxDecoration(
+            gradient: AppColors.primaryGradient,
+          ),
+          child: Stack(
+            children: [
+              // Círculo decorativo translúcido tipo brand
+              Positioned(
+                right: -28,
+                top: -28,
+                child: Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      width: 26,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 80,
+                top: 20,
+                right: 70,
+                child: Text(
+                  tipoLabel.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.78),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 80,
+                top: 40,
+                right: 16,
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                    height: 1.15,
+                    shadows: [
+                      Shadow(color: Color(0x33000000), blurRadius: 4),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Avatar overlapping
+        Positioned(
+          left: 18,
+          top: 32,
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: Colors.white, width: 4),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: AppColors.bluePrimary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label, required this.accent});
+
+  final String label;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 0, 22, 6),
+      child: Row(
+        children: [
+          Container(
+            width: 14,
+            height: 2,
+            decoration: BoxDecoration(
+              color: accent,
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: accent,
+              letterSpacing: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _SpecRow extends StatelessWidget {
