@@ -1336,10 +1336,22 @@ class SolicitudEvidencePicker extends StatelessWidget {
 }
 
 class SolicitudEvidenceUpload {
-  const SolicitudEvidenceUpload({required this.bytes, required this.url});
+  const SolicitudEvidenceUpload({
+    required this.bytes,
+    required this.url,
+    this.originalUrl,
+  });
 
+  /// Bytes que se muestran en el form (siempre la versión pública/tachada
+  /// cuando es anónima, original cuando no).
   final Uint8List bytes;
+
+  /// URL de la versión que se publica en el feed.
   final String url;
+
+  /// URL del original sin tachar, solo para el admin. Null cuando la
+  /// solicitud no es anónima (en ese caso `url` ya es el original).
+  final String? originalUrl;
 }
 
 InputDecoration solicitudFieldDecoration({

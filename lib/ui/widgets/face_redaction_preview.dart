@@ -10,35 +10,41 @@ import 'app_buttons.dart';
 class FaceRedactionResult {
   const FaceRedactionResult({
     required this.redactedBytes,
-    required this.facesRedacted,
-    required this.facesDetected,
+    required this.regionsRedacted,
+    required this.regionsDetected,
   });
 
   final Uint8List redactedBytes;
-  final int facesRedacted;
-  final int facesDetected;
+  final int regionsRedacted;
+  final int regionsDetected;
 }
 
-/// Pantalla intermedia que muestra una foto con las caras detectadas
-/// resaltadas. El usuario puede tocar cada caja para incluirla o
-/// excluirla de la redacción antes de subir.
+/// Pantalla intermedia que muestra una foto con caras + bloques de texto
+/// detectados. PII de alta confianza (nombre, cédula) y caras vienen
+/// pre-marcados para tachar. Texto genérico arranca en gris (opt-in).
 class FaceRedactionPreview extends StatefulWidget {
   const FaceRedactionPreview({
     super.key,
     required this.imageBytes,
     required this.imagePath,
     required this.service,
+    this.sensitiveNames = const [],
   });
 
   final Uint8List imageBytes;
   final String imagePath;
   final FaceRedactionService service;
 
+  /// Strings que tratamos como PII al detectarse en bloques de texto.
+  /// Típicamente el nombre del usuario + el nombre del beneficiario.
+  final List<String> sensitiveNames;
+
   static Future<FaceRedactionResult?> show(
     BuildContext context, {
     required Uint8List imageBytes,
     required String imagePath,
     required FaceRedactionService service,
+    List<String> sensitiveNames = const [],
   }) {
     return Navigator.of(context).push<FaceRedactionResult>(
       MaterialPageRoute(
@@ -47,6 +53,7 @@ class FaceRedactionPreview extends StatefulWidget {
           imageBytes: imageBytes,
           imagePath: imagePath,
           service: service,
+          sensitiveNames: sensitiveNames,
         ),
       ),
     );
@@ -56,9 +63,38 @@ class FaceRedactionPreview extends StatefulWidget {
   State<FaceRedactionPreview> createState() => _FaceRedactionPreviewState();
 }
 
+enum _ItemKind { face, highConfText, lowConfText }
+
+class _RedactionItem {
+  _RedactionItem({
+    required this.rect,
+    required this.kind,
+    required this.isIncluded,
+    this.text,
+    this.reason,
+  });
+
+  final Rect rect;
+  final _ItemKind kind;
+  final String? text;
+  final String? reason;
+  bool isIncluded;
+}
+
+class _DetectionData {
+  const _DetectionData({
+    required this.imageWidth,
+    required this.imageHeight,
+    required this.items,
+  });
+
+  final double imageWidth;
+  final double imageHeight;
+  final List<_RedactionItem> items;
+}
+
 class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
   late Future<_DetectionData> _detectionFuture;
-  final Set<int> _excludedIndices = <int>{};
   bool _isProcessing = false;
 
   @override
@@ -69,22 +105,46 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
 
   Future<_DetectionData> _runDetection() async {
     final image = await decodeImageFromList(widget.imageBytes);
-    final faces = await widget.service.detectFaces(widget.imagePath);
+    final facesFuture = widget.service.detectFaces(widget.imagePath);
+    final textFuture = widget.service.detectTextBlocks(
+      widget.imagePath,
+      sensitiveNames: widget.sensitiveNames,
+    );
+    final faces = await facesFuture;
+    final textBlocks = await textFuture;
+
+    final items = <_RedactionItem>[];
+    for (final face in faces) {
+      items.add(_RedactionItem(
+        rect: face,
+        kind: _ItemKind.face,
+        isIncluded: true,
+      ));
+    }
+    for (final block in textBlocks) {
+      final isHighConf =
+          block.confidence == TextRedactionConfidence.highConfidencePii;
+      items.add(_RedactionItem(
+        rect: block.rect,
+        kind: isHighConf ? _ItemKind.highConfText : _ItemKind.lowConfText,
+        text: block.text,
+        reason: block.matchedReason,
+        isIncluded: isHighConf,
+      ));
+    }
     return _DetectionData(
       imageWidth: image.width.toDouble(),
       imageHeight: image.height.toDouble(),
-      faces: faces,
+      items: items,
     );
   }
 
   Future<void> _confirm(_DetectionData data) async {
     setState(() => _isProcessing = true);
-    final included = <Rect>[];
-    for (var i = 0; i < data.faces.length; i++) {
-      if (!_excludedIndices.contains(i)) {
-        included.add(data.faces[i]);
-      }
-    }
+    final included = data.items
+        .where((item) => item.isIncluded)
+        .map((item) => item.rect)
+        .toList(growable: false);
     final redacted = widget.service.redactRegions(
       originalBytes: widget.imageBytes,
       boxes: included,
@@ -93,8 +153,8 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
     Navigator.of(context).pop(
       FaceRedactionResult(
         redactedBytes: redacted,
-        facesRedacted: included.length,
-        facesDetected: data.faces.length,
+        regionsRedacted: included.length,
+        regionsDetected: data.items.length,
       ),
     );
   }
@@ -103,8 +163,8 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
     Navigator.of(context).pop(
       FaceRedactionResult(
         redactedBytes: widget.imageBytes,
-        facesRedacted: 0,
-        facesDetected: data.faces.length,
+        regionsRedacted: 0,
+        regionsDetected: data.items.length,
       ),
     );
   }
@@ -151,8 +211,8 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
               onSkip: () => Navigator.of(context).pop(
                 FaceRedactionResult(
                   redactedBytes: widget.imageBytes,
-                  facesRedacted: 0,
-                  facesDetected: 0,
+                  regionsRedacted: 0,
+                  regionsDetected: 0,
                 ),
               ),
             );
@@ -160,15 +220,11 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
           return _PreviewBody(
             data: snapshot.data!,
             imageBytes: widget.imageBytes,
-            excludedIndices: _excludedIndices,
             isProcessing: _isProcessing,
-            onToggleFace: (index) {
+            onToggleItem: (index) {
               setState(() {
-                if (_excludedIndices.contains(index)) {
-                  _excludedIndices.remove(index);
-                } else {
-                  _excludedIndices.add(index);
-                }
+                final item = snapshot.data!.items[index];
+                item.isIncluded = !item.isIncluded;
               });
             },
             onConfirm: () => _confirm(snapshot.data!),
@@ -180,42 +236,34 @@ class _FaceRedactionPreviewState extends State<FaceRedactionPreview> {
   }
 }
 
-class _DetectionData {
-  const _DetectionData({
-    required this.imageWidth,
-    required this.imageHeight,
-    required this.faces,
-  });
-
-  final double imageWidth;
-  final double imageHeight;
-  final List<Rect> faces;
-}
-
 class _PreviewBody extends StatelessWidget {
   const _PreviewBody({
     required this.data,
     required this.imageBytes,
-    required this.excludedIndices,
     required this.isProcessing,
-    required this.onToggleFace,
+    required this.onToggleItem,
     required this.onConfirm,
     required this.onSkip,
   });
 
   final _DetectionData data;
   final Uint8List imageBytes;
-  final Set<int> excludedIndices;
   final bool isProcessing;
-  final ValueChanged<int> onToggleFace;
+  final ValueChanged<int> onToggleItem;
   final VoidCallback onConfirm;
   final VoidCallback onSkip;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final detected = data.faces.length;
-    final included = detected - excludedIndices.length;
+    final included = data.items.where((it) => it.isIncluded).length;
+    final faceCount = data.items.where((it) => it.kind == _ItemKind.face).length;
+    final highConfTextCount = data.items
+        .where((it) => it.kind == _ItemKind.highConfText)
+        .length;
+    final lowConfTextCount = data.items
+        .where((it) => it.kind == _ItemKind.lowConfText)
+        .length;
 
     return Column(
       children: [
@@ -225,7 +273,10 @@ class _PreviewBody extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _InfoBanner(detected: detected, included: included),
+                _InfoBanner(
+                  detected: data.items.length,
+                  included: included,
+                ),
                 const SizedBox(height: 14),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(16),
@@ -240,13 +291,12 @@ class _PreviewBody extends StatelessWidget {
                             Positioned.fill(
                               child: Image.memory(imageBytes, fit: BoxFit.cover),
                             ),
-                            for (var i = 0; i < data.faces.length; i++)
-                              _FaceBox(
-                                rect: data.faces[i],
+                            for (var i = 0; i < data.items.length; i++)
+                              _RedactionBox(
+                                item: data.items[i],
                                 scale: scale,
                                 index: i,
-                                isExcluded: excludedIndices.contains(i),
-                                onTap: () => onToggleFace(i),
+                                onTap: () => onToggleItem(i),
                               ),
                           ],
                         ),
@@ -255,10 +305,16 @@ class _PreviewBody extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 14),
+                _LegendCard(
+                  faceCount: faceCount,
+                  highConfTextCount: highConfTextCount,
+                  lowConfTextCount: lowConfTextCount,
+                ),
+                const SizedBox(height: 12),
                 Text(
-                  detected == 0
-                      ? 'No se detectaron caras. Si la imagen contiene personas que no querés mostrar, cancelá y volvé a subir una versión ya editada.'
-                      : 'Tocá una caja para excluirla del tachado. Las cajas naranjas se tachan al subir. Las grises quedan visibles.',
+                  'Tocá una caja para incluirla o excluirla del tachado. '
+                  'Las cajas con borde sólido se tachan al subir; '
+                  'las grises punteadas quedan visibles.',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppColors.darkText.withValues(alpha: 0.65),
                     height: 1.4,
@@ -284,7 +340,7 @@ class _PreviewBody extends StatelessWidget {
               children: [
                 Expanded(
                   child: AppSecondaryButton(
-                    label: detected == 0 ? 'Subir sin tachar' : 'No tachar',
+                    label: 'No tachar',
                     expanded: true,
                     onPressed: isProcessing ? null : onSkip,
                   ),
@@ -311,37 +367,59 @@ class _PreviewBody extends StatelessWidget {
   }
 }
 
-class _FaceBox extends StatelessWidget {
-  const _FaceBox({
-    required this.rect,
+class _RedactionBox extends StatelessWidget {
+  const _RedactionBox({
+    required this.item,
     required this.scale,
     required this.index,
-    required this.isExcluded,
     required this.onTap,
   });
 
-  final Rect rect;
+  final _RedactionItem item;
   final double scale;
   final int index;
-  final bool isExcluded;
   final VoidCallback onTap;
+
+  Color get _baseColor {
+    switch (item.kind) {
+      case _ItemKind.face:
+        return AppColors.orangeAction;
+      case _ItemKind.highConfText:
+        return AppColors.error;
+      case _ItemKind.lowConfText:
+        return AppColors.darkText;
+    }
+  }
+
+  String get _label {
+    switch (item.kind) {
+      case _ItemKind.face:
+        return 'Cara';
+      case _ItemKind.highConfText:
+        return 'PII';
+      case _ItemKind.lowConfText:
+        return 'Texto';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final color = isExcluded ? AppColors.darkText : AppColors.orangeAction;
+    final included = item.isIncluded;
+    final color = _baseColor;
     return Positioned(
-      left: rect.left * scale,
-      top: rect.top * scale,
-      width: rect.width * scale,
-      height: rect.height * scale,
+      left: item.rect.left * scale,
+      top: item.rect.top * scale,
+      width: item.rect.width * scale,
+      height: item.rect.height * scale,
       child: GestureDetector(
         onTap: onTap,
         child: Container(
           decoration: BoxDecoration(
-            color: color.withValues(alpha: isExcluded ? 0.10 : 0.30),
+            color: color.withValues(alpha: included ? 0.30 : 0.05),
             border: Border.all(
-              color: color,
-              width: 2.5,
+              color: color.withValues(alpha: included ? 1.0 : 0.40),
+              width: included ? 2.5 : 1.5,
+              style: included ? BorderStyle.solid : BorderStyle.solid,
             ),
             borderRadius: BorderRadius.circular(6),
           ),
@@ -350,11 +428,11 @@ class _FaceBox extends StatelessWidget {
             margin: const EdgeInsets.all(3),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: color,
+              color: included ? color : color.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              isExcluded ? '○ ${index + 1}' : '● ${index + 1}',
+              included ? '● $_label' : '○ $_label',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
@@ -383,12 +461,10 @@ class _InfoBanner extends StatelessWidget {
             ? AppColors.greenSuccess
             : AppColors.bluePrimary;
     final message = detected == 0
-        ? 'No detectamos caras automáticamente.'
-        : included == detected
-            ? 'Se tacharán $detected ${detected == 1 ? 'cara' : 'caras'} antes de publicar.'
-            : included == 0
-                ? 'Ninguna cara será tachada.'
-                : 'Se tacharán $included de $detected caras detectadas.';
+        ? 'No detectamos caras ni texto sensible.'
+        : included == 0
+            ? 'Ninguna región será tachada antes de publicar.'
+            : 'Se tacharán $included ${included == 1 ? 'región' : 'regiones'} antes de publicar.';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -418,6 +494,99 @@ class _InfoBanner extends StatelessWidget {
                 fontWeight: FontWeight.w600,
                 height: 1.4,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LegendCard extends StatelessWidget {
+  const _LegendCard({
+    required this.faceCount,
+    required this.highConfTextCount,
+    required this.lowConfTextCount,
+  });
+
+  final int faceCount;
+  final int highConfTextCount;
+  final int lowConfTextCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final entries = <Widget>[
+      if (faceCount > 0)
+        _LegendDot(
+          color: AppColors.orangeAction,
+          label: '$faceCount ${faceCount == 1 ? 'cara' : 'caras'}',
+          hint: 'Tachado por defecto',
+        ),
+      if (highConfTextCount > 0)
+        _LegendDot(
+          color: AppColors.error,
+          label: '$highConfTextCount PII',
+          hint: 'Nombres o documentos',
+        ),
+      if (lowConfTextCount > 0)
+        _LegendDot(
+          color: AppColors.darkText.withValues(alpha: 0.6),
+          label: '$lowConfTextCount texto',
+          hint: 'Tocá para tachar',
+        ),
+    ];
+    if (entries.isEmpty) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: entries,
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({
+    required this.color,
+    required this.label,
+    required this.hint,
+  });
+
+  final Color color;
+  final String label;
+  final String hint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.lightBackground,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.dividerColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.darkText,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '· $hint',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppColors.darkText.withValues(alpha: 0.55),
             ),
           ),
         ],

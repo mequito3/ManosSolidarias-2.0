@@ -53,6 +53,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   final ImagePicker _picker = ImagePicker();
   Uint8List? _coverPreviewBytes;
   String? _uploadedCoverUrl;
+  String? _uploadedCoverOriginalUrl;
   bool _uploadingCover = false;
   static const int _maxCoverBytes = 3 * 1024 * 1024;
   static const int _maxEvidenceItems = 12;
@@ -629,6 +630,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
           imageBytes: originalBytes,
           imagePath: file.path,
           service: _faceService,
+          sensitiveNames: _collectSensitiveNames(),
         );
         if (!mounted) return;
         if (result == null) {
@@ -646,12 +648,28 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         contentType: contentType,
         fileExtension: extension,
       );
+
+      // Si era anónima, también subimos el cover original para que el
+      // admin pueda revisarlo durante la moderación.
+      String? originalCoverUrl;
+      if (_esAnonimo && !identical(bytesToUpload, originalBytes)) {
+        try {
+          originalCoverUrl = await _controller.uploadCoverImage(
+            data: originalBytes,
+            contentType: contentType,
+            fileExtension: extension,
+          );
+        } catch (_) {
+          originalCoverUrl = null;
+        }
+      }
       if (!mounted) {
         return;
       }
       setState(() {
         _coverPreviewBytes = bytesToUpload;
         _uploadedCoverUrl = uploadedUrl;
+        _uploadedCoverOriginalUrl = originalCoverUrl;
       });
       _showSnack('Imagen subida correctamente.');
     } on SolicitudServiceException catch (error) {
@@ -792,6 +810,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         imageBytes: originalBytes,
         imagePath: file.path,
         service: _faceService,
+        sensitiveNames: _collectSensitiveNames(),
       );
       if (!mounted) return;
       if (result == null) {
@@ -810,9 +829,60 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     if (!mounted) {
       return;
     }
+
+    // Cuando es anónima, subimos también el original aparte para que el
+    // admin pueda verificar identidad sin que se publique en el feed.
+    String? originalUploadUrl;
+    if (_esAnonimo && !identical(bytesToUpload, originalBytes)) {
+      try {
+        originalUploadUrl = await _controller.uploadEvidenceImage(
+          data: originalBytes,
+          contentType: contentType,
+          fileExtension: extension,
+        );
+      } catch (_) {
+        // Si falla el upload del original, conservamos al menos el público.
+        originalUploadUrl = null;
+      }
+    }
+    if (!mounted) {
+      return;
+    }
     setState(() {
-      _evidenceUploads.add(SolicitudEvidenceUpload(bytes: bytesToUpload, url: uploadedUrl));
+      _evidenceUploads.add(SolicitudEvidenceUpload(
+        bytes: bytesToUpload,
+        url: uploadedUrl,
+        originalUrl: originalUploadUrl,
+      ));
     });
+  }
+
+  /// Strings que tratamos como PII al hacer OCR sobre las evidencias.
+  /// Incluye el nombre del usuario que está creando la solicitud y el
+  /// nombre del beneficiario (si se ingresó) para campañas.
+  List<String> _collectSensitiveNames() {
+    final names = <String>[];
+    final userName = widget.profile.displayName?.trim() ?? '';
+    if (userName.isNotEmpty) {
+      names.add(userName);
+      // También cada palabra del nombre por separado (>= 3 chars) para
+      // que coincida con apariciones parciales como apellido suelto.
+      for (final part in userName.split(RegExp(r'\s+'))) {
+        if (part.length >= 3 && !names.contains(part)) {
+          names.add(part);
+        }
+      }
+    }
+    final beneficiary = _beneficiaryNameCtrl.text.trim();
+    if (beneficiary.isNotEmpty) {
+      names.add(beneficiary);
+      for (final part in beneficiary.split(RegExp(r'\s+'))) {
+        if (part.length >= 3 && !names.contains(part)) {
+          names.add(part);
+        }
+      }
+    }
+    return names;
   }
 
   Future<void> _pickKermesseDateTime() async {
@@ -1209,6 +1279,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     setState(() {
       _coverPreviewBytes = null;
       _uploadedCoverUrl = null;
+      _uploadedCoverOriginalUrl = null;
     });
   }
 
@@ -1231,8 +1302,14 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       filledExtras.add('${field.label}: $text');
     }
     final evidenceUrls = _evidenceUploads.map((item) => item.url).toList();
+    final evidenceOriginals = _evidenceUploads
+        .where((item) => item.originalUrl != null)
+        .map((item) => item.originalUrl!)
+        .toList();
 
-    if (filledExtras.isEmpty && evidenceUrls.isEmpty) {
+    if (filledExtras.isEmpty &&
+        evidenceUrls.isEmpty &&
+        _uploadedCoverOriginalUrl == null) {
       return base;
     }
 
@@ -1313,6 +1390,21 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       buffer.writeln('Evidencias fotográficas:');
       for (final url in evidenceUrls) {
         buffer.writeln('- $url');
+      }
+      buffer.writeln();
+    }
+
+    if (evidenceOriginals.isNotEmpty || _uploadedCoverOriginalUrl != null) {
+      buffer.writeln('--- VERIFICACION ADMIN (no publicar) ---');
+      if (_uploadedCoverOriginalUrl != null) {
+        buffer.writeln('Portada original sin tachar:');
+        buffer.writeln('- $_uploadedCoverOriginalUrl');
+      }
+      if (evidenceOriginals.isNotEmpty) {
+        buffer.writeln('Evidencias originales sin tachar:');
+        for (final url in evidenceOriginals) {
+          buffer.writeln('- $url');
+        }
       }
     }
 
