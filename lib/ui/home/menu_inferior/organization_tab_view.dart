@@ -32,7 +32,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
   // Stagger animations: each section fades + slides in with an offset interval
   late final Animation<double> _fadeBanner;
   late final Animation<double> _fadeFeatured;
-  late final Animation<double> _fadeContact;
   late final Animation<double> _fadeAll;
 
   @override
@@ -50,10 +49,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     _fadeFeatured = CurvedAnimation(
       parent: _animController,
       curve: const Interval(0.12, 0.52, curve: Curves.easeOut),
-    );
-    _fadeContact = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.38, 0.78, curve: Curves.easeOut),
     );
     _fadeAll = CurvedAnimation(
       parent: _animController,
@@ -89,7 +84,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     final error = widget.controller.errorMessage;
     final organizations = widget.controller.organizations;
     final featured = widget.controller.featuredOrganizations;
-    final contact = widget.controller.contactOrganizations;
     final recent = widget.controller.recentOrganizations;
 
     if (isLoading && !hasLoaded) {
@@ -125,7 +119,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     final highlightedIds = <String>{
       if (heroId != null) heroId,
       ...mergedIds,
-      for (final item in contact) item.id,
     };
 
     final remainingOrganizations = organizations
@@ -179,32 +172,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
                 padding: const EdgeInsets.only(top: 28, bottom: 24),
               ),
             ),
-          if (contact.isNotEmpty)
-            _stagger(
-              _fadeContact,
-              HomeSection(
-                title: 'Contacto rápido',
-                subtitle: 'Comunícate directamente con estas organizaciones',
-                icon: Icons.phone_in_talk_rounded,
-                iconColor: AppColors.greenSuccess,
-                child: Column(
-                  children: contact
-                      .take(5)
-                      .map(
-                        (organization) => Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: OrganizationContactCard(
-                            organization: organization,
-                            onTap: () =>
-                                widget.onSelectOrganization(organization),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
-                padding: const EdgeInsets.only(top: 16, bottom: 20),
-              ),
-            ),
           if (remainingOrganizations.isNotEmpty)
             _stagger(
               _fadeAll,
@@ -254,7 +221,7 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
               ],
             ),
           ),
-          const SizedBox(height: 160),
+          const SizedBox(height: 200),
         ],
       ),
     );

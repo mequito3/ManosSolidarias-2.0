@@ -28,6 +28,8 @@ class _OrganizationHighlightCardState
 
   @override
   Widget build(BuildContext context) {
+    final hasDescription = widget.organization.description != null &&
+        widget.organization.description!.isNotEmpty;
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -62,160 +64,139 @@ class _OrganizationHighlightCardState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Hero area (200px) — matches CampaignCard ─────────────
-                SizedBox(
-                  height: 160,
-                  width: double.infinity,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      // Gradient background
-                      Container(
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColors.bluePrimary,
-                              AppColors.blueSecondary,
-                            ],
-                          ),
-                        ),
-                        child: Center(
-                          child: _OrgLogoBadge(
-                            url: widget.organization.logoUrl,
-                            size: 68,
-                          ),
-                        ),
-                      ),
-                      // Bottom scrim
-                      const Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        top: 60,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Color(0xCC000000),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Type chip — top-left
-                      if (widget.organization.type != null)
-                        Positioned(
-                          top: 12,
-                          left: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 9, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.93),
-                              borderRadius: BorderRadius.circular(99),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.14),
-                                  blurRadius: 6,
+                // Banda gradient sutil 4px (acento de marca, no fondo)
+                Container(
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        AppColors.bluePrimary,
+                        AppColors.blueSecondary,
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Logo + verified badge
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: AppColors.bluePrimary
+                                      .withValues(alpha: 0.10),
                                 ),
-                              ],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.bluePrimary
+                                        .withValues(alpha: 0.10),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(13),
+                                child: _OrgLogoSquare(
+                                  url: widget.organization.logoUrl,
+                                  size: 64,
+                                ),
+                              ),
+                            ),
+                            const Spacer(),
+                            if (widget.organization.isVerified)
+                              Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bluePrimary
+                                      .withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.verified_rounded,
+                                  color: AppColors.bluePrimary,
+                                  size: 16,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Type pill
+                        if (widget.organization.type != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.bluePrimary
+                                  .withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.domain_rounded,
-                                    size: 11,
-                                    color: AppColors.bluePrimary),
+                                const Icon(
+                                  Icons.domain_rounded,
+                                  size: 11,
+                                  color: AppColors.bluePrimary,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  widget.organization.type!,
-                                  style: const TextStyle(
-                                    color: AppColors.bluePrimary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
+                                Flexible(
+                                  child: Text(
+                                    widget.organization.type!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppColors.bluePrimary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                      // Verified badge — top-right
-                      if (widget.organization.isVerified)
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.93),
-                              borderRadius: BorderRadius.circular(99),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.14),
-                                  blurRadius: 6,
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.verified_rounded,
-                              color: AppColors.bluePrimary,
-                              size: 14,
-                            ),
-                          ),
-                        ),
-                      // Org name — bottom-left
-                      Positioned(
-                        left: 14,
-                        right: 14,
-                        bottom: 12,
-                        child: Text(
+                        const SizedBox(height: 8),
+                        // Name
+                        Text(
                           widget.organization.name,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.darkText,
                             fontWeight: FontWeight.w800,
                             fontSize: 15,
                             height: 1.25,
-                            shadows: [
-                              Shadow(color: Colors.black54, blurRadius: 6),
-                            ],
+                            letterSpacing: -0.2,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                // ── Body ─────────────────────────────────────────────────
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.organization.description != null &&
-                            widget.organization.description!.isNotEmpty)
+                        if (hasDescription) ...[
+                          const SizedBox(height: 8),
                           Expanded(
                             child: Text(
                               widget.organization.description!,
-                              maxLines: 3,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: AppColors.darkText
-                                    .withValues(alpha: 0.68),
+                                    .withValues(alpha: 0.62),
                                 fontSize: 12,
-                                height: 1.5,
+                                height: 1.45,
                               ),
                             ),
-                          )
-                        else
+                          ),
+                        ] else
                           const Spacer(),
-                        // Footer link discreto
+                        // Footer link
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
@@ -245,6 +226,45 @@ class _OrganizationHighlightCardState
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Logo cuadrado para usar dentro del card (con fallback). El borde y shadow
+/// los maneja el container exterior — este widget solo renderiza la imagen
+/// o el fallback con relleno azul tinted.
+class _OrgLogoSquare extends StatelessWidget {
+  const _OrgLogoSquare({required this.url, this.size = 64});
+
+  final String? url;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url != null && url!.isNotEmpty) {
+      return Image.network(
+        url!,
+        width: size,
+        height: size,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _fallback(),
+      );
+    }
+    return _fallback();
+  }
+
+  Widget _fallback() {
+    return Container(
+      width: size,
+      height: size,
+      color: AppColors.bluePrimary.withValues(alpha: 0.08),
+      child: Center(
+        child: Icon(
+          Icons.business_rounded,
+          color: AppColors.bluePrimary.withValues(alpha: 0.55),
+          size: size * 0.42,
         ),
       ),
     );
@@ -424,166 +444,6 @@ class _OrganizationRecentCardState extends State<OrganizationRecentCard> {
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// OrganizationContactCard — Contact card with left accent bar + action chips
-// ─────────────────────────────────────────────────────────────────────────────
-
-class OrganizationContactCard extends StatefulWidget {
-  const OrganizationContactCard({
-    super.key,
-    required this.organization,
-    this.onTap,
-    this.onCall,
-    this.onEmail,
-  });
-
-  final OrganizationSummary organization;
-  final VoidCallback? onTap;
-  final VoidCallback? onCall;
-  final VoidCallback? onEmail;
-
-  @override
-  State<OrganizationContactCard> createState() =>
-      _OrganizationContactCardState();
-}
-
-class _OrganizationContactCardState extends State<OrganizationContactCard> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasPhone = widget.organization.phone != null &&
-        widget.organization.phone!.isNotEmpty;
-    final hasEmail = widget.organization.email != null &&
-        widget.organization.email!.isNotEmpty;
-
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap?.call();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-      child: AnimatedScale(
-        scale: _pressed ? 0.98 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 14,
-                offset: const Offset(0, 4),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: IntrinsicHeight(
-              child: Row(
-                children: [
-                  // Left gradient accent bar
-                  Container(
-                    width: 4,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.bluePrimary,
-                          AppColors.blueSecondary,
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          _OrgLogoBadge(
-                              url: widget.organization.logoUrl, size: 48),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.organization.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: AppColors.darkText,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                if (widget.organization.type != null) ...[
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    widget.organization.type!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.darkText
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    if (hasPhone)
-                                      _ContactButton(
-                                        icon: Icons.phone_rounded,
-                                        label: 'Llamar',
-                                        color: AppColors.greenSuccess,
-                                        onPressed:
-                                            widget.onCall ?? widget.onTap,
-                                      ),
-                                    if (hasPhone && hasEmail)
-                                      const SizedBox(width: 8),
-                                    if (hasEmail)
-                                      _ContactButton(
-                                        icon: Icons.email_rounded,
-                                        label: 'Correo',
-                                        color: AppColors.bluePrimary,
-                                        onPressed:
-                                            widget.onEmail ?? widget.onTap,
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: 14,
-                            color:
-                                AppColors.darkText.withValues(alpha: 0.22),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ),
@@ -800,46 +660,3 @@ class _OrgLogoBadge extends StatelessWidget {
   }
 }
 
-class _ContactButton extends StatelessWidget {
-  const _ContactButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.28), width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
