@@ -10,6 +10,7 @@ import '../widgets/campaign_near_goal_card.dart';
 import '../widgets/campaign_story_strip.dart';
 import '../widgets/featured_campaign_hero.dart';
 import '../widgets/promoted_campaign_banner.dart';
+import '../widgets/sponsor_strip.dart';
 import 'shared_states.dart';
 
 class CampaignTabView extends StatelessWidget {
@@ -147,6 +148,8 @@ class CampaignTabView extends StatelessWidget {
               onSupport: () => onSupportCampaign(featured.first),
               onToggleFavorite: () => onToggleFavorite(featured.first),
             ),
+            const SizedBox(height: 12),
+            const SponsorStrip(),
             const SizedBox(height: 20),
           ],
 
