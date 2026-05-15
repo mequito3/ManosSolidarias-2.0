@@ -17,6 +17,7 @@ import '../../../../models/user_profile.dart';
 import '../../../../services/campaign_service.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../widgets/app_snackbar.dart';
+import '../../../widgets/glass_circle_button.dart';
 import '../../../widgets/highlight_wrapper.dart';
 
 part 'campaign_detail_view.dart';
@@ -561,7 +562,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
         foregroundColor: Colors.white,
         leading: Padding(
           padding: const EdgeInsets.all(10),
-          child: _GlassCircleButton(
+          child: GlassCircleButton(
             icon: Icons.arrow_back_rounded,
             onTap: () => Navigator.of(context).pop(),
           ),
@@ -571,7 +572,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
           if (_canDeleteCampaign(summary))
             Padding(
               padding: const EdgeInsets.only(right: 6, top: 10, bottom: 10),
-              child: _GlassCircleButton(
+              child: GlassCircleButton(
                 icon: Icons.delete_outline,
                 onTap: () => _handleDeleteRequest(summary),
                 tooltip: 'Eliminar solicitud',
@@ -579,7 +580,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
             ),
           Padding(
             padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
-            child: _GlassCircleButton(
+            child: GlassCircleButton(
               icon: Icons.ios_share_rounded,
               onTap: _handleShare,
               tooltip: 'Compartir campaña',
@@ -683,42 +684,6 @@ class _CampaignDetailBundle {
 
   final CampaignDetail? detail;
   final List<CampaignComment> comments;
-}
-
-/// Botón circular tipo iOS: blur sutil + fondo semi-transparente.
-class _GlassCircleButton extends StatelessWidget {
-  const _GlassCircleButton({
-    required this.icon,
-    required this.onTap,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final button = ClipOval(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Material(
-          color: Colors.black.withValues(alpha: 0.30),
-          shape: const CircleBorder(),
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 38,
-              height: 38,
-              child: Icon(icon, color: Colors.white, size: 19),
-            ),
-          ),
-        ),
-      ),
-    );
-    return tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
-  }
 }
 
 bool _looksLikeImageUrl(String rawUrl) {

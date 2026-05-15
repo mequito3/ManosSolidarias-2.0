@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +9,7 @@ import '../models/organization.dart';
 import '../services/campaign_service.dart';
 import '../services/location_geocoder.dart';
 import '../theme/app_colors.dart';
+import '../ui/widgets/glass_circle_button.dart';
 import '../ui/widgets/highlight_wrapper.dart';
 
 class OrganizationDetailPage extends StatelessWidget {
@@ -66,28 +68,40 @@ class OrganizationDetailPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.darkText, size: 24),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          organization.name,
-          style: const TextStyle(
-            color: AppColors.darkText,
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: GlassCircleButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.of(context).pop(),
           ),
         ),
-        centerTitle: false,
-        scrolledUnderElevation: 0,
+        title: const SizedBox.shrink(),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
+            child: GlassCircleButton(
+              icon: Icons.ios_share_rounded,
+              onTap: () => _handleShareOrganization(context),
+              tooltip: 'Compartir organización',
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── COVER hero detrás del AppBar transparente ─────────────
+            _OrgCoverHero(
+              imageUrl: _coverImageUrlForType(organization.type),
+            ),
             // 🎯 Banner de notificación de organización
             if (fromNotification)
               Padding(
@@ -133,13 +147,6 @@ class OrganizationDetailPage extends StatelessWidget {
                   ),
                 ),
               ),
-            // ── COVER ambiente segun tipo (si org no tiene galeria, usa
-            // imagen tematica de Unsplash). Banner 180h con overlay sutil.
-            if (galleryUrls.isEmpty)
-              _OrgCoverHero(
-                imageUrl: _coverImageUrlForType(organization.type),
-              ),
-
             // ── HEADER profile ────────────────────────────────────────
             Container(
               width: double.infinity,
@@ -396,6 +403,22 @@ class OrganizationDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _handleShareOrganization(BuildContext context) async {
+    final lines = <String>[
+      organization.name,
+      if (organization.type != null) organization.type!,
+      if (organization.address != null) '📍 ${organization.address}',
+    ];
+    await Clipboard.setData(ClipboardData(text: lines.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Organización copiada al portapapeles'),
+        duration: Duration(seconds: 2),
       ),
     );
   }

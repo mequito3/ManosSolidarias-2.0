@@ -11,6 +11,7 @@ import '../../services/location_geocoder.dart';
 import '../../theme/app_colors.dart';
 import '../home/menu_inferior/shared_states.dart';
 import '../home/widgets/home_section.dart';
+import '../widgets/glass_circle_button.dart';
 
 class KermesseListPage extends StatefulWidget {
   const KermesseListPage({super.key, required this.controller});
@@ -624,6 +625,22 @@ class KermesseDetailPage extends StatelessWidget {
         .join('\n');
   }
 
+  Future<void> _handleShareKermesse(BuildContext context) async {
+    final lines = <String>[
+      kermesse.title,
+      if (kermesse.locationName != null) '📍 ${kermesse.locationName}',
+      if (kermesse.eventDateText != null) '📅 ${kermesse.eventDateText}',
+    ];
+    await Clipboard.setData(ClipboardData(text: lines.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Kermesse copiada al portapapeles'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mapPoint = _resolveMapPoint(kermesse);
@@ -731,6 +748,32 @@ class KermesseDetailPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: GlassCircleButton(
+            icon: Icons.arrow_back_rounded,
+            onTap: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        title: const SizedBox.shrink(),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14, top: 10, bottom: 10),
+            child: GlassCircleButton(
+              icon: Icons.ios_share_rounded,
+              onTap: () => _handleShareKermesse(context),
+              tooltip: 'Compartir kermesse',
+            ),
+          ),
+        ],
+      ),
       body: AnnotatedRegion<SystemUiOverlayStyle>(
         value: SystemUiOverlayStyle.light,
         child: SingleChildScrollView(
@@ -741,14 +784,7 @@ class KermesseDetailPage extends StatelessWidget {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  _DetailHeroBanner(kermesse: kermesse, height: 280),
-                  Positioned(
-                    top: MediaQuery.of(context).padding.top + 8,
-                    left: 12,
-                    child: _HeroBackButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                    ),
-                  ),
+                  _DetailHeroBanner(kermesse: kermesse, height: 310),
                   Positioned(
                     left: 20,
                     right: 20,
@@ -861,43 +897,6 @@ class _DetailHeroBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _HeroBackButton extends StatelessWidget {
-  const _HeroBackButton({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.38),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Icon(
-            Icons.arrow_back_rounded,
-            color: Colors.white,
-            size: 22,
-          ),
-        ),
       ),
     );
   }

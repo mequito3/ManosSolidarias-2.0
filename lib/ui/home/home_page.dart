@@ -552,10 +552,9 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       case 2:
-        // MEJORA: FAB con gradiente primary
         return Container(
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
+            gradient: AppColors.actionGradient,
             borderRadius: BorderRadius.circular(AppColors.radiusRound),
             boxShadow: AppColors.shadowLg,
           ),
@@ -566,7 +565,7 @@ class _HomePageState extends State<HomePage> {
               'Registrar organización',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
+                letterSpacing: 0.0,
               ),
             ),
             backgroundColor: Colors.transparent,
