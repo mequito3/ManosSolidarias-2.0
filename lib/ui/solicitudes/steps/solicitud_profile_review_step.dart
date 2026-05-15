@@ -211,7 +211,9 @@ class _RequesterSummaryState extends State<RequesterSummary> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.volunteer_activism_rounded,
+                              tipo == SolicitudTipo.kermesse
+                                  ? Icons.festival_rounded
+                                  : Icons.volunteer_activism_rounded,
                               size: 13,
                               color: AppColors.bluePrimary,
                             ),

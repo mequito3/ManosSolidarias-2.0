@@ -144,12 +144,12 @@ class SolicitudFormStep extends StatelessWidget {
                 maxLength: solicitudTitleMaxCharacters,
                 maxLengthEnforcement: MaxLengthEnforcement.enforced,
                 textCapitalization: TextCapitalization.words,
+                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: solicitudFieldDecoration(
                   label: config.titleLabel,
                   hint: config.titleHint,
-                  helper:
-                      'Ejemplos de títulos inspiradores: Cirugía para Mateo · Medicinas para Sofía · Techo para la familia Pérez.',
-                  helperMaxLines: 3,
+                  helper: 'Ej.: "Cirugía para Mateo" o "Medicinas para Sofía".',
+                  helperMaxLines: 2,
                 ),
                 validator: (value) {
                   final text = value?.trim() ?? '';
@@ -164,10 +164,7 @@ class SolicitudFormStep extends StatelessWidget {
                     return 'Añade una palabra más para que el título tenga sentido completo.';
                   }
                   if (words.length > solicitudTitleMaxWords) {
-                    return 'Reduce el título: procura no superar $solicitudTitleMaxWords palabras.';
-                  }
-                  if (text.length > solicitudTitleMaxCharacters) {
-                    return 'Máximo $solicitudTitleMaxCharacters caracteres para mantenerlo legible.';
+                    return 'El título debe tener máximo $solicitudTitleMaxWords palabras.';
                   }
                   return null;
                 },
@@ -277,7 +274,9 @@ class SolicitudFormStep extends StatelessWidget {
                   controller: goalCtrl,
                   enabled: !isSubmitting,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*[.,]?\d{0,2}')),
+                  ],
                   decoration: solicitudFieldDecoration(
                     label: config.goalLabel,
                     hint: config.goalHint,
@@ -324,8 +323,12 @@ class SolicitudFormStep extends StatelessWidget {
                     if (text.isEmpty) {
                       return 'Indica a nombre de quién se recauda.';
                     }
-                    if (text.length < 6) {
-                      return 'Usa al menos nombre y primer apellido.';
+                    final words = text
+                        .split(RegExp(r'\s+'))
+                        .where((word) => word.isNotEmpty)
+                        .toList();
+                    if (words.length < 2) {
+                      return 'Indica nombre y al menos un apellido.';
                     }
                     return null;
                   },
@@ -713,6 +716,9 @@ class SolicitudFormStep extends StatelessWidget {
                   if (parsed == null) {
                     return 'Usa un número válido para la latitud.';
                   }
+                  if (parsed < -90 || parsed > 90) {
+                    return 'La latitud debe estar entre -90 y 90.';
+                  }
                   return null;
                 },
               ),
@@ -734,6 +740,9 @@ class SolicitudFormStep extends StatelessWidget {
                   final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
                   if (parsed == null) {
                     return 'Usa un número válido para la longitud.';
+                  }
+                  if (parsed < -180 || parsed > 180) {
+                    return 'La longitud debe estar entre -180 y 180.';
                   }
                   return null;
                 },
@@ -1695,13 +1704,13 @@ class SolicitudKermesseLocationSelector extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        if (location != null) ...[
-          if (location!.address != null && location!.address!.isNotEmpty)
-            Text(
-              location!.address!,
-              style: theme.textTheme.bodySmall,
-            ),
-        ]
+        if (location != null)
+          Text(
+            (location!.address != null && location!.address!.isNotEmpty)
+                ? location!.address!
+                : 'Punto seleccionado: ${location!.coordinatesLabel}',
+            style: theme.textTheme.bodySmall,
+          )
         else if (helperText != null)
           Text(
             helperText!,

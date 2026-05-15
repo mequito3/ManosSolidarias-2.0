@@ -1307,7 +1307,23 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     });
   }
 
-  int get _stepIndex {
+  /// Si el usuario entró con un tipo preseleccionado (ej. FAB de kermesse),
+  /// el wizard arranca en profileReview saltando landing y typeSelection.
+  /// En ese caso mostramos un counter de 2 pasos en vez de 4.
+  bool get _isShortFlow => widget.initialTipo != null;
+
+  int get _displayStepIndex {
+    if (_isShortFlow) {
+      switch (_currentStep) {
+        case _SolicitudFlowStep.profileReview:
+          return 0;
+        case _SolicitudFlowStep.form:
+          return 1;
+        case _SolicitudFlowStep.landing:
+        case _SolicitudFlowStep.typeSelection:
+          return 0;
+      }
+    }
     switch (_currentStep) {
       case _SolicitudFlowStep.landing:
         return 0;
@@ -1320,12 +1336,19 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     }
   }
 
+  int get _displayStepTotal => _isShortFlow ? 2 : 4;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: _SolicitudAppBar(stepIndex: _stepIndex),
+      appBar: _SolicitudAppBar(
+        stepIndex: _displayStepIndex,
+        stepTotal: _displayStepTotal,
+        tipo: _selectedTipo,
+        isShortFlow: _isShortFlow,
+      ),
       floatingActionButton: _currentStep == _SolicitudFlowStep.landing
           ? Container(
               decoration: BoxDecoration(
@@ -1423,17 +1446,30 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
 // ── Styled app bar with step progress ────────────────────────────────────────
 
 class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const _SolicitudAppBar({required this.stepIndex});
+  const _SolicitudAppBar({
+    required this.stepIndex,
+    required this.stepTotal,
+    required this.tipo,
+    required this.isShortFlow,
+  });
 
   final int stepIndex;
+  final int stepTotal;
+  final SolicitudTipo tipo;
+  final bool isShortFlow;
 
-  static const _stepLabels = ['Inicio', 'Tipo', 'Perfil', 'Formulario'];
+  static const _stepLabelsLong = ['Inicio', 'Tipo', 'Perfil', 'Formulario'];
+  static const _stepLabelsShort = ['Perfil', 'Formulario'];
 
   @override
   Size get preferredSize => const Size.fromHeight(72);
 
   @override
   Widget build(BuildContext context) {
+    final labels = isShortFlow ? _stepLabelsShort : _stepLabelsLong;
+    final safeIndex = stepIndex.clamp(0, labels.length - 1);
+    final titleText =
+        tipo == SolicitudTipo.kermesse ? 'Nueva kermesse' : 'Nueva campaña';
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1451,9 +1487,9 @@ class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
           title: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Nueva campaña',
-                style: TextStyle(
+              Text(
+                titleText,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.3,
@@ -1461,7 +1497,7 @@ class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
               Text(
-                'Paso ${stepIndex + 1} de 4 · ${_stepLabels[stepIndex]}',
+                'Paso ${safeIndex + 1} de $stepTotal · ${labels[safeIndex]}',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -1478,7 +1514,7 @@ class _SolicitudAppBar extends StatelessWidget implements PreferredSizeWidget {
           color: AppColors.dividerColor.withValues(alpha: 0.4),
           child: FractionallySizedBox(
             alignment: Alignment.centerLeft,
-            widthFactor: (stepIndex + 1) / 4,
+            widthFactor: (safeIndex + 1) / stepTotal,
             child: Container(
               decoration: const BoxDecoration(
                 gradient: AppColors.primaryGradient,
