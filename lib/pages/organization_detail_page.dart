@@ -130,34 +130,31 @@ class OrganizationDetailPage extends StatelessWidget {
                   ),
                 ),
               ),
-            // Header limpio (sin gradient azul) — profile style
+            // ── HEADER profile ────────────────────────────────────────
             Container(
               width: double.infinity,
               color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
               child: Column(
                 children: [
-                  // Logo grande con borde sutil + shadow
                   _buildLogo(),
-                  const SizedBox(height: 16),
-                  // Nombre (sin icono verified inline)
+                  const SizedBox(height: 12),
                   Text(
                     organization.name,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: AppColors.darkText,
-                      fontSize: 22,
+                      fontSize: 21,
                       fontWeight: FontWeight.w800,
                       height: 1.2,
                       letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // Chips solo texto (tipo, verificada, miembro desde)
+                  const SizedBox(height: 10),
                   Wrap(
                     alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: 6,
+                    runSpacing: 6,
                     children: [
                       if (organization.type != null)
                         _HeaderChip(
@@ -179,274 +176,144 @@ class OrganizationDetailPage extends StatelessWidget {
                 ],
               ),
             ),
-            // Banda gradient 3px sutil — toque de marca, no fondo
-            Container(
-              height: 3,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    AppColors.bluePrimary,
-                    AppColors.blueSecondary,
-                  ],
+            const _SectionDivider(),
+
+            // ── ACERCA DE ─────────────────────────────────────────────
+            _SectionContainer(
+              accentColor: AppColors.bluePrimary,
+              title: 'Acerca de',
+              child: Text(
+                cleanDescription,
+                style: TextStyle(
+                  color: AppColors.darkText.withValues(alpha: 0.78),
+                  fontSize: 14,
+                  height: 1.55,
                 ),
               ),
             ),
-            
-            // Descripción mejorada
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header (estilo barra accent — consistente con resto)
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: AppColors.bluePrimary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
+            const _SectionDivider(),
+
+            // ── CONTACTO (movido arriba — accion principal) ──────────
+            _SectionContainer(
+              accentColor: AppColors.bluePrimary,
+              title: 'Contacto',
+              child: (organization.hasDirectContact || organization.hasWebsite)
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (organization.phone != null &&
+                            organization.phone!.isNotEmpty)
+                          _ContactItem(
+                            accentColor: AppColors.greenSuccess,
+                            label: 'Teléfono',
+                            value: organization.phone!,
+                            actionLabel: 'Llamar',
+                            onTap: onCall,
+                          ),
+                        if (organization.phone != null &&
+                            organization.phone!.isNotEmpty &&
+                            organization.email != null &&
+                            organization.email!.isNotEmpty)
+                          const SizedBox(height: 10),
+                        if (organization.email != null &&
+                            organization.email!.isNotEmpty)
+                          _ContactItem(
+                            accentColor: AppColors.bluePrimary,
+                            label: 'Correo',
+                            value: organization.email!,
+                            actionLabel: 'Escribir',
+                            onTap: onEmail,
+                          ),
+                        if ((organization.phone != null &&
+                                    organization.phone!.isNotEmpty ||
+                                organization.email != null &&
+                                    organization.email!.isNotEmpty) &&
+                            organization.website != null &&
+                            organization.website!.isNotEmpty)
+                          const SizedBox(height: 10),
+                        if (organization.website != null &&
+                            organization.website!.isNotEmpty)
+                          _ContactItem(
+                            accentColor: AppColors.orangeAction,
+                            label: 'Sitio web',
+                            value: organization.website!,
+                            actionLabel: 'Visitar',
+                            onTap: onOpenWebsite,
+                          ),
+                      ],
+                    )
+                  : Text(
+                      'No hay información de contacto disponible',
+                      style: TextStyle(
+                        color: AppColors.darkText.withValues(alpha: 0.5),
+                        fontSize: 13,
                       ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Acerca de la organización',
-                        style: TextStyle(
-                          color: AppColors.darkText,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  // Descripción limpia (sin contenedor azul anidado)
-                  Text(
-                    cleanDescription,
-                    style: TextStyle(
-                      color: AppColors.darkText.withValues(alpha: 0.78),
-                      fontSize: 14,
-                      height: 1.6,
                     ),
-                  ),
-                ],
-              ),
             ),
-            
-            // Campañas activas de esta organización
-            const SizedBox(height: 8),
+            const _SectionDivider(),
+
+            // ── CAMPAÑAS ACTIVAS (FutureBuilder, conditional) ─────────
             _OrgCampaignsSection(orgName: organization.name),
 
-            // Galería
-            if (galleryUrls.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: AppColors.greenSuccess,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Galería',
-                          style: TextStyle(
-                            color: AppColors.darkText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color:
-                                AppColors.greenSuccess.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${galleryUrls.length}',
-                            style: const TextStyle(
-                              color: AppColors.greenSuccess,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1,
-                      ),
-                      itemCount: galleryUrls.length,
-                      itemBuilder: (context, index) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            galleryUrls[index],
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.darkText.withValues(alpha: 0.05),
-                              child: Center(
-                                child: Icon(
-                                  Icons.image_not_supported_outlined,
-                                  color: AppColors.darkText.withValues(alpha: 0.3),
-                                  size: 32,
-                                ),
-                              ),
-                            ),
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: AppColors.darkText.withValues(alpha: 0.05),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(AppColors.bluePrimary),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            
-            // Ubicación con mapa
+            // ── UBICACION ─────────────────────────────────────────────
             if (organization.hasAddress) ...[
-              const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                color: Colors.white,
-                padding: const EdgeInsets.all(24),
+              const _SectionDivider(),
+              _SectionContainer(
+                accentColor: AppColors.orangeAction,
+                title: 'Ubicación',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 4,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: AppColors.orangeAction,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Ubicación',
-                          style: TextStyle(
-                            color: AppColors.darkText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Mapa decorativo con dirección destacada
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.orangeAction.withValues(alpha: 0.08),
-                            AppColors.orangeAction.withValues(alpha: 0.04),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppColors.orangeAction.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: AppColors.orangeAction.withValues(alpha: 0.2),
-                          width: 1,
+                          color: AppColors.orangeAction.withValues(alpha: 0.18),
                         ),
                       ),
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'DIRECCIÓN',
-                            style: TextStyle(
-                              color: AppColors.orangeAction,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            organization.address!,
-                            style: TextStyle(
-                              color: AppColors.darkText.withValues(alpha: 0.8),
-                              fontSize: 14,
-                              height: 1.4,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        organization.address!,
+                        style: TextStyle(
+                          color: AppColors.darkText.withValues(alpha: 0.85),
+                          fontSize: 14,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // Botón para abrir en Google Maps (CTA solido sin icono)
+                    const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
+                      child: OutlinedButton(
                         onPressed: () async {
-                          final encoded =
-                              Uri.encodeComponent(organization.address!);
+                          final encoded = Uri.encodeComponent(
+                              organization.address!);
                           final uri = Uri.parse(
                             'https://www.google.com/maps/search/?api=1&query=$encoded',
                           );
                           await launchUrl(uri,
                               mode: LaunchMode.externalApplication);
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.orangeAction,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          elevation: 0,
-                          shadowColor:
-                              AppColors.orangeAction.withValues(alpha: 0.30),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.orangeAction,
+                          side: BorderSide(
+                            color: AppColors.orangeAction
+                                .withValues(alpha: 0.40),
+                            width: 1.4,
+                          ),
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                         child: const Text(
                           'Abrir en Google Maps',
                           style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -456,94 +323,64 @@ class OrganizationDetailPage extends StatelessWidget {
                 ),
               ),
             ],
-            
-            const SizedBox(height: 8),
-            
-            // Contacto
-            Container(
-              width: double.infinity,
-              color: Colors.white,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header (mismo patron que el resto)
-                  Row(
-                    children: [
-                      Container(
-                        width: 4,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: AppColors.bluePrimary,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Contacto',
-                        style: TextStyle(
-                          color: AppColors.darkText,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+
+            // ── GALERIA (al final, contenido secundario) ──────────────
+            if (galleryUrls.isNotEmpty) ...[
+              const _SectionDivider(),
+              _SectionContainer(
+                accentColor: AppColors.greenSuccess,
+                title: 'Galería',
+                trailingBadge: '${galleryUrls.length}',
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 1,
                   ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  if (organization.hasDirectContact || organization.hasWebsite) ...[
-                    // Teléfono
-                    if (organization.phone != null && organization.phone!.isNotEmpty)
-                      _ContactItem(
-                        accentColor: AppColors.greenSuccess,
-                        label: 'Teléfono',
-                        value: organization.phone!,
-                        actionLabel: 'Llamar',
-                        onTap: onCall,
+                  itemCount: galleryUrls.length,
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.network(
+                        galleryUrls[index],
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColors.darkText.withValues(alpha: 0.05),
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color:
+                                  AppColors.darkText.withValues(alpha: 0.3),
+                              size: 28,
+                            ),
+                          ),
+                        ),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color:
+                                AppColors.darkText.withValues(alpha: 0.05),
+                            child: const Center(
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation(
+                                    AppColors.bluePrimary),
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    
-                    if (organization.phone != null && organization.phone!.isNotEmpty &&
-                        organization.email != null && organization.email!.isNotEmpty)
-                      const SizedBox(height: 12),
-                    
-                    // Email
-                    if (organization.email != null && organization.email!.isNotEmpty)
-                      _ContactItem(
-                        accentColor: AppColors.bluePrimary,
-                        label: 'Correo',
-                        value: organization.email!,
-                        actionLabel: 'Escribir',
-                        onTap: onEmail,
-                      ),
-                    
-                    if ((organization.phone != null && organization.phone!.isNotEmpty ||
-                        organization.email != null && organization.email!.isNotEmpty) &&
-                        organization.website != null && organization.website!.isNotEmpty)
-                      const SizedBox(height: 12),
-                    
-                    // Website
-                    if (organization.website != null && organization.website!.isNotEmpty)
-                      _ContactItem(
-                        accentColor: AppColors.orangeAction,
-                        label: 'Sitio web',
-                        value: organization.website!,
-                        actionLabel: 'Visitar',
-                        onTap: onOpenWebsite,
-                      ),
-                  ] else
-                    Text(
-                      'No hay información de contacto disponible',
-                      style: TextStyle(
-                        color: AppColors.darkText.withValues(alpha: 0.5),
-                        fontSize: 13,
-                      ),
-                    ),
-                ],
+                    );
+                  },
+                ),
               ),
-            ),
-            
-            const SizedBox(height: 32),
+            ],
+
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -552,7 +389,7 @@ class OrganizationDetailPage extends StatelessWidget {
 
   Widget _buildLogo() {
     final url = organization.logoUrl;
-    const size = 108.0;
+    const size = 84.0;
 
     return Container(
       width: size,
@@ -782,69 +619,25 @@ class _OrgCampaignsSectionState extends State<_OrgCampaignsSection> {
         final campaigns = snapshot.data ?? const <CampaignSummary>[];
         if (campaigns.isEmpty) return const SizedBox.shrink();
 
-        return Container(
-          width: double.infinity,
-          color: Colors.white,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        return Column(
+          children: [
+            const _SectionDivider(),
+            _SectionContainer(
+              accentColor: AppColors.bluePrimary,
+              title: 'Campañas activas',
+              trailingBadge: '${campaigns.length}',
+              child: Column(
                 children: [
-                  Container(
-                    width: 4,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: AppColors.bluePrimary,
-                      borderRadius: BorderRadius.circular(2),
+                  for (var i = 0; i < campaigns.take(5).length; i++)
+                    Padding(
+                      padding: EdgeInsets.only(
+                          bottom: i == campaigns.take(5).length - 1 ? 0 : 10),
+                      child: _OrgCampaignTile(campaign: campaigns[i]),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Campañas activas',
-                    style: TextStyle(
-                      color: AppColors.darkText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.bluePrimary.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${campaigns.length}',
-                      style: const TextStyle(
-                        color: AppColors.bluePrimary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Iniciativas vigentes lideradas por esta organización.',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  height: 1.4,
-                  color: AppColors.darkText.withValues(alpha: 0.55),
-                ),
-              ),
-              const SizedBox(height: 14),
-              ...campaigns.take(5).map(
-                    (c) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _OrgCampaignTile(campaign: c),
-                    ),
-                  ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -964,3 +757,88 @@ class _OrgCampaignTile extends StatelessWidget {
   }
 }
 
+/// Container blanco con padding ajustado y header de seccion (barra accent
+/// + titulo + badge opcional). Reemplaza los Container+Column repetidos.
+class _SectionContainer extends StatelessWidget {
+  const _SectionContainer({
+    required this.accentColor,
+    required this.title,
+    required this.child,
+    this.trailingBadge,
+  });
+
+  final Color accentColor;
+  final String title;
+  final String? trailingBadge;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.darkText,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              if (trailingBadge != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    trailingBadge!,
+                    style: TextStyle(
+                      color: accentColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Divider hairline 1px entre secciones (en lugar de SizedBox vacio).
+class _SectionDivider extends StatelessWidget {
+  const _SectionDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 1,
+      color: AppColors.darkText.withValues(alpha: 0.06),
+    );
+  }
+}
