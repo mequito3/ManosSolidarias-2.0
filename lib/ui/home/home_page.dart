@@ -287,7 +287,7 @@ class _HomePageState extends State<HomePage> {
       MaterialPageRoute(
         builder: (_) => CreateSolicitudPage(
           profile: _profile,
-          startAtTypeSelection: true,
+          initialTipo: SolicitudTipo.campania,
         ),
       ),
     );
