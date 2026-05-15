@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/campaign.dart';
 import '../models/organization.dart';
 import '../services/campaign_service.dart';
+import '../services/location_geocoder.dart';
 import '../theme/app_colors.dart';
 import '../ui/widgets/highlight_wrapper.dart';
 
@@ -130,6 +133,13 @@ class OrganizationDetailPage extends StatelessWidget {
                   ),
                 ),
               ),
+            // ── COVER ambiente segun tipo (si org no tiene galeria, usa
+            // imagen tematica de Unsplash). Banner 180h con overlay sutil.
+            if (galleryUrls.isEmpty)
+              _OrgCoverHero(
+                imageUrl: _coverImageUrlForType(organization.type),
+              ),
+
             // ── HEADER profile ────────────────────────────────────────
             Container(
               width: double.infinity,
@@ -283,6 +293,9 @@ class OrganizationDetailPage extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    // Mapa real (geocode con Nominatim + flutter_map)
+                    _OrgLocationMap(address: organization.address!),
                     const SizedBox(height: 10),
                     SizedBox(
                       width: double.infinity,
@@ -839,6 +852,200 @@ class _SectionDivider extends StatelessWidget {
     return Container(
       height: 1,
       color: AppColors.darkText.withValues(alpha: 0.06),
+    );
+  }
+}
+
+/// Mapa tipo -> URL Unsplash curada. Imagenes elegidas por temaitica
+/// solidaria/comunitaria. Si la URL falla, errorBuilder muestra fallback
+/// gradient (la pagina no se rompe).
+const Map<String, String> _orgTypeImages = {
+  'Fundación':
+      'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=900&q=70&auto=format&fit=crop',
+  'Asociación':
+      'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=900&q=70&auto=format&fit=crop',
+  'Colectivo':
+      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=70&auto=format&fit=crop',
+  'Cooperativa':
+      'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=900&q=70&auto=format&fit=crop',
+  'Emprendimiento social':
+      'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=900&q=70&auto=format&fit=crop',
+  'Otro':
+      'https://images.unsplash.com/photo-1542816417-0983c9c9ad53?w=900&q=70&auto=format&fit=crop',
+};
+
+const String _orgDefaultCoverImage =
+    'https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=900&q=70&auto=format&fit=crop';
+
+String _coverImageUrlForType(String? type) {
+  if (type == null) return _orgDefaultCoverImage;
+  return _orgTypeImages[type] ?? _orgDefaultCoverImage;
+}
+
+/// Cover banner ambiente (180h) con overlay sutil para futura legibilidad
+/// si se quiere superponer texto. Si la imagen falla, fallback a gradient.
+class _OrgCoverHero extends StatelessWidget {
+  const _OrgCoverHero({required this.imageUrl});
+
+  final String imageUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 180,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            imageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _fallbackGradient(),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return _fallbackGradient();
+            },
+          ),
+          // Overlay sutil para conectar con el header blanco abajo
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  Color(0x33000000),
+                ],
+                stops: [0.5, 1.0],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _fallbackGradient() {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.bluePrimary, AppColors.blueSecondary],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mapa real de la ubicacion. Geocodifica la direccion con Nominatim
+/// (LocationGeocoder) y renderiza un flutter_map con marcador. Si la
+/// geocodificacion falla o esta cargando, muestra placeholder.
+class _OrgLocationMap extends StatefulWidget {
+  const _OrgLocationMap({required this.address});
+
+  final String address;
+
+  @override
+  State<_OrgLocationMap> createState() => _OrgLocationMapState();
+}
+
+class _OrgLocationMapState extends State<_OrgLocationMap> {
+  late final Future<LatLng?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = kermesseLocationGeocoder.geocode(widget.address);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<LatLng?>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return _placeholder('Cargando mapa…');
+        }
+        final point = snapshot.data;
+        if (point == null) {
+          return _placeholder('No pudimos ubicar esta dirección en el mapa');
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 180,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: point,
+                initialZoom: 15,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate:
+                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.manos.solidarias',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: point,
+                      width: 40,
+                      height: 40,
+                      alignment: Alignment.center,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.orangeAction,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.orangeAction
+                                  .withValues(alpha: 0.4),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.place_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _placeholder(String message) {
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: AppColors.orangeAction.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.orangeAction.withValues(alpha: 0.15),
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.darkText.withValues(alpha: 0.5),
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
     );
   }
 }
