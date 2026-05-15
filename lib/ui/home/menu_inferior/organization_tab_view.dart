@@ -29,10 +29,9 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
 
-  // Stagger animations: each section fades + slides in with an offset interval
+  // Stagger animations: hero fade + lista de aliadas
   late final Animation<double> _fadeBanner;
   late final Animation<double> _fadeFeatured;
-  late final Animation<double> _fadeAll;
 
   @override
   void initState() {
@@ -49,10 +48,6 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
     _fadeFeatured = CurvedAnimation(
       parent: _animController,
       curve: const Interval(0.12, 0.52, curve: Curves.easeOut),
-    );
-    _fadeAll = CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.50, 0.90, curve: Curves.easeOut),
     );
 
     _animController.forward();
@@ -108,22 +103,18 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
         : (recent.isNotEmpty ? recent.first : null);
     final heroId = hero?.id;
 
-    // Combinar destacadas + recientes (sin el hero), dedup por id
-    final mergedIds = <String>{};
-    final mergedHighlights = <OrganizationSummary>[];
-    for (final org in [...featured, ...recent]) {
-      if (org.id == heroId) continue;
-      if (mergedIds.add(org.id)) mergedHighlights.add(org);
+    // Lista unificada: destacadas + recientes + resto, dedup por id, sin hero.
+    // Orden: featured primero (mas relevantes), luego recent, luego rest.
+    final seenIds = <String>{if (heroId != null) heroId};
+    final orderedOrgs = <OrganizationSummary>[];
+    void addAll(Iterable<OrganizationSummary> source) {
+      for (final org in source) {
+        if (seenIds.add(org.id)) orderedOrgs.add(org);
+      }
     }
-
-    final highlightedIds = <String>{
-      if (heroId != null) heroId,
-      ...mergedIds,
-    };
-
-    final remainingOrganizations = organizations
-        .where((org) => !highlightedIds.contains(org.id))
-        .toList();
+    addAll(featured);
+    addAll(recent);
+    addAll(organizations);
 
     return RefreshIndicator(
       color: AppColors.bluePrimary,
@@ -146,7 +137,7 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
               child: HomeTabInlineError(
                   message: error, onRetry: widget.onRefresh),
             ),
-          if (mergedHighlights.isNotEmpty)
+          if (orderedOrgs.isNotEmpty)
             _stagger(
               _fadeFeatured,
               HomeSection(
@@ -154,49 +145,19 @@ class _OrganizationTabViewState extends State<OrganizationTabView>
                 subtitle: 'Verificadas y activas en la comunidad',
                 icon: Icons.verified_user_rounded,
                 iconColor: AppColors.bluePrimary,
-                child: SizedBox(
-                  height: 240,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: mergedHighlights.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 16),
-                    itemBuilder: (context, index) {
-                      final organization = mergedHighlights[index];
-                      return OrganizationHighlightCard(
-                        organization: organization,
-                        onTap: () => widget.onSelectOrganization(organization),
-                      );
-                    },
-                  ),
-                ),
-                padding: const EdgeInsets.only(top: 28, bottom: 24),
-              ),
-            ),
-          if (remainingOrganizations.isNotEmpty)
-            _stagger(
-              _fadeAll,
-              HomeSection(
-                title: 'Todas las organizaciones',
-                subtitle: 'Red completa de entidades verificadas',
-                icon: Icons.domain_rounded,
-                iconColor: AppColors.bluePrimary,
                 child: Column(
-                  children: List.generate(
-                    remainingOrganizations.take(20).length,
-                    (i) {
-                      final org = remainingOrganizations[i];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: OrganizationCompactTile(
+                  children: [
+                    for (final org in orderedOrgs.take(20))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: OrganizationHighlightCard(
                           organization: org,
-                          index: i,
                           onTap: () => widget.onSelectOrganization(org),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                  ],
                 ),
-                padding: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.only(top: 28, bottom: 24),
               ),
             ),
           Padding(
