@@ -221,19 +221,15 @@ class OrganizationDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header con icono
+                  // Header (estilo barra accent — consistente con resto)
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        width: 4,
+                        height: 20,
                         decoration: BoxDecoration(
-                          color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(
-                          Icons.info_outline_rounded,
                           color: AppColors.bluePrimary,
-                          size: 20,
+                          borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -241,123 +237,20 @@ class OrganizationDetailPage extends StatelessWidget {
                         'Acerca de la organización',
                         style: TextStyle(
                           color: AppColors.darkText,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  
-                  // Contenedor con fondo
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.bluePrimary.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Misión/Descripción
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.bluePrimary.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: const Icon(
-                                Icons.favorite_rounded,
-                                color: AppColors.bluePrimary,
-                                size: 16,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Descripción',
-                                    style: TextStyle(
-                                      color: AppColors.bluePrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    cleanDescription,
-                                    style: TextStyle(
-                                      color: AppColors.darkText.withValues(alpha: 0.8),
-                                      fontSize: 14,
-                                      height: 1.6,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        
-                        if (organization.type != null) ...[
-                          const SizedBox(height: 16),
-                          const Divider(height: 1),
-                          const SizedBox(height: 16),
-                          
-                          // Tipo de organización
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: AppColors.greenSuccess.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: const Icon(
-                                  Icons.business_center_rounded,
-                                  color: AppColors.greenSuccess,
-                                  size: 16,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Tipo de organización',
-                                    style: TextStyle(
-                                      color: AppColors.greenSuccess,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    organization.type!,
-                                    style: TextStyle(
-                                      color: AppColors.darkText.withValues(alpha: 0.8),
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
+                  const SizedBox(height: 14),
+                  // Descripción limpia (sin contenedor azul anidado)
+                  Text(
+                    cleanDescription,
+                    style: TextStyle(
+                      color: AppColors.darkText.withValues(alpha: 0.78),
+                      fontSize: 14,
+                      height: 1.6,
                     ),
                   ),
                 ],
@@ -381,35 +274,37 @@ class OrganizationDetailPage extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          width: 3,
-                          height: 18,
+                          width: 4,
+                          height: 20,
                           decoration: BoxDecoration(
                             color: AppColors.greenSuccess,
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 12),
                         const Text(
                           'Galería',
                           style: TextStyle(
                             color: AppColors.darkText,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppColors.greenSuccess.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(6),
+                            color:
+                                AppColors.greenSuccess.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${galleryUrls.length}',
                             style: const TextStyle(
                               color: AppColors.greenSuccess,
                               fontSize: 11,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                         ),
@@ -495,8 +390,6 @@ class OrganizationDetailPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    
-                    const SizedBox(height: 16),
 
                     // Mapa decorativo con dirección destacada
                     Container(
@@ -564,27 +457,37 @@ class OrganizationDetailPage extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    // Botón para abrir en Google Maps
+                    // Botón para abrir en Google Maps (CTA solido)
                     SizedBox(
                       width: double.infinity,
-                      child: OutlinedButton.icon(
+                      child: ElevatedButton.icon(
                         onPressed: () async {
-                          final encoded = Uri.encodeComponent(organization.address!);
+                          final encoded =
+                              Uri.encodeComponent(organization.address!);
                           final uri = Uri.parse(
                             'https://www.google.com/maps/search/?api=1&query=$encoded',
                           );
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
                         },
                         icon: const Icon(Icons.map_rounded, size: 18),
-                        label: const Text('Abrir en Google Maps'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.orangeAction,
-                          side: BorderSide(
-                            color: AppColors.orangeAction.withValues(alpha: 0.3),
+                        label: const Text(
+                          'Abrir en Google Maps',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.2,
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.orangeAction,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shadowColor:
+                              AppColors.orangeAction.withValues(alpha: 0.30),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
@@ -604,24 +507,24 @@ class OrganizationDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header simple
+                  // Header (mismo patron que el resto)
                   Row(
                     children: [
                       Container(
-                        width: 3,
-                        height: 18,
+                        width: 4,
+                        height: 20,
                         decoration: BoxDecoration(
                           color: AppColors.bluePrimary,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 12),
                       const Text(
                         'Contacto',
                         style: TextStyle(
                           color: AppColors.darkText,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                     ],
