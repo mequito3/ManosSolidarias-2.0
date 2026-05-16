@@ -343,105 +343,143 @@ class _IdentityHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tipoLabel = tipo.displayName;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Banda gradient azul tipo cover hero (mismo lenguaje que org detail)
-        Container(
-          height: 92,
-          decoration: const BoxDecoration(
-            gradient: AppColors.primaryGradient,
+    return SizedBox(
+      // Banda 96 + 24 de overflow del avatar = 120 total
+      height: 120,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Banda gradient azul con depth (overlay oscuro al pie)
+          Container(
+            height: 96,
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+            ),
+            child: Stack(
+              children: [
+                // Círculo brand decorativo arriba a la derecha
+                Positioned(
+                  right: -32,
+                  top: -32,
+                  child: Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
+                        width: 28,
+                      ),
+                    ),
+                  ),
+                ),
+                // Segundo círculo más chico debajo para depth
+                Positioned(
+                  right: 60,
+                  bottom: -20,
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.06),
+                    ),
+                  ),
+                ),
+                // Overlay oscuro inferior para legibilidad del nombre
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.18),
+                        ],
+                        stops: const [0.5, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 92,
+                  top: 20,
+                  right: 18,
+                  child: Text(
+                    tipoLabel.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.82),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.8,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 92,
+                  top: 40,
+                  right: 16,
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                      height: 1.15,
+                      shadows: [
+                        Shadow(color: Color(0x40000000), blurRadius: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Stack(
-            children: [
-              // Círculo decorativo translúcido tipo brand
-              Positioned(
-                right: -28,
-                top: -28,
-                child: Container(
-                  width: 130,
-                  height: 130,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.10),
-                      width: 26,
+          // Avatar overlap (sale 24px debajo de la banda)
+          Positioned(
+            left: 18,
+            top: 36,
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.white, width: 4),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.bluePrimaryDark.withValues(alpha: 0.35),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (rect) =>
+                      AppColors.primaryGradient.createShader(rect),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 26,
+                      letterSpacing: -1,
                     ),
                   ),
                 ),
               ),
-              Positioned(
-                left: 80,
-                top: 20,
-                right: 70,
-                child: Text(
-                  tipoLabel.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.78),
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 80,
-                top: 40,
-                right: 16,
-                child: Text(
-                  name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    height: 1.15,
-                    shadows: [
-                      Shadow(color: Color(0x33000000), blurRadius: 4),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Avatar overlapping
-        Positioned(
-          left: 18,
-          top: 32,
-          child: Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.18),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: const TextStyle(
-                  color: AppColors.bluePrimary,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 22,
-                  letterSpacing: -0.5,
-                ),
-              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -491,27 +529,28 @@ class _SpecRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label.toUpperCase(),
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: AppColors.darkText.withValues(alpha: 0.45),
-              letterSpacing: 1.2,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w900,
+              color: AppColors.darkText.withValues(alpha: 0.50),
+              letterSpacing: 1.4,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
               color: AppColors.darkText,
-              height: 1.4,
+              letterSpacing: -0.2,
+              height: 1.35,
             ),
           ),
         ],
@@ -541,10 +580,9 @@ class _SensitiveSpecRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final displayValue = isVisible ? value : obscuredValue;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -555,53 +593,61 @@ class _SensitiveSpecRow extends StatelessWidget {
                 child: Text(
                   label.toUpperCase(),
                   style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.darkText.withValues(alpha: 0.45),
-                    letterSpacing: 1.2,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.darkText.withValues(alpha: 0.50),
+                    letterSpacing: 1.4,
                   ),
                 ),
               ),
-              InkWell(
-                onTap: onToggle,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Text(
-                    isVisible ? 'Ocultar' : 'Mostrar',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.bluePrimary,
-                      letterSpacing: 0.2,
+              Material(
+                color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  onTap: onToggle,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 5,
+                    ),
+                    child: Text(
+                      isVisible ? 'Ocultar' : 'Mostrar',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.bluePrimary,
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             displayValue,
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+              fontSize: 15.5,
+              fontWeight: FontWeight.w700,
               color: AppColors.darkText,
-              height: 1.4,
+              letterSpacing: -0.2,
+              height: 1.35,
             ),
           ),
           if (isVisible && visibleChild != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             visibleChild!,
           ],
           if (helperText != null) ...[
             const SizedBox(height: 8),
             Text(
               helperText!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: AppColors.darkText.withValues(alpha: 0.50),
+              style: TextStyle(
                 fontSize: 12,
-                height: 1.35,
+                color: AppColors.darkText.withValues(alpha: 0.50),
+                height: 1.4,
               ),
             ),
           ],
