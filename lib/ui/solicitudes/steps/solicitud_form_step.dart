@@ -137,130 +137,102 @@ class SolicitudFormStep extends StatelessWidget {
                 title: config.sectionTitle,
                 subtitle: config.chipTitle,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: titleCtrl,
-                enabled: !isSubmitting,
-                maxLength: solicitudTitleMaxCharacters,
-                maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                textCapitalization: TextCapitalization.words,
-                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
-                decoration: solicitudFieldDecoration(
-                  label: config.titleLabel,
-                  hint: config.titleHint,
-                  helper: 'Ej.: "Cirugía para Mateo" o "Medicinas para Sofía".',
-                  helperMaxLines: 2,
+              const SizedBox(height: 20),
+              // ── Campo título ─────────────────────────────────────────
+              _StackedField(
+                label: config.titleLabel,
+                trailing: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: titleCtrl,
+                  builder: (context, value, _) {
+                    final wordCount = value.text
+                        .trim()
+                        .split(RegExp(r'\s+'))
+                        .where((word) => word.isNotEmpty)
+                        .length;
+                    return _CountBadge(
+                      current: wordCount,
+                      min: solicitudTitleMinWords,
+                      max: solicitudTitleMaxWords,
+                      unit: 'palabras',
+                    );
+                  },
                 ),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) {
-                    return 'Indica un título breve para tu solicitud.';
-                  }
-                  final words = text
-                      .split(RegExp(r'\s+'))
-                      .where((word) => word.isNotEmpty)
-                      .toList();
-                  if (words.length < solicitudTitleMinWords) {
-                    return 'Añade una palabra más para que el título tenga sentido completo.';
-                  }
-                  if (words.length > solicitudTitleMaxWords) {
-                    return 'El título debe tener máximo $solicitudTitleMaxWords palabras.';
-                  }
-                  return null;
-                },
-              ),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: titleCtrl,
-                builder: (context, value, _) {
-                  final wordCount = value.text
-                      .trim()
-                      .split(RegExp(r'\s+'))
-                      .where((word) => word.isNotEmpty)
-                      .length;
-                  final isOverLimit = wordCount > solicitudTitleMaxWords;
-                  final isOk = wordCount >= solicitudTitleMinWords && !isOverLimit;
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isOverLimit
-                                ? AppColors.error.withValues(alpha: 0.10)
-                                : isOk
-                                    ? AppColors.greenSuccess.withValues(alpha: 0.10)
-                                    : AppColors.bluePrimary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isOverLimit
-                                    ? Icons.warning_amber_rounded
-                                    : isOk
-                                        ? Icons.check_circle_rounded
-                                        : Icons.short_text_rounded,
-                                size: 13,
-                                color: isOverLimit
-                                    ? AppColors.error
-                                    : isOk
-                                        ? AppColors.greenSuccess
-                                        : AppColors.bluePrimary,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Palabras: $wordCount / $solicitudTitleMaxWords',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: isOverLimit
-                                      ? AppColors.error
-                                      : isOk
-                                          ? AppColors.greenSuccess
-                                          : AppColors.bluePrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: descriptionCtrl,
-                enabled: !isSubmitting,
-                maxLines: 6,
-                maxLength: solicitudDescriptionMaxLength,
-                maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: solicitudFieldDecoration(
-                  label: config.descriptionLabel,
-                  hint: config.descriptionHint,
-                  helper: config.descriptionHelper ?? 'Resume la necesidad esencial en un máximo de $solicitudDescriptionMaxLength caracteres.',
+                helper: 'Ej.: "Cirugía para Mateo" o "Medicinas para Sofía".',
+                child: TextFormField(
+                  controller: titleCtrl,
+                  enabled: !isSubmitting,
+                  maxLength: solicitudTitleMaxCharacters,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  textCapitalization: TextCapitalization.words,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  style: _premiumInputTextStyle,
+                  decoration: solicitudStackedInputDecoration(
+                    hint: config.titleHint,
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (text.isEmpty) {
+                      return 'Indica un título breve para tu solicitud.';
+                    }
+                    final words = text
+                        .split(RegExp(r'\s+'))
+                        .where((word) => word.isNotEmpty)
+                        .toList();
+                    if (words.length < solicitudTitleMinWords) {
+                      return 'Añade una palabra más para que el título tenga sentido completo.';
+                    }
+                    if (words.length > solicitudTitleMaxWords) {
+                      return 'El título debe tener máximo $solicitudTitleMaxWords palabras.';
+                    }
+                    return null;
+                  },
                 ),
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) {
-                    return 'Describe la situación para que podamos evaluarla.';
-                  }
-                  if (text.length < solicitudDescriptionMinLength) {
-                    return 'Amplía un poco más la historia (mínimo $solicitudDescriptionMinLength caracteres).';
-                  }
-                  if (text.length > solicitudDescriptionMaxLength) {
-                    return 'Máximo $solicitudDescriptionMaxLength caracteres para la descripción.';
-                  }
-                  return null;
-                },
+              ),
+              const SizedBox(height: 20),
+              // ── Campo descripción ────────────────────────────────────
+              _StackedField(
+                label: config.descriptionLabel,
+                trailing: ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: descriptionCtrl,
+                  builder: (context, value, _) {
+                    return _CountBadge(
+                      current: value.text.length,
+                      min: solicitudDescriptionMinLength,
+                      max: solicitudDescriptionMaxLength,
+                      unit: 'car.',
+                    );
+                  },
+                ),
+                helper: config.descriptionHelper ??
+                    'Resume la necesidad en un máximo de $solicitudDescriptionMaxLength caracteres.',
+                child: TextFormField(
+                  controller: descriptionCtrl,
+                  enabled: !isSubmitting,
+                  maxLines: 6,
+                  maxLength: solicitudDescriptionMaxLength,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  textCapitalization: TextCapitalization.sentences,
+                  buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
+                  style: _premiumInputTextStyle,
+                  decoration: solicitudStackedInputDecoration(
+                    hint: config.descriptionHint,
+                  ),
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    if (text.isEmpty) {
+                      return 'Describe la situación para que podamos evaluarla.';
+                    }
+                    if (text.length < solicitudDescriptionMinLength) {
+                      return 'Amplía un poco más (mínimo $solicitudDescriptionMinLength caracteres).';
+                    }
+                    return null;
+                  },
+                ),
               ),
               const SizedBox(height: 16),
-              const SolicitudInlineInfo(
-                icon: Icons.auto_awesome_rounded,
-                message: 'El equipo asignará la categoría solidaria al revisar tu solicitud.',
+              const _InlineTip(
+                message:
+                    'El equipo asignará la categoría solidaria al revisar tu solicitud.',
               ),
               if (!_isKermesse) ...[
                 const SizedBox(height: 20),
@@ -1362,6 +1334,208 @@ class SolicitudEvidenceUpload {
   /// URL del original sin tachar, solo para el admin. Null cuando la
   /// solicitud no es anónima (en ese caso `url` ya es el original).
   final String? originalUrl;
+}
+
+/// Estilo del texto que el usuario escribe dentro de los `_StackedField`
+/// premium (título / descripción / etc.).
+const TextStyle _premiumInputTextStyle = TextStyle(
+  fontSize: 15.5,
+  fontWeight: FontWeight.w600,
+  color: AppColors.darkText,
+  letterSpacing: -0.2,
+  height: 1.4,
+);
+
+/// Decoración para inputs cuyo label se renderiza FUERA del field (estilo
+/// settings premium). El field queda como una "caja" limpia con fill
+/// suave y radius generoso.
+InputDecoration solicitudStackedInputDecoration({String? hint}) {
+  return InputDecoration(
+    hintText: hint,
+    hintStyle: TextStyle(
+      color: AppColors.darkText.withValues(alpha: 0.35),
+      fontSize: 14.5,
+      fontWeight: FontWeight.w500,
+    ),
+    filled: true,
+    fillColor: AppColors.lightBackground,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(
+        color: AppColors.darkText.withValues(alpha: 0.08),
+        width: 1,
+      ),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(
+        color: AppColors.darkText.withValues(alpha: 0.08),
+        width: 1,
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: AppColors.bluePrimary, width: 1.6),
+    ),
+    errorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: AppColors.error, width: 1.2),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: const BorderSide(color: AppColors.error, width: 1.6),
+    ),
+    errorStyle: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: AppColors.error,
+      height: 1.3,
+    ),
+  );
+}
+
+/// Wrapper para inputs con label fuera (estilo premium):
+///
+/// ```
+/// LABEL UPPERCASE             [trailing optional]
+/// [   field grande   ]
+/// helper text si lo hay
+/// ```
+class _StackedField extends StatelessWidget {
+  const _StackedField({
+    required this.label,
+    required this.child,
+    this.trailing,
+    this.helper,
+  });
+
+  final String label;
+  final Widget child;
+  final Widget? trailing;
+  final String? helper;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.darkText.withValues(alpha: 0.50),
+                  letterSpacing: 1.4,
+                ),
+              ),
+            ),
+            if (trailing != null) trailing!,
+          ],
+        ),
+        const SizedBox(height: 8),
+        child,
+        if (helper != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helper!,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.darkText.withValues(alpha: 0.50),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Pill de contador (palabras / caracteres) que cambia de color según
+/// si el valor está bajo, dentro o sobre el rango aceptado.
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({
+    required this.current,
+    required this.min,
+    required this.max,
+    required this.unit,
+  });
+
+  final int current;
+  final int min;
+  final int max;
+  final String unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOver = current > max;
+    final isOk = current >= min && !isOver;
+    final color = isOver
+        ? AppColors.error
+        : isOk
+            ? AppColors.greenSuccess
+            : AppColors.darkText.withValues(alpha: 0.45);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$current/$max $unit',
+        style: TextStyle(
+          fontSize: 10.5,
+          fontWeight: FontWeight.w800,
+          color: color,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+/// Tip sutil sin icono — barrita lateral + texto.
+class _InlineTip extends StatelessWidget {
+  const _InlineTip({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            width: 3,
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                message,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.darkText.withValues(alpha: 0.65),
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 InputDecoration solicitudFieldDecoration({
