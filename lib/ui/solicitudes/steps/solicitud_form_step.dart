@@ -899,125 +899,135 @@ class SolicitudIntroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isKermesse = config.tipo == SolicitudTipo.kermesse;
+    final accent =
+        isKermesse ? AppColors.orangeAction : AppColors.bluePrimary;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: AppColors.shadowSm,
+        boxShadow: [
+          BoxShadow(
+            color: accent.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ─ Header row with badge
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: isKermesse
-                      ? AppColors.actionGradient
-                      : AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  isKermesse
-                      ? Icons.diversity_3_rounded
-                      : Icons.checklist_rounded,
-                  color: Colors.white,
-                  size: 22,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      config.introTitle,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 15,
-                        color: AppColors.darkText,
+                      isKermesse
+                          ? 'PASO 2 — DETALLES DEL EVENTO'
+                          : 'PASO 2 — DETALLES DE LA CAMPAÑA',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        color: accent,
+                        letterSpacing: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
+                    Text(
+                      config.introTitle,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.darkText,
+                        letterSpacing: -0.4,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Text(
                       config.introDescription,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkText.withValues(alpha: 0.55),
-                        height: 1.45,
+                        color: AppColors.darkText.withValues(alpha: 0.60),
+                        fontSize: 13,
+                        height: 1.5,
                       ),
                     ),
+                    if (config.checklist.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 1,
+                        color: AppColors.darkText.withValues(alpha: 0.06),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'CHECKLIST RECOMENDADO',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.darkText.withValues(alpha: 0.45),
+                          letterSpacing: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...config.checklist.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 5,
+                                height: 5,
+                                margin: const EdgeInsets.only(top: 7),
+                                decoration: BoxDecoration(
+                                  color: accent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: const TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.darkText,
+                                    height: 1.45,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (submitError != null) ...[
+                      const SizedBox(height: 14),
+                      SolicitudInlineError(message: submitError!),
+                    ],
                   ],
                 ),
               ),
-            ],
-          ),
-          if (config.checklist.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.lightBackground,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Checklist recomendado',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText.withValues(alpha: 0.55),
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ...config.checklist.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 22,
-                            height: 22,
-                            decoration: BoxDecoration(
-                              color: AppColors.greenSuccess.withValues(alpha: 0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check_rounded,
-                              size: 13,
-                              color: AppColors.greenSuccess,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              item,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.darkText.withValues(alpha: 0.75),
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
-          if (submitError != null) ...[
-            const SizedBox(height: 14),
-            SolicitudInlineError(message: submitError!),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -1592,55 +1602,63 @@ class _CoverActionChip extends StatelessWidget {
 // ──────────────── Form section header ────────────────────────────────
 class _FormSectionHeader extends StatelessWidget {
   const _FormSectionHeader({
+    // ignore: unused_element_parameter
     required this.icon,
     required this.title,
     this.subtitle,
+    // ignore: unused_element_parameter
+    this.accent = AppColors.bluePrimary,
   });
 
+  /// Retenido por compatibilidad con call sites antiguos; ya no se renderiza.
+  // ignore: unused_element
   final IconData icon;
   final String title;
   final String? subtitle;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: Icon(icon, color: Colors.white, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 14,
-                  color: AppColors.darkText,
+        // Barrita pequeña + eyebrow del título (mismo lenguaje que profile review)
+        Row(
+          children: [
+            Container(
+              width: 14,
+              height: 2,
+              decoration: BoxDecoration(
+                color: accent,
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                title.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: accent,
+                  letterSpacing: 1.4,
                 ),
               ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.darkText.withValues(alpha: 0.45),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-            ],
-          ),
+            ),
+          ],
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            subtitle!,
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.darkText.withValues(alpha: 0.55),
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+        ],
       ],
     );
   }
