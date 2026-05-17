@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../models/solicitud.dart';
 import '../../../models/user_profile.dart';
 import '../../../theme/app_colors.dart';
-import '../../widgets/app_buttons.dart';
 
 class SolicitudProfileReviewStep extends StatelessWidget {
   const SolicitudProfileReviewStep({
@@ -92,25 +91,6 @@ class SolicitudProfileReviewStep extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         RequesterSummary(profile: profile, tipo: tipo),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            AppSecondaryButton(
-              label: 'Atrás',
-              expanded: false,
-              onPressed: onBack,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: AppPrimaryButton(
-                label: 'Ir al formulario',
-                icon: Icons.assignment_turned_in_rounded,
-                expanded: true,
-                onPressed: onNext,
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -131,17 +111,6 @@ class _RequesterSummaryState extends State<RequesterSummary> {
   bool _showQrDetails = false;
 
   String _sanitize(String? value) => value?.trim() ?? '';
-
-  String _maskAccountNumber(String value) {
-    if (value.isEmpty) {
-      return '';
-    }
-    if (value.length <= 4) {
-      return '••••';
-    }
-    final lastDigits = value.substring(value.length - 4);
-    return '•••• $lastDigits';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -175,6 +144,8 @@ class _RequesterSummaryState extends State<RequesterSummary> {
       _SpecEntry(label: 'Correo de contacto', value: email),
     ];
 
+    final hasPaymentMethod = hasBankDetails || qrUrl.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -197,39 +168,36 @@ class _RequesterSummaryState extends State<RequesterSummary> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Banda hero con avatar overlapping ────────────────────
             _IdentityHero(name: name, initials: initials, tipo: tipo),
-            const SizedBox(height: 16),
-            // ── Sección contacto ─────────────────────────────────────
-            _SectionHeader(label: 'Contacto', accent: AppColors.bluePrimary),
+            const SizedBox(height: 18),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 22),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+              child: _SectionHeader(
+                label: 'Contacto',
+                accent: AppColors.bluePrimary,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < contactRows.length; i++) ...[
-                    _SpecRow(
-                      label: contactRows[i].label,
-                      value: contactRows[i].value,
-                    ),
-                    if (i < contactRows.length - 1)
-                      Container(
-                        height: 1,
-                        color: AppColors.darkText.withValues(alpha: 0.06),
-                      ),
-                  ],
+                  for (final entry in contactRows)
+                    _SpecRow(label: entry.label, value: entry.value),
                 ],
               ),
             ),
-            // ── Sección cobro (si aplica) ────────────────────────────
-            if (hasBankDetails || qrUrl.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _SectionHeader(
-                label: 'Forma de cobro',
-                accent: AppColors.orangeAction,
+            if (hasPaymentMethod) ...[
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+                child: _SectionHeader(
+                  label: 'Forma de cobro',
+                  accent: AppColors.orangeAction,
+                ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 22),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -240,27 +208,18 @@ class _RequesterSummaryState extends State<RequesterSummary> {
                         onToggle: () => setState(
                           () => _showBankDetails = !_showBankDetails,
                         ),
-                        value: _composeBankDetails(
+                        value: bankName.isNotEmpty ? bankName : 'Datos disponibles',
+                        obscuredValue: bankAccount.isNotEmpty
+                            ? 'Cuenta •••• ${bankAccount.length > 4 ? bankAccount.substring(bankAccount.length - 4) : bankAccount}'
+                            : 'Datos protegidos',
+                        richValueWhenVisible: _BankDetailsBlock(
                           holder: bankHolder,
                           bank: bankName,
                           type: bankType,
                           account: bankAccount,
                         ),
-                        obscuredValue: _composeBankDetails(
-                          holder: bankHolder,
-                          bank: bankName,
-                          type: bankType,
-                          account: bankAccount.isNotEmpty
-                              ? _maskAccountNumber(bankAccount)
-                              : '',
-                        ),
                         helperText:
                             'Oculta tu número de cuenta para evitar capturas accidentales.',
-                      ),
-                    if (hasBankDetails && qrUrl.isNotEmpty)
-                      Container(
-                        height: 1,
-                        color: AppColors.darkText.withValues(alpha: 0.06),
                       ),
                     if (qrUrl.isNotEmpty)
                       _SensitiveSpecRow(
@@ -278,8 +237,14 @@ class _RequesterSummaryState extends State<RequesterSummary> {
                   ],
                 ),
               ),
+            ] else ...[
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: _NoPaymentMethodWarning(),
+              ),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -300,27 +265,6 @@ class _RequesterSummaryState extends State<RequesterSummary> {
         .toUpperCase();
   }
 
-  String _composeBankDetails({
-    required String holder,
-    required String bank,
-    required String type,
-    required String account,
-  }) {
-    final lines = <String>[];
-    if (holder.isNotEmpty) {
-      lines.add('Titular: $holder');
-    }
-    if (bank.isNotEmpty) {
-      lines.add('Banco: $bank');
-    }
-    if (type.isNotEmpty) {
-      lines.add('Tipo de cuenta: $type');
-    }
-    if (account.isNotEmpty) {
-      lines.add('Cuenta: $account');
-    }
-    return lines.join('\n');
-  }
 }
 
 class _SpecEntry {
@@ -343,139 +287,67 @@ class _IdentityHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tipoLabel = tipo.displayName;
-    return SizedBox(
-      // Banda 96 + 24 de overflow del avatar = 120 total
-      height: 120,
-      child: Stack(
-        clipBehavior: Clip.none,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: AppColors.primaryGradient,
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Banda gradient azul con depth (overlay oscuro al pie)
           Container(
-            height: 96,
+            width: 60,
+            height: 60,
             decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+              color: Colors.white,
             ),
-            child: Stack(
+            child: Center(
+              child: ShaderMask(
+                blendMode: BlendMode.srcIn,
+                shaderCallback: (rect) =>
+                    AppColors.primaryGradient.createShader(rect),
+                child: Text(
+                  initials,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 22,
+                    letterSpacing: -1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Círculo brand decorativo arriba a la derecha
-                Positioned(
-                  right: -32,
-                  top: -32,
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.10),
-                        width: 28,
-                      ),
-                    ),
+                Text(
+                  name,
+                  softWrap: true,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    height: 1.15,
                   ),
                 ),
-                // Segundo círculo más chico debajo para depth
-                Positioned(
-                  right: 60,
-                  bottom: -20,
-                  child: Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white.withValues(alpha: 0.06),
-                    ),
-                  ),
-                ),
-                // Overlay oscuro inferior para legibilidad del nombre
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.18),
-                        ],
-                        stops: const [0.5, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 92,
-                  top: 20,
-                  right: 18,
-                  child: Text(
-                    tipoLabel.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.82),
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.8,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 92,
-                  top: 40,
-                  right: 16,
-                  child: Text(
-                    name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      height: 1.15,
-                      shadows: [
-                        Shadow(color: Color(0x40000000), blurRadius: 8),
-                      ],
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  tipoLabel,
+                  softWrap: true,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.80),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
                   ),
                 ),
               ],
-            ),
-          ),
-          // Avatar overlap (sale 24px debajo de la banda)
-          Positioned(
-            left: 18,
-            top: 36,
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.bluePrimaryDark.withValues(alpha: 0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (rect) =>
-                      AppColors.primaryGradient.createShader(rect),
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 26,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                ),
-              ),
             ),
           ),
         ],
@@ -492,26 +364,26 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(22, 0, 22, 6),
+    return IntrinsicHeight(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            width: 14,
-            height: 2,
+            width: 4,
+            height: 22,
             decoration: BoxDecoration(
               color: accent,
-              borderRadius: BorderRadius.circular(1),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 11,
+            label,
+            style: const TextStyle(
+              fontSize: 17,
               fontWeight: FontWeight.w800,
-              color: accent,
-              letterSpacing: 1.4,
+              color: AppColors.darkText,
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -529,25 +401,24 @@ class _SpecRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            label.toUpperCase(),
+            label,
             style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w900,
-              color: AppColors.darkText.withValues(alpha: 0.50),
-              letterSpacing: 1.4,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.darkText.withValues(alpha: 0.60),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 15.5,
-              fontWeight: FontWeight.w700,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
               color: AppColors.darkText,
               letterSpacing: -0.2,
               height: 1.35,
@@ -568,6 +439,7 @@ class _SensitiveSpecRow extends StatelessWidget {
     required this.onToggle,
     this.helperText,
     this.visibleChild,
+    this.richValueWhenVisible,
   });
 
   final String label;
@@ -577,12 +449,14 @@ class _SensitiveSpecRow extends StatelessWidget {
   final VoidCallback onToggle;
   final String? helperText;
   final Widget? visibleChild;
+  final Widget? richValueWhenVisible;
 
   @override
   Widget build(BuildContext context) {
     final displayValue = isVisible ? value : obscuredValue;
+    final useRichValue = isVisible && richValueWhenVisible != null;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -591,12 +465,11 @@ class _SensitiveSpecRow extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  label.toUpperCase(),
+                  label,
                   style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.darkText.withValues(alpha: 0.50),
-                    letterSpacing: 1.4,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkText.withValues(alpha: 0.60),
                   ),
                 ),
               ),
@@ -625,17 +498,20 @@ class _SensitiveSpecRow extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            displayValue,
-            style: const TextStyle(
-              fontSize: 15.5,
-              fontWeight: FontWeight.w700,
-              color: AppColors.darkText,
-              letterSpacing: -0.2,
-              height: 1.35,
+          const SizedBox(height: 6),
+          if (useRichValue)
+            richValueWhenVisible!
+          else
+            Text(
+              displayValue,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.darkText,
+                letterSpacing: -0.2,
+                height: 1.35,
+              ),
             ),
-          ),
           if (isVisible && visibleChild != null) ...[
             const SizedBox(height: 14),
             visibleChild!,
@@ -646,7 +522,7 @@ class _SensitiveSpecRow extends StatelessWidget {
               helperText!,
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.darkText.withValues(alpha: 0.50),
+                color: AppColors.darkText.withValues(alpha: 0.60),
                 height: 1.4,
               ),
             ),
@@ -657,170 +533,118 @@ class _SensitiveSpecRow extends StatelessWidget {
   }
 }
 
-class SummaryLine extends StatelessWidget {
-  const SummaryLine({super.key, required this.icon, required this.label, required this.value});
+class _BankDetailsBlock extends StatelessWidget {
+  const _BankDetailsBlock({
+    required this.holder,
+    required this.bank,
+    required this.type,
+    required this.account,
+  });
 
-  final IconData icon;
-  final String label;
-  final String value;
+  final String holder;
+  final String bank;
+  final String type;
+  final String account;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+    final rows = <_SpecEntry>[
+      if (holder.isNotEmpty) _SpecEntry(label: 'Titular', value: holder),
+      if (bank.isNotEmpty) _SpecEntry(label: 'Banco', value: bank),
+      if (type.isNotEmpty) _SpecEntry(label: 'Tipo de cuenta', value: type),
+      if (account.isNotEmpty) _SpecEntry(label: 'Número de cuenta', value: account),
+    ];
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: AppColors.darkText.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Icon badge
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.09),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, size: 17, color: AppColors.bluePrimary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
+          for (var i = 0; i < rows.length; i++) ...[
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.darkText.withValues(alpha: 0.50),
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.2,
+                SizedBox(
+                  width: 110,
+                  child: Text(
+                    rows[i].label,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.darkText.withValues(alpha: 0.60),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: AppColors.darkText,
-                    fontWeight: FontWeight.w600,
-                    height: 1.4,
-                    fontSize: 13,
+                Expanded(
+                  child: Text(
+                    rows[i].value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.darkText,
+                      letterSpacing: -0.1,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
+            if (i < rows.length - 1) const SizedBox(height: 8),
+          ],
         ],
       ),
     );
   }
 }
 
-class SensitiveSummaryLine extends StatelessWidget {
-  const SensitiveSummaryLine({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.obscuredValue,
-    required this.isVisible,
-    required this.onToggleVisibility,
-    this.helperText,
-    this.visibleChild,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final String obscuredValue;
-  final bool isVisible;
-  final VoidCallback onToggleVisibility;
-  final String? helperText;
-  final Widget? visibleChild;
-
+class _NoPaymentMethodWarning extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final displayValue = isVisible ? value : obscuredValue;
-    final Widget? child = isVisible ? visibleChild : null;
-    final helperTopPadding = child != null ? 0.0 : 4.0;
-
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SummaryLine(icon: icon, label: label, value: displayValue),
-              if (child != null)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(30, 4, 0, 12),
-                  child: child,
-                ),
-              if (helperText != null)
-                Padding(
-                  padding: EdgeInsets.fromLTRB(30, helperTopPadding, 0, 12),
-                  child: Text(
-                    helperText!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.darkText.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Container(
-          margin: const EdgeInsets.only(top: 1),
-          decoration: BoxDecoration(
-            color: AppColors.bluePrimary.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: IconButton(
-            tooltip: isVisible ? 'Ocultar' : 'Mostrar',
-            icon: Icon(
-              isVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-              size: 19,
-              color: AppColors.bluePrimary,
-            ),
-            onPressed: onToggleVisibility,
-            padding: const EdgeInsets.all(8),
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class InfoPill extends StatelessWidget {
-  const InfoPill({super.key, required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.orangeAction.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppColors.bluePrimary.withValues(alpha: 0.12),
+          color: AppColors.orangeAction.withValues(alpha: 0.30),
           width: 1,
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 15, color: AppColors.bluePrimary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: AppColors.darkText.withValues(alpha: 0.80),
-              fontWeight: FontWeight.w600,
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 22,
+            color: AppColors.orangeAction,
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Falta configurar tu forma de cobro',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                    height: 1.3,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Sin cuenta bancaria ni código QR registrados, los donantes no tendrán cómo enviarte el dinero. Configúralo desde tu perfil antes de continuar.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.darkText,
+                    height: 1.4,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

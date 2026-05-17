@@ -11,6 +11,7 @@ import '../../models/user_profile.dart';
 import '../../services/organization_service.dart';
 import '../../theme/app_colors.dart';
 import '../../ui/widgets/app_buttons.dart';
+import '../../ui/widgets/app_snackbar.dart';
 import '../../ui/widgets/location_picker_dialog.dart';
 
 class CreateOrganizationPage extends StatefulWidget {
@@ -97,9 +98,32 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final isSubmitting = _controller.isSubmitting;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Registrar organización'),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(
+              color: AppColors.darkText.withValues(alpha: 0.07),
+              width: 1,
+            ),
+          ),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+            child: AppPrimaryButton(
+              label: isSubmitting ? 'Publicando…' : 'Publicar',
+              icon: isSubmitting ? null : Icons.send_rounded,
+              onPressed: isSubmitting ? null : _submitOrganization,
+            ),
+          ),
+        ),
       ),
       body: SafeArea(
         child: Form(
@@ -134,14 +158,6 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
                     message: _controller.submitError!,
                   ),
                 ),
-              AppPrimaryButton(
-                label: _controller.isSubmitting
-                    ? 'Enviando...'
-                    : 'Enviar para revisión',
-                icon: _controller.isSubmitting ? null : Icons.verified_user_outlined,
-                onPressed: _controller.isSubmitting ? null : _submitOrganization,
-              ),
-              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -701,8 +717,9 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
         return;
       }
       final bytes = await file.readAsBytes();
+      if (!mounted) return;
       if (bytes.lengthInBytes > _maxLogoBytes) {
-        _showSnack('El logo supera los 2 MB permitidos. Usa una imagen más liviana.');
+        AppSnackBar.showWarning(context, 'El logo supera los 2 MB permitidos. Usa una imagen más liviana.');
         return;
       }
       if (!mounted) {
@@ -724,17 +741,17 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
         _logoPreviewBytes = bytes;
         _uploadedLogoUrl = uploadedUrl;
       });
-      _showSnack('Logo actualizado correctamente.');
+      AppSnackBar.showSuccess(context, 'Logo actualizado correctamente.');
     } on OrganizationServiceException catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(error.message);
+      AppSnackBar.showError(context, error.message);
     } catch (_) {
       if (!mounted) {
         return;
       }
-      _showSnack('No pudimos subir el logo seleccionado.');
+      AppSnackBar.showError(context, 'No pudimos subir el logo seleccionado.');
     } finally {
       if (mounted) {
         setState(() => _uploadingLogo = false);
@@ -808,12 +825,12 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
       if (!mounted) {
         return;
       }
-      _showSnack(error.message);
+      AppSnackBar.showError(context, error.message);
     } catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack('No pudimos subir la imagen del espacio. Intenta nuevamente.');
+      AppSnackBar.showError(context, 'No pudimos subir la imagen del espacio. Intenta nuevamente.');
     } finally {
       if (mounted) {
         setState(() => _isUploadingGallery = false);
@@ -827,8 +844,9 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
     }
 
     final bytes = await file.readAsBytes();
+    if (!mounted) return;
     if (bytes.lengthInBytes > _maxGalleryBytes) {
-      _showSnack('Una de las imágenes supera los 4 MB permitidos. Ajusta su tamaño.');
+      AppSnackBar.showWarning(context, 'Una de las imágenes supera los 4 MB permitidos. Ajusta su tamaño.');
       return;
     }
 
@@ -850,7 +868,7 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
       );
     });
 
-    _showSnack('Imagen añadida correctamente.');
+    AppSnackBar.showSuccess(context, 'Imagen añadida correctamente.');
   }
 
   void _removeGalleryItem(int index) {
@@ -876,17 +894,17 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
     final phone = _phoneCtrl.text.trim();
     final email = _emailCtrl.text.trim();
     if (phone.isEmpty && email.isEmpty) {
-      _showSnack('Añade al menos un medio de contacto (teléfono o correo).');
+      AppSnackBar.showWarning(context, 'Añade al menos un medio de contacto (teléfono o correo).');
       return;
     }
 
     if (_galleryItems.isEmpty) {
-      _showSnack('Sube al menos una foto del espacio para completar la solicitud.');
+      AppSnackBar.showWarning(context, 'Sube al menos una foto del espacio para completar la solicitud.');
       return;
     }
 
     if (!_acceptsVerification) {
-      _showSnack('Debes confirmar la veracidad de la información para enviar la solicitud.');
+      AppSnackBar.showWarning(context, 'Debes confirmar la veracidad de la información para enviar la solicitud.');
       return;
     }
 
@@ -914,13 +932,9 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
     }
 
     if (result != null) {
-      _showSnack('Organización enviada. Te avisaremos cuando el administrador la revise.');
+      // El home muestra el snackbar de éxito al recibir pop(true).
       Navigator.of(context).pop<bool>(true);
     }
-  }
-
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   String _resolveExtension(String fileName) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,6 +10,8 @@ import '../../../models/category.dart';
 import '../../../models/solicitud.dart';
 import '../../../services/admin_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../ui/widgets/app_snackbar.dart';
+import '../../../ui/widgets/image_redaction_editor.dart';
 import 'admin_section_widgets.dart';
 
 class CampaignRequestsSection extends StatefulWidget {
@@ -842,6 +845,8 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 		final formattedDate = formatAdminDate(widget.item.createdAt);
 		final typeColor = _getTypeColor(widget.item.solicitudTipo);
 		final hasCover = (widget.item.coverUrl ?? '').trim().isNotEmpty;
+		final hasOriginalCover = widget.item.esAnonimo &&
+				(widget.item.coverOriginalUrl ?? '').trim().isNotEmpty;
 
 		return SafeArea(
 			top: false,
@@ -965,6 +970,23 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																				),
 																			),
 																		const Spacer(),
+																		if (hasOriginalCover) ...[
+																			_AdminOriginalBadge(
+																				onTap: () => _showOriginalImageDialog(
+																					context,
+																					widget.item.coverOriginalUrl!,
+																				),
+																			),
+																			const SizedBox(width: 6),
+																			_AdminReRedactBadge(
+																				onTap: () => _handleAdminReRedactCover(
+																					context,
+																					widget.item,
+																					(url) => setState(() {}),
+																				),
+																			),
+																			const SizedBox(width: 8),
+																		],
 																		_buildWaitingTimeBadge(context, widget.item.createdAt),
 																	],
 																),
@@ -1072,29 +1094,75 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 												itemCount: widget.item.evidenceUrls!.length,
 												itemBuilder: (context, index) {
 													final url = widget.item.evidenceUrls![index];
+													// Si tenemos el registro enriquecido (id + url_original) y
+													// la solicitud es anónima, mostramos overlay para ver
+													// original y re-tachar.
+													final evItem = (widget.item.evidenceItems != null &&
+																	index < widget.item.evidenceItems!.length)
+															? widget.item.evidenceItems![index]
+															: null;
+													final canReRedact = widget.item.esAnonimo &&
+															evItem != null &&
+															(evItem.urlOriginal?.trim().isNotEmpty ?? false);
 													return ClipRRect(
 														borderRadius: BorderRadius.circular(10),
-														child: Image.network(
-															url,
-															fit: BoxFit.cover,
-															loadingBuilder: (context, child, loadingProgress) {
-																if (loadingProgress == null) return child;
-																return Container(
-																	color: Colors.grey[200],
-																	child: Center(
-																		child: CircularProgressIndicator(
-																			strokeWidth: 2,
-																			color: typeColor,
+														child: Stack(
+															fit: StackFit.expand,
+															children: [
+																Image.network(
+																	url,
+																	fit: BoxFit.cover,
+																	loadingBuilder: (context, child, loadingProgress) {
+																		if (loadingProgress == null) return child;
+																		return Container(
+																			color: Colors.grey[200],
+																			child: Center(
+																				child: CircularProgressIndicator(
+																					strokeWidth: 2,
+																					color: typeColor,
+																				),
+																			),
+																		);
+																	},
+																	errorBuilder: (context, error, stackTrace) {
+																		return Container(
+																			color: Colors.grey[200],
+																			child: const Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
+																		);
+																	},
+																),
+																if (canReRedact)
+																	Positioned(
+																		top: 6,
+																		right: 6,
+																		child: Row(
+																			mainAxisSize: MainAxisSize.min,
+																			children: [
+																				_AdminEvidenceIconButton(
+																					icon: Icons.visibility_rounded,
+																					tooltip: 'Ver original',
+																					background: Colors.black.withValues(alpha: 0.55),
+																					onTap: () => _showOriginalImageDialog(
+																						context,
+																						evItem.urlOriginal!,
+																					),
+																				),
+																				const SizedBox(width: 6),
+																				_AdminEvidenceIconButton(
+																					icon: Icons.edit_rounded,
+																					tooltip: 'Re-tachar',
+																					background: AppColors.orangeAction.withValues(alpha: 0.92),
+																					onTap: () => _handleAdminReRedactEvidence(
+																						context,
+																						evidenciaId: evItem.id,
+																						urlOriginal: evItem.urlOriginal!,
+																						onUpdated: (_) => setState(() {}),
+																					),
+																				),
+																			],
 																		),
 																	),
-																);
-															},
-															errorBuilder: (context, error, stackTrace) {
-																return Container(
-																	color: Colors.grey[200],
-																	child: const Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
-																);
-															},
+															],
 														),
 													);
 												},
@@ -1645,5 +1713,333 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 				],
 			),
 		);
+	}
+}
+
+class _AdminOriginalBadge extends StatelessWidget {
+	const _AdminOriginalBadge({required this.onTap});
+	final VoidCallback onTap;
+
+	@override
+	Widget build(BuildContext context) {
+		return Material(
+			color: Colors.white.withValues(alpha: 0.22),
+			borderRadius: BorderRadius.circular(20),
+			child: InkWell(
+				onTap: onTap,
+				borderRadius: BorderRadius.circular(20),
+				child: Container(
+					padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+					decoration: BoxDecoration(
+						borderRadius: BorderRadius.circular(20),
+						border: Border.all(
+							color: Colors.white.withValues(alpha: 0.4),
+							width: 1,
+						),
+					),
+					child: Row(
+						mainAxisSize: MainAxisSize.min,
+						children: const [
+							Icon(Icons.visibility_rounded, size: 13, color: Colors.white),
+							SizedBox(width: 5),
+							Text(
+								'Ver original',
+								style: TextStyle(
+									fontSize: 12,
+									fontWeight: FontWeight.w700,
+									color: Colors.white,
+									letterSpacing: 0.2,
+								),
+							),
+						],
+					),
+				),
+			),
+		);
+	}
+}
+
+void _showOriginalImageDialog(BuildContext context, String url) {
+	showDialog<void>(
+		context: context,
+		barrierColor: Colors.black.withValues(alpha: 0.92),
+		builder: (ctx) => Dialog(
+			backgroundColor: Colors.transparent,
+			insetPadding: const EdgeInsets.all(12),
+			child: Stack(
+				children: [
+					InteractiveViewer(
+						child: Image.network(
+							url,
+							fit: BoxFit.contain,
+							errorBuilder: (_, __, ___) => const Padding(
+								padding: EdgeInsets.all(40),
+								child: Text(
+									'No pudimos cargar la imagen original.',
+									textAlign: TextAlign.center,
+									style: TextStyle(color: Colors.white),
+								),
+							),
+						),
+					),
+					Positioned(
+						top: 8,
+						right: 8,
+						child: SafeArea(
+							child: Material(
+								color: Colors.black.withValues(alpha: 0.6),
+								shape: const CircleBorder(),
+								child: IconButton(
+									onPressed: () => Navigator.of(ctx).pop(),
+									icon: const Icon(Icons.close_rounded, color: Colors.white),
+									tooltip: 'Cerrar',
+								),
+							),
+						),
+					),
+					Positioned(
+						left: 12,
+						bottom: 12,
+						right: 12,
+						child: SafeArea(
+							child: Container(
+								padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+								decoration: BoxDecoration(
+									color: Colors.black.withValues(alpha: 0.6),
+									borderRadius: BorderRadius.circular(10),
+								),
+								child: const Text(
+									'Foto original sin tachar. Solo visible para admin.',
+									textAlign: TextAlign.center,
+									style: TextStyle(
+										color: Colors.white,
+										fontSize: 12,
+									),
+								),
+							),
+						),
+					),
+				],
+			),
+		),
+	);
+}
+
+class _AdminReRedactBadge extends StatelessWidget {
+	const _AdminReRedactBadge({required this.onTap});
+	final VoidCallback onTap;
+
+	@override
+	Widget build(BuildContext context) {
+		return Material(
+			color: AppColors.orangeAction.withValues(alpha: 0.32),
+			borderRadius: BorderRadius.circular(20),
+			child: InkWell(
+				onTap: onTap,
+				borderRadius: BorderRadius.circular(20),
+				child: Container(
+					padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+					decoration: BoxDecoration(
+						borderRadius: BorderRadius.circular(20),
+						border: Border.all(
+							color: Colors.white.withValues(alpha: 0.55),
+							width: 1,
+						),
+					),
+					child: Row(
+						mainAxisSize: MainAxisSize.min,
+						children: const [
+							Icon(Icons.edit_rounded, size: 13, color: Colors.white),
+							SizedBox(width: 5),
+							Text(
+								'Re-tachar',
+								style: TextStyle(
+									fontSize: 12,
+									fontWeight: FontWeight.w700,
+									color: Colors.white,
+									letterSpacing: 0.2,
+								),
+							),
+						],
+					),
+				),
+			),
+		);
+	}
+}
+
+Future<void> _handleAdminReRedactCover(
+	BuildContext context,
+	AdminPendingItem item,
+	ValueChanged<String> onUpdated,
+) async {
+	final url = item.coverOriginalUrl ?? item.coverUrl;
+	if (url == null || url.trim().isEmpty) return;
+
+	// Loading dialog mientras descarga la foto.
+	showDialog<void>(
+		context: context,
+		barrierDismissible: false,
+		builder: (_) => const Center(
+			child: CircularProgressIndicator(color: AppColors.bluePrimary),
+		),
+	);
+
+	try {
+		final response = await http.get(Uri.parse(url));
+		if (response.statusCode != 200) {
+			if (context.mounted) Navigator.of(context).pop();
+			if (context.mounted) {
+				AppSnackBar.showError(context, 'No pudimos descargar la imagen original.');
+			}
+			return;
+		}
+		final bytes = response.bodyBytes;
+		if (!context.mounted) return;
+		Navigator.of(context).pop(); // cierro el loading
+
+		final result = await ImageRedactionEditor.show(
+			context,
+			imageBytes: bytes,
+		);
+		if (result == null || !result.hasEdits) return;
+		if (!context.mounted) return;
+
+		// Reupload + UPDATE en BD
+		showDialog<void>(
+			context: context,
+			barrierDismissible: false,
+			builder: (_) => const Center(
+				child: CircularProgressIndicator(color: AppColors.bluePrimary),
+			),
+		);
+		final admin = AdminService(Supabase.instance.client);
+		final newUrl = await admin.reRedactSolicitudCover(
+			solicitudId: item.id,
+			newRedactedBytes: result.bytes,
+			contentType: 'image/jpeg',
+			fileExtension: 'jpg',
+		);
+		if (context.mounted) Navigator.of(context).pop();
+		onUpdated(newUrl);
+		if (context.mounted) {
+			AppSnackBar.showSuccess(context, 'Tachado actualizado. Refrescá la lista para ver el cambio.');
+		}
+	} catch (e) {
+		if (context.mounted) Navigator.of(context).pop();
+		if (context.mounted) {
+			AppSnackBar.showError(context, 'Error al re-tachar: $e');
+		}
+	}
+}
+
+/// Botón circular pequeño usado como overlay encima de cada thumbnail de
+/// evidencia (acciones "Ver original" / "Re-tachar"). Mantiene el mismo
+/// look del overlay de portada pero compacto para no tapar la foto.
+class _AdminEvidenceIconButton extends StatelessWidget {
+	const _AdminEvidenceIconButton({
+		required this.icon,
+		required this.tooltip,
+		required this.background,
+		required this.onTap,
+	});
+
+	final IconData icon;
+	final String tooltip;
+	final Color background;
+	final VoidCallback onTap;
+
+	@override
+	Widget build(BuildContext context) {
+		return Material(
+			color: background,
+			shape: const CircleBorder(),
+			child: InkWell(
+				customBorder: const CircleBorder(),
+				onTap: onTap,
+				child: Tooltip(
+					message: tooltip,
+					child: Container(
+						width: 30,
+						height: 30,
+						alignment: Alignment.center,
+						decoration: BoxDecoration(
+							shape: BoxShape.circle,
+							border: Border.all(
+								color: Colors.white.withValues(alpha: 0.55),
+								width: 1,
+							),
+						),
+						child: Icon(icon, size: 16, color: Colors.white),
+					),
+				),
+			),
+		);
+	}
+}
+
+/// Descarga la evidencia original, abre el editor de tachado y sube la
+/// nueva versión tachada actualizando la fila en `evidencias`. Mismo flow
+/// que [_handleAdminReRedactCover] pero para evidencias individuales.
+Future<void> _handleAdminReRedactEvidence(
+	BuildContext context, {
+	required String evidenciaId,
+	required String urlOriginal,
+	required ValueChanged<String> onUpdated,
+}) async {
+	if (urlOriginal.trim().isEmpty) return;
+
+	showDialog<void>(
+		context: context,
+		barrierDismissible: false,
+		builder: (_) => const Center(
+			child: CircularProgressIndicator(color: AppColors.bluePrimary),
+		),
+	);
+
+	try {
+		final response = await http.get(Uri.parse(urlOriginal));
+		if (response.statusCode != 200) {
+			if (context.mounted) Navigator.of(context).pop();
+			if (context.mounted) {
+				AppSnackBar.showError(context, 'No pudimos descargar la evidencia original.');
+			}
+			return;
+		}
+		final bytes = response.bodyBytes;
+		if (!context.mounted) return;
+		Navigator.of(context).pop(); // cierro loading
+
+		final result = await ImageRedactionEditor.show(
+			context,
+			imageBytes: bytes,
+		);
+		if (result == null || !result.hasEdits) return;
+		if (!context.mounted) return;
+
+		showDialog<void>(
+			context: context,
+			barrierDismissible: false,
+			builder: (_) => const Center(
+				child: CircularProgressIndicator(color: AppColors.bluePrimary),
+			),
+		);
+		final admin = AdminService(Supabase.instance.client);
+		final newUrl = await admin.reRedactEvidence(
+			evidenciaId: evidenciaId,
+			newRedactedBytes: result.bytes,
+			contentType: 'image/jpeg',
+			fileExtension: 'jpg',
+		);
+		if (context.mounted) Navigator.of(context).pop();
+		onUpdated(newUrl);
+		if (context.mounted) {
+			AppSnackBar.showSuccess(context, 'Evidencia re-tachada. Refrescá la lista para ver el cambio.');
+		}
+	} catch (e) {
+		if (context.mounted) Navigator.of(context).pop();
+		if (context.mounted) {
+			AppSnackBar.showError(context, 'Error al re-tachar evidencia: $e');
+		}
 	}
 }

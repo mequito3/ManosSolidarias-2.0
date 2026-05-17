@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,11 +8,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../controllers/solicitud_controller.dart';
 import '../../models/solicitud.dart';
 import '../../models/user_profile.dart';
-import '../../services/face_redaction_service.dart';
 import '../../services/solicitud_service.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/app_buttons.dart';
-import '../widgets/face_redaction_preview.dart';
+import '../widgets/app_snackbar.dart';
+import '../widgets/image_redaction_editor.dart';
 import 'steps/kermesse_location_picker_page.dart';
 import 'steps/solicitud_form_step.dart';
 import 'steps/solicitud_profile_review_step.dart';
@@ -41,7 +43,6 @@ class CreateSolicitudPage extends StatefulWidget {
 class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   late final SolicitudService _service;
   late final SolicitudController _controller;
-  late final FaceRedactionService _faceService;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _titleCtrl = TextEditingController();
@@ -59,12 +60,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   static const int _maxEvidenceItems = 12;
 
   late _SolicitudFlowStep _currentStep;
+  final ScrollController _scrollController = ScrollController();
   SolicitudTipo _selectedTipo = SolicitudTipo.campania;
   bool _acceptsGuidelines = false;
   bool _esAnonimo = false;
   bool _anonymousWarningShown = false;
   bool _showValidation = false;
   bool _isUploadingEvidence = false;
+  int _evidenceCurrent = 0;
+  int _evidenceTotal = 0;
   final List<SolicitudEvidenceUpload> _evidenceUploads = [];
   String? _beneficiaryRelationship;
   DateTime? _kermesseStartDateTime;
@@ -90,7 +94,6 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     );
     _service = SolicitudService(Supabase.instance.client);
     _controller = SolicitudController(_service);
-    _faceService = FaceRedactionService();
     _beneficiaryRelationship = _relationshipOptions.first;
     // initialTipo tiene prioridad: pre-selecciona el tipo y salta a profileReview
     if (widget.initialTipo != null) {
@@ -316,6 +319,69 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     );
   }
 
+  Widget? _buildStickyFooter() {
+    final Widget button;
+    switch (_currentStep) {
+      case _SolicitudFlowStep.landing:
+      case _SolicitudFlowStep.typeSelection:
+        return null;
+      case _SolicitudFlowStep.profileReview:
+        final hasPaymentMethod = _profileHasPaymentMethod;
+        button = AppPrimaryButton(
+          label: 'Siguiente',
+          icon: Icons.arrow_forward_rounded,
+          onPressed: hasPaymentMethod
+              ? () => _goToStep(_SolicitudFlowStep.form)
+              : null,
+        );
+        break;
+      case _SolicitudFlowStep.form:
+        final isSubmitting = _controller.isSubmitting;
+        final showEvidenceProgress =
+            _isUploadingEvidence && _evidenceTotal > 1 && _evidenceCurrent > 0;
+        final String label;
+        IconData? icon;
+        if (isSubmitting) {
+          label = 'Enviando…';
+          icon = null;
+        } else if (showEvidenceProgress) {
+          label = 'Subiendo $_evidenceCurrent de $_evidenceTotal…';
+          icon = null;
+        } else {
+          label = 'Enviar a revisión';
+          icon = Icons.send_rounded;
+        }
+        button = AppPrimaryButton(
+          label: label,
+          icon: icon,
+          onPressed: (isSubmitting || showEvidenceProgress)
+              ? null
+              : _submitSolicitud,
+        );
+        break;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: AppColors.darkText.withValues(alpha: 0.07),
+            width: 1,
+          ),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+          child: button,
+        ),
+      ),
+    );
+  }
+
+
   Widget _buildFormStep() {
     final config = solicitudTypeConfigs[_selectedTipo]!;
     for (final field in config.extraFields) {
@@ -376,7 +442,6 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   void dispose() {
     _controller.removeListener(_handleControllerChange);
     _controller.dispose();
-    _faceService.close();
     _titleCtrl.dispose();
     _descriptionCtrl.dispose();
     _goalCtrl.dispose();
@@ -384,6 +449,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     for (final ctrl in _extraControllers.values) {
       ctrl.dispose();
     }
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -400,69 +466,28 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.orangeAction.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.privacy_tip_rounded,
-              color: AppColors.orangeAction, size: 32),
+        icon: const Icon(
+          Icons.privacy_tip_rounded,
+          color: AppColors.orangeAction,
+          size: 36,
         ),
         title: const Text(
           'Tu solicitud será anónima',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+          textAlign: TextAlign.center,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Tu nombre, contacto y dirección NO aparecerán en la vista pública. '
-              'Solo el equipo administrador podrá verlos para validar la solicitud.',
-              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.45),
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.auto_fix_high_rounded,
-                      color: AppColors.warning, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Al subir cada foto, detectamos automáticamente los '
-                      'rostros y los tachamos antes de publicar. Vas a poder '
-                      'revisar y confirmar el resultado antes de subir.\n\n'
-                      'Recuerda cubrir manualmente:\n'
-                      '• Nombres, cédulas y direcciones visibles\n'
-                      '• Fechas u otros datos personales\n\n'
-                      'La detección automática solo cubre caras.',
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                            color: AppColors.darkText,
-                            height: 1.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+        content: const Text(
+          'Tus datos personales no aparecerán en la vista pública. Vas a poder elegir qué partes tachar de tus fotos.',
+          style: TextStyle(fontSize: 14, height: 1.4),
+          textAlign: TextAlign.center,
         ),
+        actionsAlignment: MainAxisAlignment.center,
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.bluePrimary,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('Entendido'),
@@ -504,20 +529,22 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     setState(() => _showValidation = true);
 
     if (!formState.validate()) {
+      AppSnackBar.showWarning(context, 'Te faltan datos por completar. Revisa los campos marcados en rojo.');
+      _scrollToFormStart();
       return;
     }
     if (_selectedTipo == SolicitudTipo.campania && _evidenceUploads.length < 2) {
-      _showSnack('Sube al menos dos fotos de evidencia para respaldar la campaña.');
+      AppSnackBar.showWarning(context, 'Sube al menos dos fotos de evidencia para respaldar la campaña.');
       return;
     }
     if (!_acceptsGuidelines) {
-      _showSnack('Confirma que asumirás la responsabilidad de la campaña.');
+      AppSnackBar.showWarning(context, 'Confirma que asumirás la responsabilidad de la campaña.');
       return;
     }
 
     final goal = _parseAmount(_goalCtrl.text.trim());
     if (_goalCtrl.text.trim().isNotEmpty && (goal == null || goal <= 0)) {
-      _showSnack('Ingresa un monto objetivo válido.');
+      AppSnackBar.showWarning(context, 'Ingresa un monto objetivo válido.');
       return;
     }
 
@@ -526,20 +553,30 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       final lngText = _extraControllerFor('event_location_lng').text.trim();
       final hasCoordinates = latText.isNotEmpty && lngText.isNotEmpty;
       if (!hasCoordinates) {
-        _showSnack('Selecciona la ubicación en el mapa o ingresa las coordenadas manualmente.');
+        AppSnackBar.showWarning(context, 'Selecciona la ubicación en el mapa o ingresa las coordenadas manualmente.');
         return;
       }
     }
 
     final description = _mergeDescriptionWithExtras();
     final normalizedTitle = _clampTitle(_titleCtrl.text);
+    final evidences = _evidenceUploads
+        .map((upload) => SolicitudDraftEvidence(
+              url: upload.url,
+              urlOriginal: upload.originalUrl,
+              tipo: 'foto',
+              visibilidad: 'publico',
+            ))
+        .toList();
     final draft = SolicitudDraft(
       titulo: normalizedTitle,
       descripcion: description,
       tipo: _selectedTipo,
       montoObjetivo: goal,
       portadaUrl: _uploadedCoverUrl,
+      portadaOriginalUrl: _uploadedCoverOriginalUrl,
       esAnonimo: _esAnonimo,
+      evidences: evidences,
     );
 
     final solicitud = await _controller.submitSolicitud(draft);
@@ -547,17 +584,22 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       return;
     }
     if (_controller.submitError != null) {
-      _showSnack(_controller.submitError!);
+      AppSnackBar.showError(context, _controller.submitError!);
       return;
     }
     if (solicitud != null) {
-      _showSnack('Solicitud enviada. Te avisaremos por correo cuando sea revisada.');
+      // El home muestra el snackbar de éxito al recibir pop(true).
       Navigator.of(context).pop<bool>(true);
     }
   }
 
-  void _showSnack(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  void _scrollToFormStart() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   double? _parseAmount(String raw) {
@@ -569,20 +611,11 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   }
 
   String _clampTitle(String raw) {
-    final words = raw
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((word) => word.isNotEmpty)
-        .toList();
-    if (words.isEmpty) {
-      return '';
+    final trimmed = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (trimmed.length <= solicitudTitleMaxCharacters) {
+      return trimmed;
     }
-    final limited = words.take(solicitudTitleMaxWords).toList();
-    final joined = limited.join(' ');
-    if (joined.length <= solicitudTitleMaxCharacters) {
-      return joined;
-    }
-    return joined.substring(0, solicitudTitleMaxCharacters).trimRight();
+    return trimmed.substring(0, solicitudTitleMaxCharacters).trimRight();
   }
 
   Future<void> _openCoverSourceSheet() async {
@@ -623,21 +656,8 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         return;
       }
 
-      var bytesToUpload = originalBytes;
-      if (_esAnonimo) {
-        final result = await FaceRedactionPreview.show(
-          context,
-          imageBytes: originalBytes,
-          imagePath: file.path,
-          service: _faceService,
-          sensitiveNames: _collectSensitiveNames(),
-        );
-        if (!mounted) return;
-        if (result == null) {
-          return;
-        }
-        bytesToUpload = result.redactedBytes;
-      }
+      final bytesToUpload = await _maybeRedact(originalBytes: originalBytes);
+      if (bytesToUpload == null) return;
 
       setState(() => _uploadingCover = true);
 
@@ -649,20 +669,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         fileExtension: extension,
       );
 
-      // Si era anónima, también subimos el cover original para que el
-      // admin pueda revisarlo durante la moderación.
-      String? originalCoverUrl;
-      if (_esAnonimo && !identical(bytesToUpload, originalBytes)) {
-        try {
-          originalCoverUrl = await _controller.uploadCoverImage(
-            data: originalBytes,
-            contentType: contentType,
-            fileExtension: extension,
-          );
-        } catch (_) {
-          originalCoverUrl = null;
-        }
-      }
+      final originalCoverUrl = await _uploadOriginalIfNeeded(
+        original: originalBytes,
+        sentBytes: bytesToUpload,
+        uploader: (bytes) => _controller.uploadCoverImage(
+          data: bytes,
+          contentType: contentType,
+          fileExtension: extension,
+        ),
+      );
       if (!mounted) {
         return;
       }
@@ -671,17 +686,17 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         _uploadedCoverUrl = uploadedUrl;
         _uploadedCoverOriginalUrl = originalCoverUrl;
       });
-      _showSnack('Imagen subida correctamente.');
+      AppSnackBar.showSuccess(context, 'Imagen subida correctamente.');
     } on SolicitudServiceException catch (error) {
       if (!mounted) {
         return;
       }
-      _showSnack(error.message);
+      AppSnackBar.showError(context, error.message);
     } catch (_) {
       if (!mounted) {
         return;
       }
-      _showSnack('No pudimos subir la imagen seleccionada.');
+      AppSnackBar.showError(context, 'No pudimos subir la imagen seleccionada.');
     } finally {
       if (mounted) {
         setState(() => _uploadingCover = false);
@@ -695,7 +710,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     }
     final remainingSlots = _maxEvidenceItems - _evidenceUploads.length;
     if (remainingSlots <= 0) {
-      _showSnack('Ya subiste el máximo de evidencias permitidas.');
+      AppSnackBar.showWarning(context, 'Ya subiste el máximo de evidencias permitidas.');
       return;
     }
 
@@ -740,15 +755,15 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       setState(() => _isUploadingEvidence = true);
       await _handleEvidenceFile(file);
       if (mounted) {
-        _showSnack('Evidencia subida correctamente.');
+        AppSnackBar.showSuccess(context, 'Evidencia subida correctamente.');
       }
     } on SolicitudServiceException catch (error) {
       if (mounted) {
-        _showSnack(error.message);
+        AppSnackBar.showError(context, error.message);
       }
     } catch (_) {
       if (mounted) {
-        _showSnack('No pudimos subir la evidencia seleccionada.');
+        AppSnackBar.showError(context, 'No pudimos subir la evidencia seleccionada.');
       }
     } finally {
       if (mounted) {
@@ -760,7 +775,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   Future<void> _pickEvidenceFromGallery() async {
     final remainingSlots = _maxEvidenceItems - _evidenceUploads.length;
     if (remainingSlots <= 0) {
-      _showSnack('Ya subiste el máximo de evidencias permitidas.');
+      AppSnackBar.showWarning(context, 'Ya subiste el máximo de evidencias permitidas.');
       return;
     }
 
@@ -769,33 +784,55 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       if (files.isEmpty) {
         return;
       }
-      final selected = files.take(remainingSlots);
+      final selected = files.take(remainingSlots).toList();
       if (mounted) {
         setState(() => _isUploadingEvidence = true);
       }
-      for (final file in selected) {
-        await _handleEvidenceFile(file);
+      // Pre-leemos los bytes de TODAS las fotos en paralelo. Eso evita
+      // que el read-from-disk bloquee entre editor y editor.
+      final allBytes = await Future.wait(
+        selected.map((f) => f.readAsBytes()),
+      );
+      if (mounted) {
+        setState(() {
+          _evidenceCurrent = 0;
+          _evidenceTotal = selected.length;
+        });
+      }
+      for (var i = 0; i < selected.length; i++) {
+        if (mounted) {
+          setState(() => _evidenceCurrent = i + 1);
+        }
+        await _handleEvidenceFile(selected[i], allBytes[i]);
       }
       if (mounted) {
-        _showSnack('Evidencias subidas correctamente.');
+        setState(() {
+          _evidenceCurrent = 0;
+          _evidenceTotal = 0;
+        });
+        AppSnackBar.showSuccess(context, 'Evidencias subidas correctamente.');
       }
     } on SolicitudServiceException catch (error) {
       if (mounted) {
-        _showSnack(error.message);
+        AppSnackBar.showError(context, error.message);
       }
     } catch (_) {
       if (mounted) {
-        _showSnack('No pudimos subir una de las evidencias seleccionadas.');
+        AppSnackBar.showError(context, 'No pudimos subir una de las evidencias seleccionadas.');
       }
     } finally {
       if (mounted) {
-        setState(() => _isUploadingEvidence = false);
+        setState(() {
+          _isUploadingEvidence = false;
+          _evidenceCurrent = 0;
+          _evidenceTotal = 0;
+        });
       }
     }
   }
 
-  Future<void> _handleEvidenceFile(XFile file) async {
-    final originalBytes = await file.readAsBytes();
+  Future<void> _handleEvidenceFile(XFile file, [Uint8List? preReadBytes]) async {
+    final originalBytes = preReadBytes ?? await file.readAsBytes();
     if (!_validateImageSize(originalBytes.length)) {
       return;
     }
@@ -803,51 +840,37 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       return;
     }
 
-    var bytesToUpload = originalBytes;
-    if (_esAnonimo) {
-      final result = await FaceRedactionPreview.show(
-        context,
-        imageBytes: originalBytes,
-        imagePath: file.path,
-        service: _faceService,
-        sensitiveNames: _collectSensitiveNames(),
-      );
-      if (!mounted) return;
-      if (result == null) {
-        return; // usuario canceló desde el preview
-      }
-      bytesToUpload = result.redactedBytes;
-    }
+    final bytesToUpload = await _maybeRedact(originalBytes: originalBytes);
+    if (bytesToUpload == null) return;
 
     final extension = _resolveExtension(file.name);
     final contentType = _resolveContentType(extension);
-    final uploadedUrl = await _controller.uploadEvidenceImage(
-      data: bytesToUpload,
-      contentType: contentType,
-      fileExtension: extension,
-    );
-    if (!mounted) {
-      return;
-    }
 
-    // Cuando es anónima, subimos también el original aparte para que el
-    // admin pueda verificar identidad sin que se publique en el feed.
-    String? originalUploadUrl;
-    if (_esAnonimo && !identical(bytesToUpload, originalBytes)) {
-      try {
-        originalUploadUrl = await _controller.uploadEvidenceImage(
-          data: originalBytes,
-          contentType: contentType,
-          fileExtension: extension,
-        );
-      } catch (_) {
-        // Si falla el upload del original, conservamos al menos el público.
-        originalUploadUrl = null;
-      }
-    }
-    if (!mounted) {
-      return;
-    }
+    // Subir tachada y original EN PARALELO en vez de en serie. Eso baja
+    // el tiempo de espera entre fotos a ~max(t1, t2) en vez de t1+t2.
+    final needsOriginal =
+        _esAnonimo && !identical(bytesToUpload, originalBytes);
+    final futures = <Future<String?>>[
+      _controller.uploadEvidenceImage(
+        data: bytesToUpload,
+        contentType: contentType,
+        fileExtension: extension,
+      ),
+      if (needsOriginal)
+        _controller
+            .uploadEvidenceImage(
+              data: originalBytes,
+              contentType: contentType,
+              fileExtension: extension,
+            )
+            .then<String?>((url) => url)
+            .catchError((_) => null),
+    ];
+    final results = await Future.wait(futures);
+    if (!mounted) return;
+    final uploadedUrl = results[0]!;
+    final originalUploadUrl = needsOriginal ? results[1] : null;
+
     setState(() {
       _evidenceUploads.add(SolicitudEvidenceUpload(
         bytes: bytesToUpload,
@@ -857,32 +880,36 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     });
   }
 
-  /// Strings que tratamos como PII al hacer OCR sobre las evidencias.
-  /// Incluye el nombre del usuario que está creando la solicitud y el
-  /// nombre del beneficiario (si se ingresó) para campañas.
-  List<String> _collectSensitiveNames() {
-    final names = <String>[];
-    final userName = widget.profile.displayName?.trim() ?? '';
-    if (userName.isNotEmpty) {
-      names.add(userName);
-      // También cada palabra del nombre por separado (>= 3 chars) para
-      // que coincida con apariciones parciales como apellido suelto.
-      for (final part in userName.split(RegExp(r'\s+'))) {
-        if (part.length >= 3 && !names.contains(part)) {
-          names.add(part);
-        }
-      }
+  /// Si la solicitud es anónima, abre el editor manual donde el usuario
+  /// pinta sobre las regiones sensibles (caras, nombres, documentos
+  /// visibles). Devuelve los bytes a subir, o null si el usuario canceló.
+  /// Si no es anónima, devuelve [originalBytes] sin tocar.
+  Future<Uint8List?> _maybeRedact({
+    required Uint8List originalBytes,
+  }) async {
+    if (!_esAnonimo) return originalBytes;
+    final result = await ImageRedactionEditor.show(
+      context,
+      imageBytes: originalBytes,
+    );
+    if (!mounted) return null;
+    return result?.bytes;
+  }
+
+  /// Si la solicitud es anónima y los bytes que se subieron son distintos
+  /// del original (i.e. hubo tachado real), sube también el original para
+  /// que el admin pueda verificar identidad. Devuelve la URL o null.
+  Future<String?> _uploadOriginalIfNeeded({
+    required Uint8List original,
+    required Uint8List sentBytes,
+    required Future<String> Function(Uint8List) uploader,
+  }) async {
+    if (!_esAnonimo || identical(sentBytes, original)) return null;
+    try {
+      return await uploader(original);
+    } catch (_) {
+      return null;
     }
-    final beneficiary = _beneficiaryNameCtrl.text.trim();
-    if (beneficiary.isNotEmpty) {
-      names.add(beneficiary);
-      for (final part in beneficiary.split(RegExp(r'\s+'))) {
-        if (part.length >= 3 && !names.contains(part)) {
-          names.add(part);
-        }
-      }
-    }
-    return names;
   }
 
   Future<void> _pickKermesseDateTime() async {
@@ -976,13 +1003,13 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       if (!mounted) {
         return;
       }
-      _showSnack('No pudimos abrir el mapa (${error.code}). Ingresa las coordenadas manualmente.');
+      AppSnackBar.showError(context, 'No pudimos abrir el mapa (${error.code}). Ingresa las coordenadas manualmente.');
       _setManualKermesseCoords(true);
     } catch (_) {
       if (!mounted) {
         return;
       }
-      _showSnack('No pudimos abrir el mapa. Intenta de nuevo o ingresa las coordenadas manualmente.');
+      AppSnackBar.showError(context, 'No pudimos abrir el mapa. Intenta de nuevo o ingresa las coordenadas manualmente.');
       _setManualKermesseCoords(true);
     }
   }
@@ -1243,7 +1270,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     if (length <= _maxCoverBytes) {
       return true;
     }
-    _showSnack('Selecciona imágenes de hasta 3 MB.');
+    AppSnackBar.showWarning(context, 'Selecciona imágenes de hasta 3 MB.');
     return false;
   }
 
@@ -1442,6 +1469,12 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
   /// mostramos un counter de 2 pasos en vez de 3.
   bool get _isShortFlow => widget.initialTipo != null;
 
+  bool get _profileHasPaymentMethod {
+    final account = widget.profile.bankAccountNumber?.trim() ?? '';
+    final qr = widget.profile.donationQrUrl?.trim() ?? '';
+    return account.isNotEmpty || qr.isNotEmpty;
+  }
+
   int get _displayStepIndex {
     if (_isShortFlow) {
       switch (_currentStep) {
@@ -1467,10 +1500,93 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
 
   int get _displayStepTotal => _isShortFlow ? 2 : 3;
 
+  /// Devuelve true si hay fotos subidas a Storage que se perderían al cancelar.
+  bool get _hasUploadedPhotos {
+    if (_uploadedCoverUrl != null || _uploadedCoverOriginalUrl != null) {
+      return true;
+    }
+    for (final ev in _evidenceUploads) {
+      if (ev.url.isNotEmpty) return true;
+      if (ev.originalUrl != null && ev.originalUrl!.isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  /// Recolecta todas las URLs públicas subidas (cover + originales +
+  /// evidencias + originales de evidencias) para borrarlas al descartar.
+  List<String> _collectUploadedUrls() {
+    final urls = <String>[];
+    if (_uploadedCoverUrl != null && _uploadedCoverUrl!.isNotEmpty) {
+      urls.add(_uploadedCoverUrl!);
+    }
+    if (_uploadedCoverOriginalUrl != null &&
+        _uploadedCoverOriginalUrl!.isNotEmpty) {
+      urls.add(_uploadedCoverOriginalUrl!);
+    }
+    for (final ev in _evidenceUploads) {
+      if (ev.url.isNotEmpty) urls.add(ev.url);
+      if (ev.originalUrl != null && ev.originalUrl!.isNotEmpty) {
+        urls.add(ev.originalUrl!);
+      }
+    }
+    return urls;
+  }
+
+  Future<void> _handlePopAttempt() async {
+    // Solo interceptar si estamos en el paso form y hay fotos subidas.
+    if (_currentStep != _SolicitudFlowStep.form || !_hasUploadedPhotos) {
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+    final shouldDiscard = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          '¿Cancelar y descartar?',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+        ),
+        content: const Text(
+          'Tienes fotos subidas que se perderán. ¿Estás seguro?',
+          style: TextStyle(fontSize: 14, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Seguir editando'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.orangeAction,
+            ),
+            child: const Text('Descartar'),
+          ),
+        ],
+      ),
+    );
+    if (shouldDiscard != true) return;
+    if (!mounted) return;
+    final urls = _collectUploadedUrls();
+    // Fire-and-forget: el método ya loggea internamente; no bloqueamos
+    // el pop más de lo estrictamente necesario.
+    unawaited(_service.deleteStorageFiles(urls));
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await _handlePopAttempt();
+      },
+      child: Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: _SolicitudAppBar(
         stepIndex: _displayStepIndex,
@@ -1498,6 +1614,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      bottomNavigationBar: _buildStickyFooter(),
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _controller,
@@ -1548,6 +1665,9 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               child: KeyedSubtree(
                 key: ValueKey(_currentStep),
                 child: SingleChildScrollView(
+                  controller: _currentStep == _SolicitudFlowStep.form
+                      ? _scrollController
+                      : null,
                   padding: EdgeInsets.only(
                     left: 20,
                     right: 20,
@@ -1567,6 +1687,7 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
             );
           },
         ),
+      ),
       ),
     );
   }

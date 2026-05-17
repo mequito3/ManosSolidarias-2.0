@@ -44,6 +44,20 @@ class AdminDashboardMetrics {
   final String topCampaignCategory; // Categoría más popular
 }
 
+class AdminEvidenceItem {
+  const AdminEvidenceItem({
+    required this.id,
+    required this.url,
+    this.urlOriginal,
+  });
+
+  final String id;
+  final String url;
+  /// URL de la evidencia SIN tachar. Solo presente cuando la solicitud es
+  /// anónima y el usuario aplicó tachado. El admin puede verla y re-tacharla.
+  final String? urlOriginal;
+}
+
 class AdminPendingItem {
   const AdminPendingItem({
     required this.id,
@@ -56,7 +70,9 @@ class AdminPendingItem {
     this.beneficiaryName,
     this.beneficiaryRelation,
     this.evidenceUrls,
+    this.evidenceItems,
     this.coverUrl,
+    this.coverOriginalUrl,
     this.kermesseLatitude,
     this.kermesseLongitude,
     this.kermesseAddress,
@@ -78,7 +94,15 @@ class AdminPendingItem {
   final String? beneficiaryName;
   final String? beneficiaryRelation;
   final List<String>? evidenceUrls;
+  /// Lista enriquecida de evidencias con id y url_original (solo nuevas
+  /// evidencias que viven en tabla `evidencias`). Para legacy basadas en
+  /// regex sobre descripción, se llena `evidenceUrls` y este queda null.
+  final List<AdminEvidenceItem>? evidenceItems;
   final String? coverUrl;
+  /// URL de la portada SIN tachar. Solo presente cuando la solicitud es
+  /// anónima y el usuario aplicó tachado. El admin la puede ver para
+  /// validar identidad sin que se publique en el feed.
+  final String? coverOriginalUrl;
   final double? kermesseLatitude;
   final double? kermesseLongitude;
   final String? kermesseAddress;

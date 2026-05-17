@@ -8,9 +8,8 @@ import '../../../theme/app_colors.dart';
 import '../../widgets/app_buttons.dart';
 import 'solicitud_type_step.dart';
 
-const int solicitudTitleMinWords = 2;
-const int solicitudTitleMaxWords = 4;
-const int solicitudTitleMaxCharacters = 48;
+const int solicitudTitleMinCharacters = 8;
+const int solicitudTitleMaxCharacters = 55;
 const int solicitudDescriptionMinLength = 80;
 const int solicitudDescriptionMaxLength = 300;
 
@@ -130,25 +129,31 @@ class SolicitudFormStep extends StatelessWidget {
         children: [
           SolicitudIntroCard(config: config, submitError: submitError),
           const SizedBox(height: 16),
+          _AnonymousSwitchCard(
+            value: esAnonimo,
+            enabled: !isSubmitting,
+            onChanged: onEsAnonimoChanged,
+          ),
+          const SizedBox(height: 16),
           SolicitudFormCard(
             children: [
               _FormSectionHeader(
-                icon: Icons.edit_note_rounded,
                 title: config.sectionTitle,
                 subtitle: config.chipTitle,
+                showDivider: false,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               TextFormField(
                 controller: titleCtrl,
                 enabled: !isSubmitting,
                 maxLength: solicitudTitleMaxCharacters,
                 maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                textCapitalization: TextCapitalization.words,
+                textCapitalization: TextCapitalization.sentences,
                 buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: solicitudFieldDecoration(
                   label: config.titleLabel,
-                  hint: config.titleHint,
-                  helper: 'Ej.: "Cirugía para Mateo" o "Medicinas para Sofía".',
+                  hint: 'Ej. Cirugía para Mateo',
+                  helper: 'Aparecerá en la lista pública.',
                   helperMaxLines: 2,
                 ),
                 validator: (value) {
@@ -156,15 +161,8 @@ class SolicitudFormStep extends StatelessWidget {
                   if (text.isEmpty) {
                     return 'Indica un título breve para tu solicitud.';
                   }
-                  final words = text
-                      .split(RegExp(r'\s+'))
-                      .where((word) => word.isNotEmpty)
-                      .toList();
-                  if (words.length < solicitudTitleMinWords) {
-                    return 'Añade una palabra más para que el título tenga sentido completo.';
-                  }
-                  if (words.length > solicitudTitleMaxWords) {
-                    return 'El título debe tener máximo $solicitudTitleMaxWords palabras.';
+                  if (text.length < solicitudTitleMinCharacters) {
+                    return 'El título es demasiado corto, añade un poco más de contexto.';
                   }
                   return null;
                 },
@@ -172,60 +170,29 @@ class SolicitudFormStep extends StatelessWidget {
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable: titleCtrl,
                 builder: (context, value, _) {
-                  final wordCount = value.text
-                      .trim()
-                      .split(RegExp(r'\s+'))
-                      .where((word) => word.isNotEmpty)
-                      .length;
-                  final isOverLimit = wordCount > solicitudTitleMaxWords;
-                  final isOk = wordCount >= solicitudTitleMinWords && !isOverLimit;
+                  final length = value.text.length;
+                  final remaining = solicitudTitleMaxCharacters - length;
+                  // Sólo mostramos el contador cuando empieza a importar.
+                  if (length == 0 || remaining > 15) {
+                    return const SizedBox(height: 4);
+                  }
+                  final color = remaining <= 0
+                      ? AppColors.error
+                      : remaining <= 5
+                          ? AppColors.orangeAction
+                          : AppColors.darkText.withValues(alpha: 0.45);
                   return Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 4),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: isOverLimit
-                                ? AppColors.error.withValues(alpha: 0.10)
-                                : isOk
-                                    ? AppColors.greenSuccess.withValues(alpha: 0.10)
-                                    : AppColors.bluePrimary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                isOverLimit
-                                    ? Icons.warning_amber_rounded
-                                    : isOk
-                                        ? Icons.check_circle_rounded
-                                        : Icons.short_text_rounded,
-                                size: 13,
-                                color: isOverLimit
-                                    ? AppColors.error
-                                    : isOk
-                                        ? AppColors.greenSuccess
-                                        : AppColors.bluePrimary,
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                'Palabras: $wordCount / $solicitudTitleMaxWords',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: isOverLimit
-                                      ? AppColors.error
-                                      : isOk
-                                          ? AppColors.greenSuccess
-                                          : AppColors.bluePrimary,
-                                ),
-                              ),
-                            ],
-                          ),
+                    padding: const EdgeInsets.only(top: 6, right: 4),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '$length / $solicitudTitleMaxCharacters',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: color,
                         ),
-                      ],
+                      ),
                     ),
                   );
                 },
@@ -238,6 +205,7 @@ class SolicitudFormStep extends StatelessWidget {
                 maxLength: solicitudDescriptionMaxLength,
                 maxLengthEnforcement: MaxLengthEnforcement.enforced,
                 textCapitalization: TextCapitalization.sentences,
+                buildCounter: (_, {required currentLength, required isFocused, maxLength}) => null,
                 decoration: solicitudFieldDecoration(
                   label: config.descriptionLabel,
                   hint: config.descriptionHint,
@@ -257,17 +225,47 @@ class SolicitudFormStep extends StatelessWidget {
                   return null;
                 },
               ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: descriptionCtrl,
+                builder: (context, value, _) {
+                  final length = value.text.length;
+                  final remaining = solicitudDescriptionMaxLength - length;
+                  if (length == 0 || remaining > 50) {
+                    return const SizedBox(height: 4);
+                  }
+                  final color = remaining <= 0
+                      ? AppColors.error
+                      : remaining <= 20
+                          ? AppColors.orangeAction
+                          : AppColors.darkText.withValues(alpha: 0.45);
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 6, right: 4),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '$length / $solicitudDescriptionMaxLength',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: 16),
               const SolicitudInlineInfo(
                 icon: Icons.auto_awesome_rounded,
                 message: 'El equipo asignará la categoría solidaria al revisar tu solicitud.',
               ),
               if (!_isKermesse) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 const _FormSectionHeader(
                   icon: Icons.payments_rounded,
                   title: 'Meta económica',
-                  subtitle: 'Monto en bolivianos',
+                  subtitle: 'Monto que necesitas recaudar en bolivianos',
+                  accent: AppColors.greenSuccess,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -280,34 +278,30 @@ class SolicitudFormStep extends StatelessWidget {
                   decoration: solicitudFieldDecoration(
                     label: config.goalLabel,
                     hint: config.goalHint,
-                    helper: 'Ingresa el monto en bolivianos. Deja vacío si no aplica.',
+                    helper: 'En bolivianos. Déjalo vacío si no aplica.',
                   ).copyWith(
-                    prefixIcon: Container(
-                      margin: const EdgeInsets.only(left: 12, right: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.bluePrimary.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 6),
                       child: Text(
                         'Bs',
                         style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                          color: AppColors.bluePrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.darkText.withValues(alpha: 0.55),
                         ),
                       ),
                     ),
                     prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                    suffixIcon: const Icon(Icons.monetization_on_rounded, color: AppColors.bluePrimary, size: 20),
                   ),
                 ),
               ],
               if (_isCampania) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 const _FormSectionHeader(
-                  icon: Icons.person_rounded,
+                  icon: Icons.favorite_rounded,
                   title: 'Datos del beneficiario',
+                  subtitle: 'A nombre de quién se recauda',
+                  accent: AppColors.orangeAction,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -315,8 +309,8 @@ class SolicitudFormStep extends StatelessWidget {
                   enabled: !isSubmitting,
                   textCapitalization: TextCapitalization.words,
                   decoration: solicitudFieldDecoration(
-                    label: 'Nombre completo del beneficiario',
-                    hint: 'Ejemplo: Mateo Flores Vargas',
+                    label: 'Nombre del beneficiario',
+                    hint: 'Ej. Mateo Flores Vargas',
                   ),
                   validator: (value) {
                     final text = value?.trim() ?? '';
@@ -339,11 +333,17 @@ class SolicitudFormStep extends StatelessWidget {
                   items: relationshipOptions
                       .map((option) => DropdownMenuItem<String>(
                             value: option,
-                            child: Text(option),
+                            child: Text(
+                              option,
+                              softWrap: true,
+                              maxLines: 2,
+                            ),
                           ))
                       .toList(),
                   onChanged: isSubmitting ? null : onRelationshipChanged,
                   isExpanded: true,
+                  itemHeight: 64,
+                  menuMaxHeight: 480,
                   decoration: solicitudFieldDecoration(
                     label: 'Relación con el beneficiario',
                     hint: 'Selecciona la opción que corresponda',
@@ -393,13 +393,16 @@ class SolicitudFormStep extends StatelessWidget {
                 }),
               ],
               if (_isCampania || _isKermesse) ...[
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 _FormSectionHeader(
                   icon: Icons.photo_library_rounded,
                   title: _isCampania
                       ? 'Evidencias fotográficas'
                       : 'Galería del evento',
-                  subtitle: _isCampania ? 'Mínimo 2 imágenes' : 'Opcional',
+                  subtitle: _isCampania
+                      ? 'Sube al menos 2 imágenes que respalden la historia'
+                      : 'Opcional · fotos del espacio y del equipo',
+                  accent: AppColors.bluePrimary,
                 ),
                 const SizedBox(height: 16),
                 SolicitudEvidencePicker(
@@ -408,18 +411,17 @@ class SolicitudFormStep extends StatelessWidget {
                   onAdd: onAddEvidence,
                   onRemove: onRemoveEvidence,
                   maxItems: maxEvidenceItems,
-                  counterLabel:
-                      _isCampania ? 'Evidencias cargadas' : 'Imágenes cargadas',
                   helperText: _isCampania
-                      ? 'Sugerencia: comparte diagnósticos, facturas y fotos que respalden la historia.'
-                      : 'Sugerencia: añade fotos del espacio, del equipo y de actividades previas para motivar la asistencia.',
+                      ? 'Comparte diagnósticos, facturas o fotos que respalden la historia.'
+                      : 'Añade fotos del espacio, del equipo y de actividades previas.',
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               _FormSectionHeader(
-                icon: Icons.image_rounded,
+                icon: Icons.wallpaper_rounded,
                 title: 'Portada de la campaña',
-                subtitle: 'Opcional · JPG, PNG · máx. 3 MB',
+                subtitle: 'Opcional · JPG o PNG · máx. 3 MB',
+                accent: AppColors.blueSecondary,
               ),
               const SizedBox(height: 16),
               _CoverPickerCard(
@@ -433,122 +435,28 @@ class SolicitudFormStep extends StatelessWidget {
           const SizedBox(height: 16),
           SolicitudFormCard(
             children: [
-              // ─ Guidelines checkbox inside tinted container
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.bluePrimary.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.bluePrimary.withValues(alpha: 0.12)),
-                ),
-                child: CheckboxListTile(
-                  value: acceptsGuidelines,
-                  onChanged: isSubmitting ? null : onAcceptGuidelinesChanged,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  activeColor: AppColors.bluePrimary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  title: Text(
-                    'Confirmo que la información es verificable y subiré evidencias del uso de fondos.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.darkText,
-                      height: 1.4,
-                    ),
+              CheckboxListTile(
+                value: acceptsGuidelines,
+                onChanged: isSubmitting ? null : onAcceptGuidelinesChanged,
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                activeColor: AppColors.bluePrimary,
+                title: Text(
+                  'Confirmo que la información es verificable y subiré evidencias del uso de fondos.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.darkText,
+                    height: 1.4,
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              // ─ Switch de privacidad: publicar como anónimo
-              Container(
-                decoration: BoxDecoration(
-                  color: esAnonimo
-                      ? AppColors.orangeAction.withValues(alpha: 0.08)
-                      : AppColors.grayLight.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: esAnonimo
-                        ? AppColors.orangeAction.withValues(alpha: 0.35)
-                        : AppColors.dividerColor,
-                  ),
-                ),
-                child: SwitchListTile.adaptive(
-                  value: esAnonimo,
-                  onChanged: isSubmitting ? null : onEsAnonimoChanged,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  activeColor: AppColors.orangeAction,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  secondary: Icon(
-                    esAnonimo ? Icons.lock_rounded : Icons.lock_outline_rounded,
-                    color: esAnonimo
-                        ? AppColors.orangeAction
-                        : AppColors.darkText.withValues(alpha: 0.5),
-                  ),
-                  title: Text(
-                    'Publicar como anónimo',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                    ),
-                  ),
-                  subtitle: Text(
-                    esAnonimo
-                        ? 'Tu nombre y contacto no aparecerán en la vista pública. Solo el equipo admin podrá verlos.'
-                        : 'Tu nombre aparecerá como creador de la solicitud.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.darkText.withValues(alpha: 0.7),
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               const SolicitudInlineInfo(
-                icon: Icons.notifications_rounded,
+                icon: Icons.notifications_none_rounded,
                 message:
-                    'Te enviaremos una notificación cuando cambie el estado de tu solicitud o se requiera información adicional.',
+                    'Te avisaremos cuando cambie el estado de tu solicitud o necesitemos más información.',
               ),
-              const SizedBox(height: 24),
-              // ─ Divider
-              Container(
-                height: 1,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(1),
-                ),
-              ),
-              Row(
-                children: [
-                  AppSecondaryButton(
-                    label: 'Volver',
-                    expanded: false,
-                    onPressed: isSubmitting ? null : onBack,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: AppPrimaryButton(
-                      label: isSubmitting ? 'Enviando...' : 'Enviar solicitud',
-                      icon: isSubmitting ? null : Icons.send_rounded,
-                      onPressed: isSubmitting ? null : onSubmit,
-                    ),
-                  ),
-                ],
-              ),
-              if (!isSubmitting)
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Center(
-                    child: TextButton(
-                      onPressed: onCancel,
-                      child: Text(
-                        'Cancelar y cerrar',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.40),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ],
@@ -636,9 +544,8 @@ class SolicitudFormStep extends StatelessWidget {
     }
 
     return [
-      const SizedBox(height: 20),
+      const SizedBox(height: 24),
       const _FormSectionHeader(
-        icon: Icons.schedule_rounded,
         title: 'Agenda y horario',
         subtitle: 'Fecha y hora de inicio del evento',
       ),
@@ -646,7 +553,7 @@ class SolicitudFormStep extends StatelessWidget {
       buildField(
         field: dateField,
         controller: dateController,
-        helper: 'Selecciona la fecha y hora exacta en la que arranca la kermesse.',
+        helper: 'Día y hora de inicio del evento.',
         readOnly: true,
         onTap: onPickKermesseDate,
         suffixIcon: const Icon(Icons.event_outlined),
@@ -655,17 +562,18 @@ class SolicitudFormStep extends StatelessWidget {
           'Define cuándo inicia la kermesse.',
         ),
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.place_rounded,
         title: 'Ubicación del evento',
         subtitle: 'Punto visible en el mapa público',
+        accent: AppColors.bluePrimary,
       ),
       const SizedBox(height: 16),
       buildField(
         field: locationNameField,
         controller: locationNameController,
-        helper: 'Puedes incluir referencias cercanas o el nombre del espacio comunitario.',
+        helper: 'Nombre del espacio o referencia cercana.',
         textCapitalization: TextCapitalization.words,
         validator: (value) => requiredValidator(
           value,
@@ -676,7 +584,7 @@ class SolicitudFormStep extends StatelessWidget {
         location: kermesseLocation,
         onPick: isSubmitting ? null : onPickKermesseLocation,
         onClear: isSubmitting || kermesseLocation == null ? null : onClearKermesseLocation,
-        helperText: 'El punto seleccionado alimentará el mapa público y se guardará junto con la solicitud.',
+        helperText: 'Este punto se mostrará en el mapa público.',
       ),
       Container(
         decoration: BoxDecoration(
@@ -693,7 +601,7 @@ class SolicitudFormStep extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           title: const Text('Ingresar coordenadas manualmente'),
-          subtitle: const Text('Marca esta opción si no puedes abrir Google Maps en tu dispositivo.'),
+          subtitle: const Text('Si no puedes abrir Google Maps.'),
         ),
       ),
       if (useManualKermesseCoords) ...[
@@ -703,7 +611,7 @@ class SolicitudFormStep extends StatelessWidget {
               child: buildField(
                 field: latField,
                 controller: latController,
-                helper: 'Copia la latitud desde Google Maps (ej. -17.7833).',
+                helper: 'Desde Google Maps. Ej. -17.7833',
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 textCapitalization: TextCapitalization.none,
@@ -728,7 +636,7 @@ class SolicitudFormStep extends StatelessWidget {
               child: buildField(
                 field: lngField,
                 controller: lngController,
-                helper: 'Asegura que la longitud corresponda al mismo punto (ej. -63.1821).',
+                helper: 'Del mismo punto. Ej. -63.1821',
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
                 keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
                 textCapitalization: TextCapitalization.none,
@@ -774,11 +682,12 @@ class SolicitudFormStep extends StatelessWidget {
           ),
         ),
       ],
-      const SizedBox(height: 24),
+      const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.event_note_rounded,
         title: 'Programación y actividades',
         subtitle: 'Menú, shows y entretenimiento',
+        accent: AppColors.orangeAction,
       ),
       const SizedBox(height: 16),
       SolicitudKermesseMenuList(
@@ -796,36 +705,38 @@ class SolicitudFormStep extends StatelessWidget {
         onEdit: onEditActivity,
         onRemove: onRemoveActivity,
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.people_rounded,
         title: 'Impacto social esperado',
         subtitle: 'Beneficiarios y destino de fondos',
+        accent: AppColors.greenSuccess,
       ),
       const SizedBox(height: 16),
       buildField(
         field: beneficiariesField,
         controller: beneficiariesController,
-        helper: 'Cuenta quiénes se beneficiarán directamente del evento.',
+        helper: 'Personas o comunidad beneficiaria.',
         maxLines: beneficiariesField.maxLines,
       ),
       buildField(
         field: goalField,
         controller: goalController,
-        helper: 'Explica a qué proyecto o causa se destinarán los fondos recaudados.',
+        helper: 'Proyecto o causa que recibirá los fondos.',
         maxLines: goalField.maxLines,
       ),
-      const SizedBox(height: 24),
+      const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.handshake_rounded,
         title: 'Aliados y patrocinadores',
-        subtitle: 'Opcional',
+        subtitle: 'Opcional · suma confianza al evento',
+        accent: AppColors.blueSecondary,
       ),
       const SizedBox(height: 16),
       buildField(
         field: partnersField,
         controller: partnersController,
-        helper: 'Menciona instituciones, empresas o voluntarios que ya confirmaron apoyo.',
+        helper: 'Instituciones, empresas o voluntarios confirmados.',
         maxLines: partnersField.maxLines,
       ),
     ];
@@ -843,7 +754,18 @@ class SolicitudFormCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: AppColors.shadowSm,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -862,26 +784,106 @@ class SolicitudInlineInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-      decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.bluePrimary.withValues(alpha: 0.12)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 17, color: AppColors.bluePrimary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppColors.darkText.withValues(alpha: 0.70),
-                height: 1.4,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            icon,
+            size: 14,
+            color: AppColors.darkText.withValues(alpha: 0.45),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            message,
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.darkText.withValues(alpha: 0.60),
+              height: 1.4,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnonymousSwitchCard extends StatelessWidget {
+  const _AnonymousSwitchCard({
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = value ? AppColors.orangeAction : AppColors.darkText;
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.10),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(
+            value ? Icons.lock_rounded : Icons.lock_open_rounded,
+            color: accent,
+            size: 26,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Publicar como anónimo',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.darkText,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value
+                      ? 'Al subir cada foto, abrirás el editor para tachar caras y datos.'
+                      : 'Tu nombre aparecerá como creador de la solicitud.',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: AppColors.darkText.withValues(alpha: 0.60),
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            onChanged: enabled ? onChanged : null,
+            activeColor: AppColors.orangeAction,
           ),
         ],
       ),
@@ -1214,9 +1216,8 @@ class SolicitudEvidencePicker extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
     required this.maxItems,
-    this.counterLabel = 'Evidencias cargadas',
     this.helperText =
-        'Sugerencia: comparte diagnósticos, facturas y fotos que respalden la historia.',
+        'Comparte diagnósticos, facturas o fotos que respalden la historia.',
   });
 
   final List<SolicitudEvidenceUpload> items;
@@ -1224,7 +1225,6 @@ class SolicitudEvidencePicker extends StatelessWidget {
   final VoidCallback onAdd;
   final void Function(int index) onRemove;
   final int maxItems;
-  final String counterLabel;
   final String helperText;
 
   @override
@@ -1274,36 +1274,29 @@ class SolicitudEvidencePicker extends StatelessWidget {
                   onTap: uploading ? null : onAdd,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.bluePrimary.withValues(alpha: 0.05),
+                      color: AppColors.lightBackground,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: AppColors.bluePrimary.withValues(alpha: 0.22),
+                        color: AppColors.darkText.withValues(alpha: 0.14),
+                        width: 1.2,
                       ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppColors.bluePrimary.withValues(alpha: 0.10),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            uploading
-                                ? Icons.hourglass_top_rounded
-                                : Icons.add_photo_alternate_rounded,
-                            size: 19,
-                            color: AppColors.bluePrimary,
-                          ),
+                        Icon(
+                          uploading
+                              ? Icons.hourglass_top_outlined
+                              : Icons.add_outlined,
+                          size: 24,
+                          color: AppColors.darkText.withValues(alpha: 0.45),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Text(
-                          uploading ? 'Subiendo...' : 'Agregar',
+                          uploading ? 'Subiendo…' : 'Agregar',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: AppColors.bluePrimary,
+                            color: AppColors.darkText.withValues(alpha: 0.65),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1315,29 +1308,12 @@ class SolicitudEvidencePicker extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.bluePrimary.withValues(alpha: 0.09),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                '$counterLabel: ${items.length} / $maxItems',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.bluePrimary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
         Text(
-          helperText,
+          '${items.length} de $maxItems · $helperText',
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.darkText.withValues(alpha: 0.55),
+            fontSize: 12.5,
+            height: 1.4,
           ),
         ),
       ],
@@ -1377,7 +1353,16 @@ InputDecoration solicitudFieldDecoration({
     helperMaxLines: helperMaxLines,
     filled: true,
     fillColor: AppColors.lightBackground,
-    floatingLabelBehavior: FloatingLabelBehavior.auto,
+    floatingLabelBehavior: FloatingLabelBehavior.always,
+    labelStyle: const TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      color: AppColors.darkText,
+    ),
+    hintStyle: TextStyle(
+      fontSize: 15,
+      color: AppColors.darkText.withValues(alpha: 0.40),
+    ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(14),
@@ -1505,7 +1490,7 @@ class _CoverPickerCard extends StatelessWidget {
       );
     }
 
-    // Empty state — tappable area
+    // Empty state — tappable area, dashed-feel border, sin badge gradient.
     return Material(
       color: AppColors.lightBackground,
       borderRadius: radius,
@@ -1514,37 +1499,36 @@ class _CoverPickerCard extends StatelessWidget {
         borderRadius: radius,
         child: Container(
           width: double.infinity,
-          height: 160,
+          height: 150,
           decoration: BoxDecoration(
             borderRadius: radius,
-            border: Border.all(color: AppColors.dividerColor, width: 1.5),
+            border: Border.all(
+              color: AppColors.darkText.withValues(alpha: 0.14),
+              width: 1.2,
+            ),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: AppColors.iconSizeXl,
-                height: AppColors.iconSizeXl,
-                decoration: BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                  boxShadow: AppColors.shadowSm,
-                ),
-                child: const Icon(Icons.add_photo_alternate_rounded, color: Colors.white, size: AppColors.iconSizeMd),
+              Icon(
+                Icons.add_photo_alternate_outlined,
+                color: AppColors.darkText.withValues(alpha: 0.40),
+                size: 28,
               ),
-              const SizedBox(height: AppColors.space12),
+              const SizedBox(height: 10),
               Text(
-                'Toca para elegir portada',
+                'Toca para elegir una portada',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  fontWeight: AppColors.fontWeightBold,
-                  color: AppColors.darkText,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.darkText.withValues(alpha: 0.75),
                 ),
               ),
-              const SizedBox(height: AppColors.space4),
+              const SizedBox(height: 2),
               Text(
-                'Una imagen atractiva genera más donaciones',
+                'Opcional · ayuda a generar más donaciones',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.grayNeutral,
+                  color: AppColors.darkText.withValues(alpha: 0.45),
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -1600,21 +1584,25 @@ class _CoverActionChip extends StatelessWidget {
 }
 
 // ──────────────── Form section header ────────────────────────────────
+//
+// Jerarquía puramente tipográfica: número de paso pequeño + título grande
+// + subtítulo. Sin badges ni iconos para no saturar el formulario.
 class _FormSectionHeader extends StatelessWidget {
   const _FormSectionHeader({
     // ignore: unused_element_parameter
-    required this.icon,
+    this.icon,
     required this.title,
     this.subtitle,
-    // ignore: unused_element_parameter
+    this.showDivider = true,
     this.accent = AppColors.bluePrimary,
   });
 
-  /// Retenido por compatibilidad con call sites antiguos; ya no se renderiza.
+  /// Mantenido por compatibilidad con call sites; ya no se renderiza.
   // ignore: unused_element
-  final IconData icon;
+  final IconData? icon;
   final String title;
   final String? subtitle;
+  final bool showDivider;
   final Color accent;
 
   @override
@@ -1622,44 +1610,87 @@ class _FormSectionHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Barrita pequeña + eyebrow del título (mismo lenguaje que profile review)
-        Row(
-          children: [
-            Container(
-              width: 14,
-              height: 2,
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(1),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                title.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
+        if (showDivider) ...[
+          Container(
+            height: 1,
+            color: AppColors.darkText.withValues(alpha: 0.07),
+          ),
+          const SizedBox(height: 16),
+        ],
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 3,
+                margin: const EdgeInsets.only(top: 3, right: 10),
+                decoration: BoxDecoration(
                   color: accent,
-                  letterSpacing: 1.4,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-          ],
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            style: TextStyle(
-              fontSize: 13,
-              color: AppColors.darkText.withValues(alpha: 0.55),
-              fontWeight: FontWeight.w500,
-              height: 1.4,
-            ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.darkText,
+                        letterSpacing: -0.3,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.darkText.withValues(alpha: 0.55),
+                          fontWeight: FontWeight.w400,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ],
+    );
+  }
+}
+
+class _SubsectionLabel extends StatelessWidget {
+  const _SubsectionLabel({
+    // ignore: unused_element_parameter
+    this.icon,
+    required this.label,
+    // ignore: unused_element_parameter
+    this.accent = AppColors.bluePrimary,
+  });
+
+  // ignore: unused_element
+  final IconData? icon;
+  final String label;
+  // ignore: unused_element
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+        color: AppColors.darkText,
+        letterSpacing: -0.1,
+      ),
     );
   }
 }
@@ -1769,16 +1800,15 @@ class SolicitudKermesseMenuList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _FormSectionHeader(
+        const _SubsectionLabel(
           icon: Icons.restaurant_menu_rounded,
-          title: 'Platos y precios',
-          subtitle: 'Menú del evento',
+          label: 'Platos y precios',
+          accent: AppColors.orangeAction,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         if (items.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),
@@ -1862,16 +1892,15 @@ class SolicitudKermesseActivityList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _FormSectionHeader(
+        const _SubsectionLabel(
           icon: Icons.music_note_rounded,
-          title: 'Shows y entretenimiento',
-          subtitle: 'Actividades del evento',
+          label: 'Shows y entretenimiento',
+          accent: AppColors.bluePrimary,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         if (items.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),

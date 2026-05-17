@@ -259,23 +259,60 @@ class AdminService {
   Future<List<AdminPendingItem>> fetchPendingCampaignRequests() async {
     final response = await _client
         .from('solicitudes')
-        .select('id, titulo, descripcion, tipo, portada_url, categoria_id, created_at, es_anonimo')
+        .select('id, titulo, descripcion, tipo, portada_url, portada_original_url, categoria_id, created_at, es_anonimo')
         .eq('estado', 'pendiente')
         .order('created_at', ascending: false);
 
     final rows = (response as List<dynamic>).cast<Map<String, dynamic>>();
+
+    // Cargar evidencias enriquecidas (id + url_original) en una sola query,
+    // y agruparlas por solicitud_id. Si falla, dejamos cada item sin
+    // evidenceItems y el render hace fallback a evidenceUrls (regex legacy).
+    final solicitudIds = rows.map((r) => r['id'] as String).toList(growable: false);
+    final Map<String, List<AdminEvidenceItem>> evidenciasBySolicitud = {};
+    if (solicitudIds.isNotEmpty) {
+      try {
+        final evRes = await _client
+            .from('evidencias')
+            .select('id, solicitud_id, url, url_original')
+            .inFilter('solicitud_id', solicitudIds);
+        final evRows = (evRes as List<dynamic>).cast<Map<String, dynamic>>();
+        for (final ev in evRows) {
+          final sid = ev['solicitud_id'] as String?;
+          final url = ev['url'] as String?;
+          final id = ev['id'] as String?;
+          if (sid == null || url == null || id == null) continue;
+          evidenciasBySolicitud.putIfAbsent(sid, () => []).add(
+                AdminEvidenceItem(
+                  id: id,
+                  url: url,
+                  urlOriginal: ev['url_original'] as String?,
+                ),
+              );
+        }
+      } catch (e) {
+        debugPrint('AdminService.fetchPendingCampaignRequests evidencias error: $e');
+      }
+    }
+
     return rows
         .map(
           (row) {
             final desc = row['descripcion'] as String? ?? '';
             final tipo = solicitudTipoFromCode(row['tipo'] as String?);
             final beneficiaryInfo = _extractBeneficiaryInfo(desc);
-            final evidenceUrls = _extractEvidenceUrls(desc);
+            final solicitudId = row['id'] as String;
+            final evItems = evidenciasBySolicitud[solicitudId];
+            // Si hay evidencias en la tabla, usamos esas; si no, caemos al
+            // legacy de extraer urls de la descripción.
+            final evidenceUrls = (evItems != null && evItems.isNotEmpty)
+                ? evItems.map((e) => e.url).toList(growable: false)
+                : _extractEvidenceUrls(desc);
             final locationInfo = _extractLocationInfo(desc);
             final kermesseInfo = tipo == SolicitudTipo.kermesse ? _extractKermesseInfo(desc) : null;
-            
+
             return AdminPendingItem(
-              id: row['id'] as String,
+              id: solicitudId,
               title: row['titulo'] as String,
               subtitle: _cleanDescription(desc),
               type: AdminItemType.campaignRequest,
@@ -285,7 +322,9 @@ class AdminService {
               beneficiaryName: beneficiaryInfo['name'],
               beneficiaryRelation: beneficiaryInfo['relation'],
               evidenceUrls: evidenceUrls,
+              evidenceItems: evItems,
               coverUrl: row['portada_url'] as String?,
+              coverOriginalUrl: row['portada_original_url'] as String?,
               kermesseLatitude: locationInfo['latitude'],
               kermesseLongitude: locationInfo['longitude'],
               kermesseAddress: locationInfo['address'],
@@ -881,6 +920,90 @@ class AdminService {
       'admin_id': adminId,
       'decision': 'aprobada',
     });
+  }
+
+  /// Sube una nueva versión tachada de la portada y actualiza el campo
+  /// `portada_url` de la solicitud. Útil cuando el admin retoca el tachado
+  /// del usuario antes de aprobar.
+  Future<String> reRedactSolicitudCover({
+    required String solicitudId,
+    required Uint8List newRedactedBytes,
+    required String contentType,
+    required String fileExtension,
+  }) async {
+    final solicitudRow = await _client
+        .from('solicitudes')
+        .select('user_id')
+        .eq('id', solicitudId)
+        .single();
+    final userId = solicitudRow['user_id'] as String;
+    final storage = _client.storage.from('documentos');
+    var sanitizedExt = fileExtension.replaceAll(RegExp('[^a-zA-Z0-9]'), '').toLowerCase();
+    if (sanitizedExt.isEmpty) sanitizedExt = 'jpg';
+    final ts = DateTime.now().microsecondsSinceEpoch;
+    final nonce = ts.hashCode.toUnsigned(16).toRadixString(16).padLeft(4, '0');
+    final objectPath = 'users/$userId/solicitudes/covers/${ts}_$nonce.$sanitizedExt';
+    await storage.uploadBinary(
+      objectPath,
+      newRedactedBytes,
+      fileOptions: FileOptions(contentType: contentType, upsert: true),
+    );
+    final newUrl = storage.getPublicUrl(objectPath);
+    await _client
+        .from('solicitudes')
+        .update({'portada_url': newUrl})
+        .eq('id', solicitudId);
+    return newUrl;
+  }
+
+  /// Sube una nueva versión tachada de una evidencia individual y actualiza
+  /// el campo `url` en la fila correspondiente de la tabla `evidencias`.
+  /// Mismo patrón que [reRedactSolicitudCover] pero para evidencias.
+  Future<String> reRedactEvidence({
+    required String evidenciaId,
+    required Uint8List newRedactedBytes,
+    required String contentType,
+    required String fileExtension,
+  }) async {
+    // 1. Obtener solicitud_id de la evidencia para resolver el user_id dueño.
+    final evidenciaRow = await _client
+        .from('evidencias')
+        .select('solicitud_id')
+        .eq('id', evidenciaId)
+        .single();
+    final solicitudId = evidenciaRow['solicitud_id'] as String?;
+    if (solicitudId == null) {
+      throw const AdminServiceException(
+        'La evidencia no está asociada a una solicitud (no podemos resolver el dueño para el path).',
+      );
+    }
+    final solicitudRow = await _client
+        .from('solicitudes')
+        .select('user_id')
+        .eq('id', solicitudId)
+        .single();
+    final userId = solicitudRow['user_id'] as String;
+
+    // 2. Subir a path único bajo /users/<uid>/solicitudes/evidencias/.
+    final storage = _client.storage.from('documentos');
+    var sanitizedExt = fileExtension.replaceAll(RegExp('[^a-zA-Z0-9]'), '').toLowerCase();
+    if (sanitizedExt.isEmpty) sanitizedExt = 'jpg';
+    final ts = DateTime.now().microsecondsSinceEpoch;
+    final nonce = ts.hashCode.toUnsigned(16).toRadixString(16).padLeft(4, '0');
+    final objectPath = 'users/$userId/solicitudes/evidencias/${ts}_$nonce.$sanitizedExt';
+    await storage.uploadBinary(
+      objectPath,
+      newRedactedBytes,
+      fileOptions: FileOptions(contentType: contentType, upsert: true),
+    );
+    final newUrl = storage.getPublicUrl(objectPath);
+
+    // 3. Actualizar la fila apuntando a la nueva versión tachada.
+    await _client
+        .from('evidencias')
+        .update({'url': newUrl})
+        .eq('id', evidenciaId);
+    return newUrl;
   }
 }
 

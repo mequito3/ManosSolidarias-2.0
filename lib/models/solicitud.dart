@@ -142,6 +142,24 @@ class Solicitud {
 	}
 }
 
+class SolicitudDraftEvidence {
+	const SolicitudDraftEvidence({
+		required this.url,
+		this.urlOriginal,
+		this.tipo = 'foto',
+		this.descripcion,
+		this.visibilidad = 'publico',
+	});
+
+	final String url;
+	/// URL del original sin tachar. Solo visible para admin cuando la
+	/// solicitud es anónima. Null cuando no hubo edición.
+	final String? urlOriginal;
+	final String tipo;
+	final String? descripcion;
+	final String visibilidad;
+}
+
 class SolicitudDraft {
 	const SolicitudDraft({
 		required this.titulo,
@@ -151,8 +169,10 @@ class SolicitudDraft {
 		this.montoObjetivo,
 		this.organizationId,
 		this.portadaUrl,
+		this.portadaOriginalUrl,
 		this.qrOriginalUrl,
 		this.esAnonimo = false,
+		this.evidences = const [],
 	});
 
 	final String titulo;
@@ -162,8 +182,12 @@ class SolicitudDraft {
 	final double? montoObjetivo;
 	final String? organizationId;
 	final String? portadaUrl;
+	/// URL de la portada sin tachar. Solo se envía si es_anonimo=true y el
+	/// usuario aplicó tachado. Solo admin la ve.
+	final String? portadaOriginalUrl;
 	final String? qrOriginalUrl;
 	final bool esAnonimo;
+	final List<SolicitudDraftEvidence> evidences;
 
 	Map<String, dynamic> toInsertMap({required String userId}) {
 		return {
@@ -175,6 +199,7 @@ class SolicitudDraft {
 			'monto_objetivo': montoObjetivo,
 			'organizacion_id': organizationId,
 			'portada_url': portadaUrl,
+			'portada_original_url': portadaOriginalUrl,
 			'qr_original_url': qrOriginalUrl,
 			'es_anonimo': esAnonimo,
 		}..removeWhere((_, value) => value == null);

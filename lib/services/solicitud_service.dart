@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -69,7 +71,9 @@ class SolicitudService {
 					.insert(payload)
 					.select()
 					.single();
-			return Solicitud.fromJson(response as Map<String, dynamic>);
+			final solicitud = Solicitud.fromJson(response as Map<String, dynamic>);
+			await _insertEvidencesForSolicitud(solicitud.id, draft.evidences);
+			return solicitud;
 		} on PostgrestException catch (error, stackTrace) {
 			if (error.code == 'PGRST204' && error.message.contains("'tipo'")) {
 				debugPrint('SolicitudService.createSolicitud fallback: esquema sin columna tipo, enviando nuevamente sin el campo.');
@@ -85,7 +89,9 @@ class SolicitudService {
 						.insert(fallbackPayload)
 						.select()
 						.single();
-				return Solicitud.fromJson(response as Map<String, dynamic>);
+				final solicitud = Solicitud.fromJson(response as Map<String, dynamic>);
+				await _insertEvidencesForSolicitud(solicitud.id, draft.evidences);
+				return solicitud;
 			}
 			debugPrint('SolicitudService.createSolicitud error (PostgrestException): ${error.message}');
 			Error.throwWithStackTrace(
@@ -103,6 +109,47 @@ class SolicitudService {
 		}
 	}
 
+	/// Persiste las URLs de evidencias en tabla `evidencias` con
+	/// `solicitud_id` (sin campania_id porque la campaña aún no existe).
+	/// El trigger `evidencias_migrate_on_campania_insert` las migra al
+	/// campania_id cuando el admin aprueba la solicitud.
+	Future<void> _insertEvidencesForSolicitud(
+		String solicitudId,
+		List<SolicitudDraftEvidence> evidences,
+	) async {
+		if (evidences.isEmpty) return;
+		final rows = evidences
+				.map((e) => {
+							'solicitud_id': solicitudId,
+							'url': e.url,
+							'url_original': e.urlOriginal,
+							'tipo': e.tipo,
+							'descripcion': e.descripcion,
+							'visibilidad': e.visibilidad,
+						}..removeWhere((_, v) => v == null))
+				.toList();
+		try {
+			await _client.from('evidencias').insert(rows);
+		} on PostgrestException catch (error) {
+			// No tumbamos la creación de la solicitud si las evidencias fallan.
+			// El admin puede pedírselas después. Pero loggeamos para debug.
+			debugPrint('SolicitudService._insertEvidencesForSolicitud error: ${error.message}');
+		} catch (error) {
+			debugPrint('SolicitudService._insertEvidencesForSolicitud error: $error');
+		}
+	}
+
+	/// Genera un filename único: timestamp en microsegundos + nonce hex de 4
+	/// dígitos. Evita colisiones cuando se suben 2 versiones de la misma
+	/// imagen (redactada + original) en rápida sucesión, que con upsert:true
+	/// sobreescribirían la primera silenciosamente.
+	static final Random _filenameRandom = Random();
+	String _uniqueFilename(String sanitizedExt) {
+		final ts = DateTime.now().microsecondsSinceEpoch;
+		final nonce = _filenameRandom.nextInt(0xFFFF).toRadixString(16).padLeft(4, '0');
+		return '${ts}_$nonce.$sanitizedExt';
+	}
+
 	Future<String> uploadCoverImage({
 		required Uint8List data,
 		required String contentType,
@@ -114,8 +161,7 @@ class SolicitudService {
 		if (sanitizedExt.isEmpty) {
 			sanitizedExt = 'jpg';
 		}
-		final timestamp = DateTime.now().millisecondsSinceEpoch;
-		final objectPath = 'users/$userId/solicitudes/covers/$timestamp.$sanitizedExt';
+		final objectPath = 'users/$userId/solicitudes/covers/${_uniqueFilename(sanitizedExt)}';
 
 		try {
 			await storage.uploadBinary(
@@ -131,6 +177,30 @@ class SolicitudService {
 		}
 	}
 
+	/// Borra archivos de Storage dadas sus URLs públicas.
+	/// Parsea cada URL para extraer el path relativo al bucket y los elimina.
+	/// Fire-and-forget: errores se loggean pero no se propagan.
+	Future<void> deleteStorageFiles(List<String> publicUrls) async {
+		if (publicUrls.isEmpty) return;
+		final storage = _client.storage.from('documentos');
+		final paths = <String>[];
+		for (final url in publicUrls) {
+			// URL pública típica:
+			// https://<project>.supabase.co/storage/v1/object/public/documentos/users/<uid>/solicitudes/covers/<ts>_<nonce>.jpg
+			// El path relativo es lo que va después de '/documentos/'
+			const marker = '/documentos/';
+			final idx = url.indexOf(marker);
+			if (idx == -1) continue;
+			paths.add(url.substring(idx + marker.length));
+		}
+		if (paths.isEmpty) return;
+		try {
+			await storage.remove(paths);
+		} catch (e) {
+			debugPrint('SolicitudService.deleteStorageFiles error: $e');
+		}
+	}
+
 	Future<String> uploadEvidenceImage({
 		required Uint8List data,
 		required String contentType,
@@ -142,8 +212,7 @@ class SolicitudService {
 		if (sanitizedExt.isEmpty) {
 			sanitizedExt = 'jpg';
 		}
-		final timestamp = DateTime.now().microsecondsSinceEpoch;
-		final objectPath = 'users/$userId/solicitudes/evidencias/$timestamp.$sanitizedExt';
+		final objectPath = 'users/$userId/solicitudes/evidencias/${_uniqueFilename(sanitizedExt)}';
 
 		try {
 			await storage.uploadBinary(
