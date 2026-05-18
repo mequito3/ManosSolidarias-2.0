@@ -419,7 +419,7 @@ class SolicitudFormStep extends StatelessWidget {
               const SizedBox(height: 28),
               _FormSectionHeader(
                 icon: Icons.wallpaper_rounded,
-                title: 'Portada de la campaña',
+                title: _isKermesse ? 'Portada del evento' : 'Portada de la campaña',
                 subtitle: 'Opcional · JPG o PNG · máx. 3 MB',
                 accent: AppColors.blueSecondary,
               ),
@@ -544,24 +544,32 @@ class SolicitudFormStep extends StatelessWidget {
     }
 
     return [
-      const SizedBox(height: 24),
+      // ── Sección 3: Agenda y horario ─────────────────────────────────
+      const SizedBox(height: 28),
       const _FormSectionHeader(
+        icon: Icons.event_rounded,
         title: 'Agenda y horario',
         subtitle: 'Fecha y hora de inicio del evento',
+        accent: AppColors.orangeAction,
       ),
       const SizedBox(height: 16),
       buildField(
         field: dateField,
         controller: dateController,
-        helper: 'Día y hora de inicio del evento.',
+        helper: 'Toca para elegir día y hora.',
         readOnly: true,
         onTap: onPickKermesseDate,
-        suffixIcon: const Icon(Icons.event_outlined),
+        suffixIcon: Icon(
+          Icons.event_outlined,
+          size: 20,
+          color: AppColors.bluePrimary.withValues(alpha: 0.75),
+        ),
         validator: (value) => requiredValidator(
           value,
           'Define cuándo inicia la kermesse.',
         ),
       ),
+      // ── Sección 4: Ubicación del evento ─────────────────────────────
       const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.place_rounded,
@@ -573,7 +581,6 @@ class SolicitudFormStep extends StatelessWidget {
       buildField(
         field: locationNameField,
         controller: locationNameController,
-        helper: 'Nombre del espacio o referencia cercana.',
         textCapitalization: TextCapitalization.words,
         validator: (value) => requiredValidator(
           value,
@@ -586,110 +593,147 @@ class SolicitudFormStep extends StatelessWidget {
         onClear: isSubmitting || kermesseLocation == null ? null : onClearKermesseLocation,
         helperText: 'Este punto se mostrará en el mapa público.',
       ),
-      Container(
-        decoration: BoxDecoration(
-          color: AppColors.lightBackground,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.dividerColor),
-        ),
-        child: CheckboxListTile(
-          value: useManualKermesseCoords,
-          onChanged: isSubmitting
-              ? null
-              : (value) => onManualKermesseCoordsChanged(value ?? false),
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          title: const Text('Ingresar coordenadas manualmente'),
-          subtitle: const Text('Si no puedes abrir Google Maps.'),
-        ),
-      ),
-      if (useManualKermesseCoords) ...[
-        Row(
-          children: [
-            Expanded(
-              child: buildField(
-                field: latField,
-                controller: latController,
-                helper: 'Desde Google Maps. Ej. -17.7833',
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                textCapitalization: TextCapitalization.none,
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) {
-                    return 'Ingresa la latitud en formato decimal.';
-                  }
-                  final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
-                  if (parsed == null) {
-                    return 'Usa un número válido para la latitud.';
-                  }
-                  if (parsed < -90 || parsed > 90) {
-                    return 'La latitud debe estar entre -90 y 90.';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: buildField(
-                field: lngField,
-                controller: lngController,
-                helper: 'Del mismo punto. Ej. -63.1821',
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
-                keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                textCapitalization: TextCapitalization.none,
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (text.isEmpty) {
-                    return 'Ingresa la longitud en formato decimal.';
-                  }
-                  final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
-                  if (parsed == null) {
-                    return 'Usa un número válido para la longitud.';
-                  }
-                  if (parsed < -180 || parsed > 180) {
-                    return 'La longitud debe estar entre -180 y 180.';
-                  }
-                  return null;
-                },
-              ),
-            ),
-          ],
-        ),
+      if (kermesseLocation != null && !useManualKermesseCoords)
         const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: SolicitudInlineInfo(
-            icon: Icons.info_outline_rounded,
-            message: 'Obtén las coordenadas en Google Maps: toca y mantén presionado sobre el punto deseado.',
-          ),
-        ),
-      ] else if (kermesseLocation != null) ...[
-        Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: EdgeInsets.only(top: 8, bottom: 4),
           child: SolicitudInlineInfo(
             icon: Icons.check_circle_rounded,
-            message: 'Coordenadas guardadas: ${kermesseLocation!.coordinatesLabel}',
+            message: 'Punto confirmado para el mapa público.',
           ),
         ),
-      ] else ...[
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: SolicitudInlineInfo(
-            icon: Icons.map_outlined,
-            message: 'Selecciona el punto exacto en Google Maps para mostrarlo a los asistentes.',
+      const SizedBox(height: 4),
+      Theme(
+        data: theme.copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(top: 8, bottom: 4),
+          initiallyExpanded: useManualKermesseCoords,
+          title: Text(
+            '¿No puedes abrir Google Maps?',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppColors.darkText.withValues(alpha: 0.70),
+            ),
           ),
+          children: [
+            CheckboxListTile(
+              value: useManualKermesseCoords,
+              onChanged: isSubmitting
+                  ? null
+                  : (value) => onManualKermesseCoordsChanged(value ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              activeColor: AppColors.bluePrimary,
+              title: const Text(
+                'Ingresar coordenadas manualmente',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (useManualKermesseCoords) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: buildField(
+                      field: latField,
+                      controller: latController,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      textCapitalization: TextCapitalization.none,
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) {
+                          return 'Ingresa la latitud.';
+                        }
+                        final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
+                        if (parsed == null) {
+                          return 'Usa un número válido.';
+                        }
+                        if (parsed < -90 || parsed > 90) {
+                          return 'Entre -90 y 90.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: buildField(
+                      field: lngField,
+                      controller: lngController,
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                      textCapitalization: TextCapitalization.none,
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) {
+                          return 'Ingresa la longitud.';
+                        }
+                        final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
+                        if (parsed == null) {
+                          return 'Usa un número válido.';
+                        }
+                        if (parsed < -180 || parsed > 180) {
+                          return 'Entre -180 y 180.';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SolicitudInlineInfo(
+                icon: Icons.tips_and_updates_outlined,
+                message: 'Mantén pulsado un punto en Google Maps para copiar las coords.',
+              ),
+            ],
+          ],
         ),
-      ],
+      ),
+      // ── Sección 5: Impacto social esperado ──────────────────────────
       const SizedBox(height: 28),
       const _FormSectionHeader(
-        icon: Icons.event_note_rounded,
-        title: 'Programación y actividades',
-        subtitle: 'Menú, shows y entretenimiento',
+        icon: Icons.volunteer_activism_rounded,
+        title: 'Impacto social esperado',
+        subtitle: 'Beneficiarios y destino de los fondos',
+        accent: AppColors.greenSuccess,
+      ),
+      const SizedBox(height: 16),
+      buildField(
+        field: beneficiariesField,
+        controller: beneficiariesController,
+        maxLines: beneficiariesField.maxLines,
+        validator: (value) => requiredValidator(
+          value,
+          'Cuéntanos a quiénes beneficiará la kermesse.',
+        ),
+      ),
+      buildField(
+        field: goalField,
+        controller: goalController,
+        maxLines: goalField.maxLines,
+        validator: (value) => requiredValidator(
+          value,
+          'Indica el destino de lo que se recaude.',
+        ),
+      ),
+      // ── Sección 6: Programación y oferta ────────────────────────────
+      const SizedBox(height: 16),
+      const _FormSectionHeader(
+        icon: Icons.restaurant_menu_rounded,
+        title: 'Programación y oferta',
+        subtitle: 'Lo que ofrecerás a los asistentes',
         accent: AppColors.orangeAction,
       ),
       const SizedBox(height: 16),
+      _SubsectionLabel(
+        label: menuItems.isEmpty
+            ? 'Menú y platos'
+            : 'Menú y platos · ${menuItems.length} agregados',
+      ),
+      const SizedBox(height: 8),
       SolicitudKermesseMenuList(
         items: menuItems,
         enabled: !isSubmitting,
@@ -697,7 +741,13 @@ class SolicitudFormStep extends StatelessWidget {
         onEdit: onEditMenuItem,
         onRemove: onRemoveMenuItem,
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 20),
+      _SubsectionLabel(
+        label: activityItems.isEmpty
+            ? 'Shows y actividades'
+            : 'Shows y actividades · ${activityItems.length} agregadas',
+      ),
+      const SizedBox(height: 8),
       SolicitudKermesseActivityList(
         items: activityItems,
         enabled: !isSubmitting,
@@ -705,26 +755,14 @@ class SolicitudFormStep extends StatelessWidget {
         onEdit: onEditActivity,
         onRemove: onRemoveActivity,
       ),
-      const SizedBox(height: 28),
-      const _FormSectionHeader(
-        icon: Icons.people_rounded,
-        title: 'Impacto social esperado',
-        subtitle: 'Beneficiarios y destino de fondos',
-        accent: AppColors.greenSuccess,
-      ),
-      const SizedBox(height: 16),
-      buildField(
-        field: beneficiariesField,
-        controller: beneficiariesController,
-        helper: 'Personas o comunidad beneficiaria.',
-        maxLines: beneficiariesField.maxLines,
-      ),
-      buildField(
-        field: goalField,
-        controller: goalController,
-        helper: 'Proyecto o causa que recibirá los fondos.',
-        maxLines: goalField.maxLines,
-      ),
+      if (menuItems.isEmpty || activityItems.isEmpty) ...[
+        const SizedBox(height: 12),
+        const SolicitudInlineInfo(
+          icon: Icons.info_outline_rounded,
+          message: 'Los asistentes ven mejor tu evento con al menos 2 platos y 1 show.',
+        ),
+      ],
+      // ── Sección 7: Aliados y patrocinadores ─────────────────────────
       const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.handshake_rounded,
@@ -736,7 +774,6 @@ class SolicitudFormStep extends StatelessWidget {
       buildField(
         field: partnersField,
         controller: partnersController,
-        helper: 'Instituciones, empresas o voluntarios confirmados.',
         maxLines: partnersField.maxLines,
       ),
     ];
