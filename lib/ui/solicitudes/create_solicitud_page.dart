@@ -1081,120 +1081,80 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       text: initial?.price != null ? initial!.price!.toStringAsFixed(2) : '',
     );
 
-    return showDialog<SolicitudKermesseMenuItem>(
+    return showModalBottomSheet<SolicitudKermesseMenuItem>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.orangeAction.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.fastfood_rounded,
-              color: AppColors.orangeAction,
-              size: 28,
-            ),
-          ),
-          title: Text(
-            initial == null ? 'Añadir plato' : 'Editar plato',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-            textAlign: TextAlign.center,
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: solicitudFieldDecoration(
-                      label: 'Nombre del plato',
-                      hint: 'Ej. Sopa de maní',
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return 'Indica el nombre del plato.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: priceCtrl,
-                    decoration: solicitudFieldDecoration(
-                      label: 'Precio (Bs)',
-                      hint: 'Ej. 15.50',
-                      helper: 'Opcional — déjalo vacío si aún no lo definiste.',
-                    ).copyWith(
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 6),
-                        child: Text(
-                          'Bs',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: AppColors.darkText.withValues(alpha: 0.55),
-                          ),
-                        ),
-                      ),
-                      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                    ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return null;
-                      }
-                      final parsed = _parseAmount(text);
-                      if (parsed == null || parsed <= 0) {
-                        return 'Ingresa un precio válido o déjalo vacío.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppSecondaryButton(
-                          label: 'Cancelar',
-                          expanded: true,
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: AppPrimaryButton(
-                          label: initial == null ? 'Añadir' : 'Guardar',
-                          expanded: true,
-                          onPressed: () {
-                            if (!(formKey.currentState?.validate() ?? false)) {
-                              return;
-                            }
-                            final priceText = priceCtrl.text.trim();
-                            final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
-                            Navigator.of(ctx).pop(
-                              SolicitudKermesseMenuItem(
-                                name: nameCtrl.text.trim(),
-                                price: parsedPrice,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+        return _KermesseItemSheet(
+          headerAccent: AppColors.orangeAction,
+          headerIcon: Icons.fastfood_rounded,
+          title: initial == null ? 'Añadir plato' : 'Editar plato',
+          submitLabel: initial == null ? 'Añadir' : 'Guardar',
+          formKey: formKey,
+          fields: [
+            TextFormField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: solicitudFieldDecoration(
+                label: 'Nombre del plato',
+                hint: 'Ej. Sopa de maní',
               ),
+              textCapitalization: TextCapitalization.sentences,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) {
+                  return 'Indica el nombre del plato.';
+                }
+                return null;
+              },
             ),
-          ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: priceCtrl,
+              decoration: solicitudFieldDecoration(
+                label: 'Precio (Bs)',
+                hint: 'Ej. 15.50',
+                helper: 'Opcional — déjalo vacío si aún no lo definiste.',
+              ).copyWith(
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 6),
+                  child: Text(
+                    'Bs',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      color: AppColors.darkText.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ),
+                prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) {
+                  return null;
+                }
+                final parsed = _parseAmount(text);
+                if (parsed == null || parsed <= 0) {
+                  return 'Ingresa un precio válido o déjalo vacío.';
+                }
+                return null;
+              },
+            ),
+          ],
+          onSubmit: () {
+            if (!(formKey.currentState?.validate() ?? false)) {
+              return null;
+            }
+            final priceText = priceCtrl.text.trim();
+            final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
+            return SolicitudKermesseMenuItem(
+              name: nameCtrl.text.trim(),
+              price: parsedPrice,
+            );
+          },
         );
       },
     );
@@ -1235,95 +1195,55 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     final nameCtrl = TextEditingController(text: initial?.name ?? '');
     final detailCtrl = TextEditingController(text: initial?.detail ?? '');
 
-    return showDialog<SolicitudKermesseActivity>(
+    return showModalBottomSheet<SolicitudKermesseActivity>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.star_rounded,
-              color: AppColors.bluePrimary,
-              size: 28,
-            ),
-          ),
-          title: Text(
-            initial == null ? 'Añadir show' : 'Editar show',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-            textAlign: TextAlign.center,
-          ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: solicitudFieldDecoration(
-                      label: 'Nombre del show',
-                      hint: 'Ej. Banda Juventud Alegre',
-                    ),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (value) {
-                      final text = value?.trim() ?? '';
-                      if (text.isEmpty) {
-                        return 'Indica el nombre del show o actividad.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: detailCtrl,
-                    decoration: solicitudFieldDecoration(
-                      label: 'Horario o detalle',
-                      hint: 'Ej. 20:30 · Escenario principal',
-                      helper: 'Opcional — horario, costo o ubicación dentro del evento.',
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: AppSecondaryButton(
-                          label: 'Cancelar',
-                          expanded: true,
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: AppPrimaryButton(
-                          label: initial == null ? 'Añadir' : 'Guardar',
-                          expanded: true,
-                          onPressed: () {
-                            if (!(formKey.currentState?.validate() ?? false)) {
-                              return;
-                            }
-                            Navigator.of(ctx).pop(
-                              SolicitudKermesseActivity(
-                                name: nameCtrl.text.trim(),
-                                detail: detailCtrl.text.trim(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+        return _KermesseItemSheet(
+          headerAccent: AppColors.bluePrimary,
+          headerIcon: Icons.star_rounded,
+          title: initial == null ? 'Añadir show' : 'Editar show',
+          submitLabel: initial == null ? 'Añadir' : 'Guardar',
+          formKey: formKey,
+          fields: [
+            TextFormField(
+              controller: nameCtrl,
+              autofocus: true,
+              decoration: solicitudFieldDecoration(
+                label: 'Nombre del show',
+                hint: 'Ej. Banda Juventud Alegre',
               ),
+              textCapitalization: TextCapitalization.words,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) {
+                  return 'Indica el nombre del show o actividad.';
+                }
+                return null;
+              },
             ),
-          ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: detailCtrl,
+              decoration: solicitudFieldDecoration(
+                label: 'Horario o detalle',
+                hint: 'Ej. 20:30 · Escenario principal',
+                helper: 'Opcional — horario, costo o ubicación dentro del evento.',
+              ),
+              textCapitalization: TextCapitalization.sentences,
+              maxLines: 2,
+            ),
+          ],
+          onSubmit: () {
+            if (!(formKey.currentState?.validate() ?? false)) {
+              return null;
+            }
+            return SolicitudKermesseActivity(
+              name: nameCtrl.text.trim(),
+              detail: detailCtrl.text.trim(),
+            );
+          },
         );
       },
     );
@@ -2083,6 +2003,134 @@ class _SheetOptionTile extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Modal bottom sheet reusable para los formularios de plato y show de
+/// kermesse. Se adapta automáticamente al teclado y respeta SafeArea.
+/// Patrón mobile-first: handle bar arriba, icono+título, campos, acciones.
+class _KermesseItemSheet<T> extends StatelessWidget {
+  const _KermesseItemSheet({
+    super.key,
+    required this.headerAccent,
+    required this.headerIcon,
+    required this.title,
+    required this.submitLabel,
+    required this.formKey,
+    required this.fields,
+    required this.onSubmit,
+  });
+
+  final Color headerAccent;
+  final IconData headerIcon;
+  final String title;
+  final String submitLabel;
+  final GlobalKey<FormState> formKey;
+  final List<Widget> fields;
+
+  /// Retorna el item construido o null si la validación falla.
+  final T? Function() onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.only(bottom: bottomInset),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkText.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Header con icono accent + título
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: headerAccent.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(headerIcon, color: headerAccent, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.darkText,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded),
+                          color: AppColors.darkText.withValues(alpha: 0.55),
+                          onPressed: () => Navigator.of(context).pop(),
+                          tooltip: 'Cerrar',
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    ...fields,
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppSecondaryButton(
+                            label: 'Cancelar',
+                            expanded: true,
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: AppPrimaryButton(
+                            label: submitLabel,
+                            expanded: true,
+                            onPressed: () {
+                              final result = onSubmit();
+                              if (result != null) {
+                                Navigator.of(context).pop(result);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
       ),
