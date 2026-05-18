@@ -474,17 +474,13 @@ class SolicitudFormStep extends StatelessWidget {
     }
 
     final dateField = fieldById('event_date');
-  final locationNameField = fieldById('event_location_name');
-  final latField = fieldById('event_location_lat');
-  final lngField = fieldById('event_location_lng');
+    final locationNameField = fieldById('event_location_name');
     final beneficiariesField = fieldById('event_beneficiaries');
     final goalField = fieldById('event_goal');
     final partnersField = fieldById('event_partners');
 
     final dateController = _extraController(dateField.id);
     final locationNameController = _extraController(locationNameField.id);
-    final latController = _extraController(latField.id);
-    final lngController = _extraController(lngField.id);
     final beneficiariesController = _extraController(beneficiariesField.id);
     final goalController = _extraController(goalField.id);
     final partnersController = _extraController(partnersField.id);
@@ -595,106 +591,6 @@ class SolicitudFormStep extends StatelessWidget {
         location: kermesseLocation,
         onPick: isSubmitting ? null : onPickKermesseLocation,
         onClear: isSubmitting || kermesseLocation == null ? null : onClearKermesseLocation,
-        helperText: 'Este punto se mostrará en el mapa público.',
-      ),
-      if (kermesseLocation != null && !useManualKermesseCoords)
-        const Padding(
-          padding: EdgeInsets.only(top: 8, bottom: 4),
-          child: SolicitudInlineInfo(
-            icon: Icons.check_circle_rounded,
-            message: 'Punto confirmado para el mapa público.',
-          ),
-        ),
-      const SizedBox(height: 4),
-      Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: const EdgeInsets.only(top: 8, bottom: 4),
-          initiallyExpanded: useManualKermesseCoords,
-          title: Text(
-            '¿No puedes abrir Google Maps?',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.darkText.withValues(alpha: 0.70),
-            ),
-          ),
-          children: [
-            CheckboxListTile(
-              value: useManualKermesseCoords,
-              onChanged: isSubmitting
-                  ? null
-                  : (value) => onManualKermesseCoordsChanged(value ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              activeColor: AppColors.bluePrimary,
-              title: const Text(
-                'Ingresar coordenadas manualmente',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ),
-            if (useManualKermesseCoords) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: buildField(
-                      field: latField,
-                      controller: latController,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      textCapitalization: TextCapitalization.none,
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
-                        if (text.isEmpty) {
-                          return 'Ingresa la latitud.';
-                        }
-                        final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
-                        if (parsed == null) {
-                          return 'Usa un número válido.';
-                        }
-                        if (parsed < -90 || parsed > 90) {
-                          return 'Entre -90 y 90.';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: buildField(
-                      field: lngField,
-                      controller: lngController,
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,-]'))],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
-                      textCapitalization: TextCapitalization.none,
-                      validator: (value) {
-                        final text = value?.trim() ?? '';
-                        if (text.isEmpty) {
-                          return 'Ingresa la longitud.';
-                        }
-                        final parsed = double.tryParse(text.replaceAll(' ', '').replaceAll(',', '.'));
-                        if (parsed == null) {
-                          return 'Usa un número válido.';
-                        }
-                        if (parsed < -180 || parsed > 180) {
-                          return 'Entre -180 y 180.';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SolicitudInlineInfo(
-                icon: Icons.tips_and_updates_outlined,
-                message: 'Mantén pulsado un punto en Google Maps para copiar las coords.',
-              ),
-            ],
-          ],
-        ),
       ),
       // ── Sección 5: Impacto social esperado ──────────────────────────
       const SizedBox(height: 28),
@@ -1771,54 +1667,201 @@ class SolicitudKermesseLocationSelector extends StatelessWidget {
     required this.location,
     required this.onPick,
     required this.onClear,
-    this.helperText,
   });
 
   final SolicitudKermesseLocation? location;
   final VoidCallback? onPick;
   final VoidCallback? onClear;
-  final String? helperText;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: AppSecondaryButton(
-                label: location == null ? 'Elegir en Google Maps' : 'Cambiar punto en mapa',
-                icon: Icons.map_outlined,
-                onPressed: onPick,
+    if (location == null) {
+      // Empty state — card grande tappable estilo "elegir foto"
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPick,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.bluePrimary.withValues(alpha: 0.30),
+                width: 1.4,
               ),
             ),
-            if (location != null) ...[
-              const SizedBox(width: 12),
-              AppSecondaryButton(
-                label: 'Limpiar',
-                expanded: false,
-                icon: Icons.delete_outline,
-                onPressed: onClear,
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (location != null)
-          Text(
-            (location!.address != null && location!.address!.isNotEmpty)
-                ? location!.address!
-                : 'Punto seleccionado: ${location!.coordinatesLabel}',
-            style: theme.textTheme.bodySmall,
-          )
-        else if (helperText != null)
-          Text(
-            helperText!,
-            style: theme.textTheme.bodySmall,
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.bluePrimary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.bluePrimary,
+                    size: 26,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Tocar para elegir en el mapa',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.darkText,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Marca el punto exacto del evento.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppColors.darkText,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.bluePrimary,
+                ),
+              ],
+            ),
           ),
-      ],
+        ),
+      );
+    }
+
+    // Filled state — punto seleccionado con detalle + acciones
+    final addressLine = (location!.address != null && location!.address!.isNotEmpty)
+        ? location!.address!
+        : 'Punto seleccionado en el mapa';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+      decoration: BoxDecoration(
+        color: AppColors.greenSuccess.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.greenSuccess.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.greenSuccess.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_rounded,
+              color: AppColors.greenSuccess,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Punto confirmado',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.greenSuccess,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  addressLine,
+                  softWrap: true,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: AppColors.darkText,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: onPick,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.edit_location_alt_outlined,
+                                size: 16, color: AppColors.bluePrimary),
+                            SizedBox(width: 4),
+                            Text(
+                              'Cambiar',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.bluePrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (onClear != null) ...[
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: onClear,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.delete_outline_rounded,
+                                  size: 16, color: AppColors.darkText),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Quitar',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.darkText
+                                      .withValues(alpha: 0.70),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
