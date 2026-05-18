@@ -1888,67 +1888,32 @@ class SolicitudKermesseMenuList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SubsectionLabel(
-          icon: Icons.restaurant_menu_rounded,
-          label: 'Platos y precios',
-          accent: AppColors.orangeAction,
-        ),
-        const SizedBox(height: 12),
         if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: SolicitudInlineInfo(
-              icon: Icons.info_outline_rounded,
-              message: 'Detalla cada plato con su precio para facilitar la difusión.',
-            ),
+          _EmptyListHint(
+            icon: Icons.restaurant_menu_rounded,
+            accent: AppColors.orangeAction,
+            message: 'Aún no agregaste platos. Detalla cada uno con su precio.',
           )
         else
           Column(
             children: [
               for (var i = 0; i < items.length; i++)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.dividerColor),
-                    boxShadow: AppColors.shadowSm,
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.orangeAction.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.fastfood_rounded, size: 18, color: AppColors.orangeAction),
-                    ),
-                    title: Text(items[i].name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: items[i].price != null
-                        ? Text('Bs ${items[i].price!.toStringAsFixed(2)}', style: const TextStyle(color: AppColors.greenSuccess, fontWeight: FontWeight.w600))
-                        : const Text('Precio pendiente', style: TextStyle(color: AppColors.grayDark)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          color: AppColors.bluePrimary,
-                          onPressed: enabled ? () => onEdit(i) : null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          color: AppColors.error,
-                          onPressed: enabled ? () => onRemove(i) : null,
-                        ),
-                      ],
-                    ),
-                  ),
+                _KermesseListItem(
+                  icon: Icons.fastfood_rounded,
+                  accent: AppColors.orangeAction,
+                  title: items[i].name,
+                  subtitle: items[i].price != null
+                      ? 'Bs ${items[i].price!.toStringAsFixed(2)}'
+                      : 'Precio pendiente',
+                  subtitleColor: items[i].price != null
+                      ? AppColors.greenSuccess
+                      : AppColors.darkText.withValues(alpha: 0.50),
+                  onEdit: enabled ? () => onEdit(i) : null,
+                  onRemove: enabled ? () => onRemove(i) : null,
                 ),
             ],
           ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 10),
         AppSecondaryButton(
           label: 'Añadir plato',
           icon: Icons.add_rounded,
@@ -1980,73 +1945,181 @@ class SolicitudKermesseActivityList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _SubsectionLabel(
-          icon: Icons.music_note_rounded,
-          label: 'Shows y entretenimiento',
-          accent: AppColors.bluePrimary,
-        ),
-        const SizedBox(height: 12),
         if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 4),
-            child: SolicitudInlineInfo(
-              icon: Icons.info_outline_rounded,
-              message: 'Registra grupos musicales, academias o juegos con su horario o costo.',
-            ),
+          _EmptyListHint(
+            icon: Icons.music_note_rounded,
+            accent: AppColors.bluePrimary,
+            message: 'Aún no agregaste shows. Grupos, juegos o actividades con horario.',
           )
         else
           Column(
             children: [
               for (var i = 0; i < items.length; i++)
-                Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.dividerColor),
-                    boxShadow: AppColors.shadowSm,
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppColors.bluePrimary.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.star_rounded, size: 18, color: AppColors.bluePrimary),
-                    ),
-                    title: Text(items[i].name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: items[i].detail != null && items[i].detail!.isNotEmpty
-                        ? Text(items[i].detail!, style: const TextStyle(color: AppColors.grayDark))
-                        : const Text('Detalle pendiente', style: TextStyle(color: AppColors.grayNeutral)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined, size: 20),
-                          color: AppColors.bluePrimary,
-                          onPressed: enabled ? () => onEdit(i) : null,
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline, size: 20),
-                          color: AppColors.error,
-                          onPressed: enabled ? () => onRemove(i) : null,
-                        ),
-                      ],
-                    ),
-                  ),
+                _KermesseListItem(
+                  icon: Icons.star_rounded,
+                  accent: AppColors.bluePrimary,
+                  title: items[i].name,
+                  subtitle: items[i].detail != null && items[i].detail!.isNotEmpty
+                      ? items[i].detail!
+                      : 'Detalle pendiente',
+                  subtitleColor: items[i].detail != null && items[i].detail!.isNotEmpty
+                      ? AppColors.darkText.withValues(alpha: 0.60)
+                      : AppColors.darkText.withValues(alpha: 0.40),
+                  onEdit: enabled ? () => onEdit(i) : null,
+                  onRemove: enabled ? () => onRemove(i) : null,
                 ),
             ],
           ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 10),
         AppSecondaryButton(
-          label: 'Añadir show o actividad',
+          label: 'Añadir show',
           icon: Icons.add_rounded,
           onPressed: enabled ? onAdd : null,
         ),
       ],
+    );
+  }
+}
+
+/// Card vacía con icono + mensaje, para listas sin items.
+class _EmptyListHint extends StatelessWidget {
+  const _EmptyListHint({
+    required this.icon,
+    required this.accent,
+    required this.message,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: accent.withValues(alpha: 0.25),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.darkText.withValues(alpha: 0.70),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Item de lista (plato o actividad): icono accent, título, subtítulo y
+/// acciones editar/quitar. Card unificada para los 2 listas de kermesse.
+class _KermesseListItem extends StatelessWidget {
+  const _KermesseListItem({
+    required this.icon,
+    required this.accent,
+    required this.title,
+    required this.subtitle,
+    required this.subtitleColor,
+    required this.onEdit,
+    required this.onRemove,
+  });
+
+  final IconData icon;
+  final Color accent;
+  final String title;
+  final String subtitle;
+  final Color subtitleColor;
+  final VoidCallback? onEdit;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.darkText.withValues(alpha: 0.08),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: accent, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.darkText,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: subtitleColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            color: AppColors.bluePrimary,
+            visualDensity: VisualDensity.compact,
+            onPressed: onEdit,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            color: AppColors.darkText.withValues(alpha: 0.55),
+            visualDensity: VisualDensity.compact,
+            onPressed: onRemove,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1083,9 +1083,26 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
 
     return showDialog<SolicitudKermesseMenuItem>(
       context: context,
-      builder: (context) {
+      builder: (ctx) {
         return AlertDialog(
-          title: Text(initial == null ? 'Añadir plato' : 'Editar plato'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          icon: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.orangeAction.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.fastfood_rounded,
+              color: AppColors.orangeAction,
+              size: 28,
+            ),
+          ),
+          title: Text(
+            initial == null ? 'Añadir plato' : 'Editar plato',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+            textAlign: TextAlign.center,
+          ),
           content: Form(
             key: formKey,
             child: Column(
@@ -1093,9 +1110,9 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               children: [
                 TextFormField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del plato o puesto',
-                    hintText: 'Ej.: Sopa de maní',
+                  decoration: solicitudFieldDecoration(
+                    label: 'Nombre del plato',
+                    hint: 'Ej. Sopa de maní',
                   ),
                   textCapitalization: TextCapitalization.sentences,
                   validator: (value) {
@@ -1106,12 +1123,26 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: priceCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Precio sugerido (Bs)',
-                    hintText: 'Ej.: 15.50',
+                  decoration: solicitudFieldDecoration(
+                    label: 'Precio (Bs)',
+                    hint: 'Ej. 15.50',
+                    helper: 'Opcional — déjalo vacío si aún no lo definiste.',
+                  ).copyWith(
+                    prefixIcon: Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 6),
+                      child: Text(
+                        'Bs',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: AppColors.darkText.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
@@ -1129,26 +1160,38 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!(formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
-                final priceText = priceCtrl.text.trim();
-                final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
-                Navigator.of(context).pop(
-                  SolicitudKermesseMenuItem(
-                    name: nameCtrl.text.trim(),
-                    price: parsedPrice,
+            Row(
+              children: [
+                Expanded(
+                  child: AppSecondaryButton(
+                    label: 'Cancelar',
+                    expanded: true,
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
-                );
-              },
-              child: Text(initial == null ? 'Añadir' : 'Guardar'),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AppPrimaryButton(
+                    label: initial == null ? 'Añadir' : 'Guardar',
+                    expanded: true,
+                    onPressed: () {
+                      if (!(formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
+                      final priceText = priceCtrl.text.trim();
+                      final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
+                      Navigator.of(ctx).pop(
+                        SolicitudKermesseMenuItem(
+                          name: nameCtrl.text.trim(),
+                          price: parsedPrice,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1193,9 +1236,26 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
 
     return showDialog<SolicitudKermesseActivity>(
       context: context,
-      builder: (context) {
+      builder: (ctx) {
         return AlertDialog(
-          title: Text(initial == null ? 'Añadir show o actividad' : 'Editar show o actividad'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          icon: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.star_rounded,
+              color: AppColors.bluePrimary,
+              size: 28,
+            ),
+          ),
+          title: Text(
+            initial == null ? 'Añadir show' : 'Editar show',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
+            textAlign: TextAlign.center,
+          ),
           content: Form(
             key: formKey,
             child: Column(
@@ -1203,9 +1263,9 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               children: [
                 TextFormField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Nombre del grupo o actividad',
-                    hintText: 'Ej.: Banda Juventud Alegre',
+                  decoration: solicitudFieldDecoration(
+                    label: 'Nombre del show',
+                    hint: 'Ej. Banda Juventud Alegre',
                   ),
                   textCapitalization: TextCapitalization.words,
                   validator: (value) {
@@ -1216,12 +1276,13 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: detailCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Horario, costo u otro detalle',
-                    hintText: 'Ej.: 20:30 - Escenario principal',
+                  decoration: solicitudFieldDecoration(
+                    label: 'Horario o detalle',
+                    hint: 'Ej. 20:30 · Escenario principal',
+                    helper: 'Opcional — horario, costo o ubicación dentro del evento.',
                   ),
                   textCapitalization: TextCapitalization.sentences,
                   maxLines: 2,
@@ -1229,24 +1290,36 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (!(formKey.currentState?.validate() ?? false)) {
-                  return;
-                }
-                Navigator.of(context).pop(
-                  SolicitudKermesseActivity(
-                    name: nameCtrl.text.trim(),
-                    detail: detailCtrl.text.trim(),
+            Row(
+              children: [
+                Expanded(
+                  child: AppSecondaryButton(
+                    label: 'Cancelar',
+                    expanded: true,
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
-                );
-              },
-              child: Text(initial == null ? 'Añadir' : 'Guardar'),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: AppPrimaryButton(
+                    label: initial == null ? 'Añadir' : 'Guardar',
+                    expanded: true,
+                    onPressed: () {
+                      if (!(formKey.currentState?.validate() ?? false)) {
+                        return;
+                      }
+                      Navigator.of(ctx).pop(
+                        SolicitudKermesseActivity(
+                          name: nameCtrl.text.trim(),
+                          detail: detailCtrl.text.trim(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ],
         );
