@@ -129,12 +129,16 @@ class SolicitudFormStep extends StatelessWidget {
         children: [
           SolicitudIntroCard(config: config, submitError: submitError),
           const SizedBox(height: 16),
-          _AnonymousSwitchCard(
-            value: esAnonimo,
-            enabled: !isSubmitting,
-            onChanged: onEsAnonimoChanged,
-          ),
-          const SizedBox(height: 16),
+          // El switch anónimo solo aplica a campañas. Kermesses son eventos
+          // públicos por naturaleza (mapa + agenda visible).
+          if (_isCampania) ...[
+            _AnonymousSwitchCard(
+              value: esAnonimo,
+              enabled: !isSubmitting,
+              onChanged: onEsAnonimoChanged,
+            ),
+            const SizedBox(height: 16),
+          ],
           SolicitudFormCard(
             children: [
               _FormSectionHeader(
