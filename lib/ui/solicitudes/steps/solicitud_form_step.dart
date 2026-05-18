@@ -515,31 +515,30 @@ class SolicitudFormStep extends StatelessWidget {
             }
           : null);
 
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: TextFormField(
-          controller: controller,
-          enabled: !isSubmitting,
-          readOnly: readOnly,
-          onTap: readOnly && (isSubmitting || onTap == null)
-              ? null
-              : () {
-                  if (isSubmitting) {
-                    return;
-                  }
-                  onTap?.call();
-                },
-          maxLines: maxLines ?? field.maxLines,
-          textCapitalization: textCapitalization,
-          keyboardType: keyboardType ?? field.keyboardType,
-          inputFormatters: inputFormatters,
-          decoration: solicitudFieldDecoration(
-            label: field.label,
-            hint: field.hint,
-            helper: helper,
-          ).copyWith(suffixIcon: suffixIcon),
-          validator: effectiveValidator,
-        ),
+      // Mismo patrón que el form de Campaña: TextFormField directo, sin
+      // wrapper Padding. El spacing se controla con SizedBox entre fields.
+      return TextFormField(
+        controller: controller,
+        enabled: !isSubmitting,
+        readOnly: readOnly,
+        onTap: readOnly && (isSubmitting || onTap == null)
+            ? null
+            : () {
+                if (isSubmitting) {
+                  return;
+                }
+                onTap?.call();
+              },
+        maxLines: maxLines ?? field.maxLines,
+        textCapitalization: textCapitalization,
+        keyboardType: keyboardType ?? field.keyboardType,
+        inputFormatters: inputFormatters,
+        decoration: solicitudFieldDecoration(
+          label: field.label,
+          hint: field.hint,
+          helper: helper,
+        ).copyWith(suffixIcon: suffixIcon),
+        validator: effectiveValidator,
       );
     }
 
@@ -587,6 +586,7 @@ class SolicitudFormStep extends StatelessWidget {
           'Indica el nombre del lugar donde se realizará.',
         ),
       ),
+      const SizedBox(height: 16),
       SolicitudKermesseLocationSelector(
         location: kermesseLocation,
         onPick: isSubmitting ? null : onPickKermesseLocation,
@@ -610,6 +610,7 @@ class SolicitudFormStep extends StatelessWidget {
           'Cuéntanos a quiénes beneficiará la kermesse.',
         ),
       ),
+      const SizedBox(height: 16),
       buildField(
         field: goalField,
         controller: goalController,
@@ -620,7 +621,7 @@ class SolicitudFormStep extends StatelessWidget {
         ),
       ),
       // ── Sección 6: Programación y oferta ────────────────────────────
-      const SizedBox(height: 16),
+      const SizedBox(height: 28),
       const _FormSectionHeader(
         icon: Icons.restaurant_menu_rounded,
         title: 'Programación y oferta',
