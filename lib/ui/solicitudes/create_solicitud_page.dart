@@ -1103,97 +1103,98 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
             textAlign: TextAlign.center,
           ),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: solicitudFieldDecoration(
-                    label: 'Nombre del plato',
-                    hint: 'Ej. Sopa de maní',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) {
-                      return 'Indica el nombre del plato.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: priceCtrl,
-                  decoration: solicitudFieldDecoration(
-                    label: 'Precio (Bs)',
-                    hint: 'Ej. 15.50',
-                    helper: 'Opcional — déjalo vacío si aún no lo definiste.',
-                  ).copyWith(
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.only(left: 16, right: 6),
-                      child: Text(
-                        'Bs',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          color: AppColors.darkText.withValues(alpha: 0.55),
-                        ),
-                      ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: solicitudFieldDecoration(
+                      label: 'Nombre del plato',
+                      hint: 'Ej. Sopa de maní',
                     ),
-                    prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                  ),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) {
-                      return null;
-                    }
-                    final parsed = _parseAmount(text);
-                    if (parsed == null || parsed <= 0) {
-                      return 'Ingresa un precio válido o déjalo vacío.';
-                    }
-                    return null;
-                  },
-                ),
-              ],
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: AppSecondaryButton(
-                    label: 'Cancelar',
-                    expanded: true,
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AppPrimaryButton(
-                    label: initial == null ? 'Añadir' : 'Guardar',
-                    expanded: true,
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
+                    textCapitalization: TextCapitalization.sentences,
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
+                        return 'Indica el nombre del plato.';
                       }
-                      final priceText = priceCtrl.text.trim();
-                      final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
-                      Navigator.of(ctx).pop(
-                        SolicitudKermesseMenuItem(
-                          name: nameCtrl.text.trim(),
-                          price: parsedPrice,
-                        ),
-                      );
+                      return null;
                     },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: priceCtrl,
+                    decoration: solicitudFieldDecoration(
+                      label: 'Precio (Bs)',
+                      hint: 'Ej. 15.50',
+                      helper: 'Opcional — déjalo vacío si aún no lo definiste.',
+                    ).copyWith(
+                      prefixIcon: Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 6),
+                        child: Text(
+                          'Bs',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: AppColors.darkText.withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ),
+                      prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
+                        return null;
+                      }
+                      final parsed = _parseAmount(text);
+                      if (parsed == null || parsed <= 0) {
+                        return 'Ingresa un precio válido o déjalo vacío.';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppSecondaryButton(
+                          label: 'Cancelar',
+                          expanded: true,
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AppPrimaryButton(
+                          label: initial == null ? 'Añadir' : 'Guardar',
+                          expanded: true,
+                          onPressed: () {
+                            if (!(formKey.currentState?.validate() ?? false)) {
+                              return;
+                            }
+                            final priceText = priceCtrl.text.trim();
+                            final parsedPrice = priceText.isEmpty ? null : _parseAmount(priceText);
+                            Navigator.of(ctx).pop(
+                              SolicitudKermesseMenuItem(
+                                name: nameCtrl.text.trim(),
+                                price: parsedPrice,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
@@ -1256,72 +1257,73 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
             textAlign: TextAlign.center,
           ),
-          content: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: nameCtrl,
-                  decoration: solicitudFieldDecoration(
-                    label: 'Nombre del show',
-                    hint: 'Ej. Banda Juventud Alegre',
-                  ),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) {
-                      return 'Indica el nombre del show o actividad.';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 14),
-                TextFormField(
-                  controller: detailCtrl,
-                  decoration: solicitudFieldDecoration(
-                    label: 'Horario o detalle',
-                    hint: 'Ej. 20:30 · Escenario principal',
-                    helper: 'Opcional — horario, costo o ubicación dentro del evento.',
-                  ),
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: AppSecondaryButton(
-                    label: 'Cancelar',
-                    expanded: true,
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AppPrimaryButton(
-                    label: initial == null ? 'Añadir' : 'Guardar',
-                    expanded: true,
-                    onPressed: () {
-                      if (!(formKey.currentState?.validate() ?? false)) {
-                        return;
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameCtrl,
+                    decoration: solicitudFieldDecoration(
+                      label: 'Nombre del show',
+                      hint: 'Ej. Banda Juventud Alegre',
+                    ),
+                    textCapitalization: TextCapitalization.words,
+                    validator: (value) {
+                      final text = value?.trim() ?? '';
+                      if (text.isEmpty) {
+                        return 'Indica el nombre del show o actividad.';
                       }
-                      Navigator.of(ctx).pop(
-                        SolicitudKermesseActivity(
-                          name: nameCtrl.text.trim(),
-                          detail: detailCtrl.text.trim(),
-                        ),
-                      );
+                      return null;
                     },
                   ),
-                ),
-              ],
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: detailCtrl,
+                    decoration: solicitudFieldDecoration(
+                      label: 'Horario o detalle',
+                      hint: 'Ej. 20:30 · Escenario principal',
+                      helper: 'Opcional — horario, costo o ubicación dentro del evento.',
+                    ),
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLines: 2,
+                  ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppSecondaryButton(
+                          label: 'Cancelar',
+                          expanded: true,
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: AppPrimaryButton(
+                          label: initial == null ? 'Añadir' : 'Guardar',
+                          expanded: true,
+                          onPressed: () {
+                            if (!(formKey.currentState?.validate() ?? false)) {
+                              return;
+                            }
+                            Navigator.of(ctx).pop(
+                              SolicitudKermesseActivity(
+                                name: nameCtrl.text.trim(),
+                                detail: detailCtrl.text.trim(),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         );
       },
     );
