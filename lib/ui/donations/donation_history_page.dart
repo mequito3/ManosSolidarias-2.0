@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
+
 import '../../controllers/donation_history_controller.dart';
 import '../../models/donation_history_entry.dart';
 import '../../theme/app_colors.dart';
+import '../widgets/app_buttons.dart';
+import '../widgets/app_network_image.dart';
+import '../widgets/premium_app_bar.dart';
+import '../widgets/premium_empty_state.dart';
+import '../widgets/premium_hero.dart';
 
 class DonationHistoryPage extends StatefulWidget {
   const DonationHistoryPage({super.key, required this.controller});
@@ -26,55 +32,176 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Historial de donaciones',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.bluePrimary, AppColors.blueSecondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       backgroundColor: AppColors.lightBackground,
+      appBar: PremiumAppBar(
+        title: 'Mis donaciones',
+        actions: [
+          PremiumAppBarAction(
+            icon: Icons.refresh_rounded,
+            tooltip: 'Actualizar',
+            onPressed: widget.controller.isLoading ? null : _handleRefresh,
+          ),
+        ],
+      ),
       body: AnimatedBuilder(
         animation: widget.controller,
         builder: (context, _) {
           final controller = widget.controller;
 
           if (controller.isLoading && controller.entries.isEmpty) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.bluePrimary),
+            );
           }
 
           if (controller.errorMessage != null && controller.entries.isEmpty) {
-            return _DonationHistoryError(
-              message: controller.errorMessage!,
-              onRetry: controller.refreshHistory,
+            return PremiumEmptyState(
+              icon: Icons.error_outline_rounded,
+              iconColor: AppColors.error,
+              title: 'No pudimos cargar tu historial',
+              description: controller.errorMessage!,
+              blobColors: [
+                AppColors.error.withValues(alpha: 0.08),
+                AppColors.bluePrimary.withValues(alpha: 0.06),
+              ],
+              action: AppPrimaryButton(
+                label: 'Reintentar',
+                icon: Icons.refresh_rounded,
+                onPressed: _handleRefresh,
+              ),
             );
           }
 
           if (controller.entries.isEmpty) {
-            return const _DonationHistoryEmpty();
+            return PremiumEmptyState(
+              icon: Icons.volunteer_activism_rounded,
+              iconColor: AppColors.bluePrimary,
+              title: 'Sin donaciones aún',
+              description:
+                  'Cuando apoyes una campaña, tus aportes aparecerán acá con su estado y comprobante.',
+              blobColors: [
+                AppColors.bluePrimary.withValues(alpha: 0.10),
+                AppColors.greenHope.withValues(alpha: 0.08),
+              ],
+              hintChips: const [
+                PremiumHintChip(
+                  icon: Icons.favorite_rounded,
+                  label: 'Apoyá una causa',
+                  color: AppColors.orangeAction,
+                ),
+                PremiumHintChip(
+                  icon: Icons.receipt_long_rounded,
+                  label: 'Subí el comprobante',
+                  color: AppColors.bluePrimary,
+                ),
+              ],
+            );
           }
 
+          final entries = controller.entries;
+          final totalApproved = entries
+              .where((e) => e.status == DonationStatus.approved)
+              .fold<double>(0, (sum, e) => sum + e.amount);
+          final approvedCount =
+              entries.where((e) => e.status == DonationStatus.approved).length;
+          final pendingCount =
+              entries.where((e) => e.status == DonationStatus.pending).length;
+          final rejectedCount =
+              entries.where((e) => e.status == DonationStatus.rejected).length;
+
           return RefreshIndicator(
+            color: AppColors.bluePrimary,
             onRefresh: _handleRefresh,
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              itemCount: controller.entries.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                final entry = controller.entries[index];
-                return _DonationHistoryCard(entry: entry);
-              },
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    AppColors.space12,
+                    AppColors.space20,
+                    AppColors.space16,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: PremiumHero(
+                      icon: Icons.volunteer_activism_rounded,
+                      iconGradient: AppColors.primaryGradient,
+                      iconShadowColor: AppColors.bluePrimary,
+                      title: entries.length == 1
+                          ? 'Hiciste 1 donación'
+                          : 'Hiciste ${entries.length} donaciones',
+                      subtitle: 'Gracias por ser parte del cambio.',
+                      backgroundColors: [
+                        AppColors.bluePrimary.withValues(alpha: 0.10),
+                        AppColors.greenHope.withValues(alpha: 0.07),
+                      ],
+                      blobColors: [
+                        AppColors.bluePrimary.withValues(alpha: 0.12),
+                        AppColors.greenHope.withValues(alpha: 0.10),
+                      ],
+                      stats: [
+                        PremiumStatPill(
+                          icon: Icons.savings_rounded,
+                          label: 'Total donado',
+                          value: _formatCompact(totalApproved),
+                          color: AppColors.greenHope,
+                        ),
+                        PremiumStatPill(
+                          icon: Icons.check_circle_rounded,
+                          label: 'Aprobadas',
+                          value: '$approvedCount',
+                          color: AppColors.bluePrimary,
+                        ),
+                        PremiumStatPill(
+                          icon: pendingCount > 0
+                              ? Icons.hourglass_top_rounded
+                              : Icons.cancel_rounded,
+                          label: pendingCount > 0
+                              ? 'Pendientes'
+                              : 'Rechazadas',
+                          value: pendingCount > 0
+                              ? '$pendingCount'
+                              : '$rejectedCount',
+                          color: pendingCount > 0
+                              ? AppColors.orangeAction
+                              : AppColors.error,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    0,
+                    AppColors.space20,
+                    AppColors.space12,
+                  ),
+                  sliver: SliverToBoxAdapter(
+                    child: PremiumSectionHeader(
+                      title: 'Tu historial',
+                      accentGradient: AppColors.primaryGradient,
+                      count: entries.length,
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    AppColors.space4,
+                    AppColors.space20,
+                    AppColors.space32,
+                  ),
+                  sliver: SliverList.separated(
+                    itemCount: entries.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppColors.space12),
+                    itemBuilder: (context, index) =>
+                        _DonationCard(entry: entries[index]),
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -83,203 +210,259 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
   }
 }
 
-class _DonationHistoryCard extends StatelessWidget {
-  const _DonationHistoryCard({required this.entry});
+String _formatCompact(double value) {
+  if (value >= 1000000) return 'Bs ${(value / 1000000).toStringAsFixed(1)}M';
+  if (value >= 1000) {
+    return 'Bs ${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}K';
+  }
+  return 'Bs ${value.toStringAsFixed(0)}';
+}
+
+// ─── Donation card ──────────────────────────────────────────────────────────
+
+class _DonationCard extends StatelessWidget {
+  const _DonationCard({required this.entry});
 
   final DonationHistoryEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final amountText = 'Bs ${entry.amount.toStringAsFixed(2)}';
-    final dateText = _formatDate(entry.createdAt);
-    final validatedText = entry.validatedAt != null ? _formatDate(entry.validatedAt!) : null;
     final statusColor = _statusColor(entry.status);
+    final dateText = _formatDate(entry.createdAt);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        boxShadow: AppColors.shadowMd,
+        border: Border(
+          left: BorderSide(color: statusColor, width: 4),
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header strip with status colour
-          Container(
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              border: Border(
-                bottom: BorderSide(color: statusColor.withValues(alpha: 0.2)),
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.all(AppColors.space16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                if (entry.campaignCoverUrl != null &&
+                    entry.campaignCoverUrl!.isNotEmpty)
+                  ClipRRect(
+                    borderRadius:
+                        BorderRadius.circular(AppColors.radiusSm),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: AppNetworkImage(
+                        url: entry.campaignCoverUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: Container(
+                          color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                          child: const Icon(Icons.campaign_rounded,
+                              color: AppColors.bluePrimary, size: 22),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                      borderRadius:
+                          BorderRadius.circular(AppColors.radiusSm),
+                    ),
+                    child: const Icon(Icons.campaign_rounded,
+                        color: AppColors.bluePrimary, size: 22),
                   ),
-                  child: Icon(Icons.volunteer_activism_rounded, color: statusColor, size: 20),
-                ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppColors.space12),
                 Expanded(
-                  child: Text(
-                    entry.campaignTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Status badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statusColor.withValues(alpha: 0.35)),
-                  ),
-                  child: Text(
-                    entry.status.label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        entry.campaignTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.darkText,
+                          fontSize: AppColors.fontSizeBase,
+                          fontWeight: AppColors.fontWeightExtraBold,
+                          letterSpacing: -0.2,
+                          height: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded,
+                              size: 12, color: AppColors.lightText),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              dateText,
+                              style: const TextStyle(
+                                color: AppColors.lightText,
+                                fontSize: AppColors.fontSizeXs,
+                                fontWeight: AppColors.fontWeightSemiBold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
-          // Body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: AppColors.space12),
+            Row(
               children: [
-                // Amount + date row
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.bluePrimary, AppColors.blueSecondary],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppColors.space12,
+                      vertical: AppColors.space8),
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius:
+                        BorderRadius.circular(AppColors.radiusRound),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            AppColors.bluePrimary.withValues(alpha: 0.25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
                       ),
-                      child: Text(
-                        amountText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 14,
-                        ),
-                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Bs ${entry.amount.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: AppColors.fontWeightExtraBold,
+                      fontSize: AppColors.fontSizeBase,
+                      letterSpacing: -0.2,
                     ),
-                    const Spacer(),
-                    Icon(Icons.access_time_rounded, size: 13, color: AppColors.grayDark),
-                    const SizedBox(width: 4),
-                    Text(
-                      dateText,
-                      style: theme.textTheme.bodySmall?.copyWith(color: AppColors.grayDark),
+                  ),
+                ),
+                const Spacer(),
+                _StatusBadge(status: entry.status),
+              ],
+            ),
+            if (_hasDetails) ...[
+              const SizedBox(height: AppColors.space12),
+              const Divider(height: 1, color: AppColors.grayLight),
+              const SizedBox(height: AppColors.space12),
+              if (entry.validatedAt != null)
+                _DetailRow(
+                  icon: entry.status == DonationStatus.approved
+                      ? Icons.verified_rounded
+                      : Icons.update_rounded,
+                  label: entry.status == DonationStatus.approved
+                      ? 'Aprobada'
+                      : 'Actualizada',
+                  value: _formatDate(entry.validatedAt!),
+                ),
+              if (entry.method != null)
+                _DetailRow(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'Método',
+                  value: _methodLabel(entry.method!),
+                ),
+              if (entry.reference != null)
+                _DetailRow(
+                  icon: Icons.confirmation_number_rounded,
+                  label: 'Referencia',
+                  value: entry.reference!,
+                ),
+              if (entry.rewardTitle != null)
+                _DetailRow(
+                  icon: Icons.card_giftcard_rounded,
+                  label: 'Recompensa',
+                  value: entry.rewardTitle!,
+                ),
+            ],
+            if (entry.message != null) ...[
+              const SizedBox(height: AppColors.space12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppColors.space12),
+                decoration: BoxDecoration(
+                  color: AppColors.lightBackground,
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                  border: Border.all(color: AppColors.grayLight),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.chat_bubble_outline_rounded,
+                        size: 14, color: AppColors.lightText),
+                    const SizedBox(width: AppColors.space8),
+                    Expanded(
+                      child: Text(
+                        entry.message!,
+                        style: const TextStyle(
+                          color: AppColors.mediumText,
+                          fontSize: AppColors.fontSizeSm,
+                          height: 1.4,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                // Detail rows
-                if (validatedText != null)
-                  _DetailRow(
-                    icon: Icons.verified_outlined,
-                    label: entry.status == DonationStatus.approved ? 'Aprobada' : 'Actualizada',
-                    value: validatedText,
-                  ),
-                if (entry.method != null)
-                  _DetailRow(
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: 'Método',
-                    value: _methodLabel(entry.method!),
-                  ),
-                if (entry.reference != null)
-                  _DetailRow(
-                    icon: Icons.confirmation_number_outlined,
-                    label: 'Referencia',
-                    value: entry.reference!,
-                  ),
-                if (entry.rewardTitle != null)
-                  _DetailRow(
-                    icon: Icons.card_giftcard_outlined,
-                    label: 'Recompensa',
-                    value: entry.rewardTitle!,
-                  ),
-                if (entry.message != null) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightBackground,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.grayLight),
+              ),
+            ],
+            if (entry.hasReceipt) ...[
+              const SizedBox(height: AppColors.space12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _openReceipt(context, entry.receiptUrl!),
+                  icon: const Icon(Icons.image_search_rounded, size: 18),
+                  label: const Text('Ver comprobante'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.bluePrimary,
+                    side: const BorderSide(
+                        color: AppColors.bluePrimary, width: 1.4),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: AppColors.space12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppColors.radiusMd),
                     ),
-                    child: Text(
-                      entry.message!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.mediumText,
-                        height: 1.45,
-                      ),
+                    textStyle: const TextStyle(
+                      fontWeight: AppColors.fontWeightExtraBold,
+                      letterSpacing: 0.2,
                     ),
                   ),
-                ],
-                if (entry.hasReceipt) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _openReceipt(context, entry.receiptUrl!),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.bluePrimary.withValues(alpha: 0.4)),
-                        foregroundColor: AppColors.bluePrimary,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.image_search_rounded, size: 18),
-                      label: const Text('Ver comprobante', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
+  bool get _hasDetails =>
+      entry.validatedAt != null ||
+      entry.method != null ||
+      entry.reference != null ||
+      entry.rewardTitle != null;
+
   static Color _statusColor(DonationStatus status) {
     switch (status) {
       case DonationStatus.approved:
-        return AppColors.greenSuccess;
+        return AppColors.greenHope;
       case DonationStatus.rejected:
-        return Colors.redAccent;
+        return AppColors.error;
       case DonationStatus.pending:
         return AppColors.orangeAction;
     }
@@ -299,7 +482,10 @@ class _DonationHistoryCard extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     final local = date.toLocal();
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const months = [
+      'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+      'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    ];
     final day = local.day.toString().padLeft(2, '0');
     final month = months[local.month - 1];
     final year = local.year;
@@ -317,11 +503,11 @@ class _DonationHistoryCard extends StatelessWidget {
       );
       return;
     }
-
     final messenger = ScaffoldMessenger.maybeOf(context);
     messenger?.showSnackBar(
       const SnackBar(
-        content: Text('Este comprobante no es una imagen. Copia el enlace manualmente.'),
+        content: Text(
+            'Este comprobante no es una imagen. Copia el enlace manualmente.'),
       ),
     );
   }
@@ -333,6 +519,60 @@ class _DonationHistoryCard extends StatelessWidget {
         lower.endsWith('.png') ||
         lower.endsWith('.webp') ||
         lower.contains('image');
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final DonationStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color color;
+    late final String label;
+    late final IconData icon;
+    switch (status) {
+      case DonationStatus.approved:
+        color = AppColors.greenHope;
+        label = 'APROBADA';
+        icon = Icons.check_circle_rounded;
+        break;
+      case DonationStatus.pending:
+        color = AppColors.orangeAction;
+        label = 'PENDIENTE';
+        icon = Icons.hourglass_top_rounded;
+        break;
+      case DonationStatus.rejected:
+        color = AppColors.error;
+        label = 'RECHAZADA';
+        icon = Icons.cancel_rounded;
+        break;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppColors.space12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppColors.radiusRound),
+        border: Border.all(color: color.withValues(alpha: 0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: AppColors.fontSizeXs,
+              fontWeight: AppColors.fontWeightExtraBold,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -350,38 +590,40 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.only(bottom: AppColors.space8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            margin: const EdgeInsets.only(top: 1),
-            padding: const EdgeInsets.all(5),
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
               color: AppColors.bluePrimary.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(7),
+              borderRadius: BorderRadius.circular(AppColors.radiusSm),
             ),
-            child: Icon(icon, size: 13, color: AppColors.bluePrimary),
+            child: Icon(icon, size: 14, color: AppColors.bluePrimary),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppColors.space8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mediumText,
-                    fontSize: 11,
-                    letterSpacing: 0.2,
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.lightText.withValues(alpha: 0.95),
+                    fontSize: AppColors.fontSizeXs,
+                    fontWeight: AppColors.fontWeightBold,
+                    letterSpacing: 0.8,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: const TextStyle(
                     color: AppColors.darkText,
-                    fontSize: 13,
+                    fontSize: AppColors.fontSizeSm,
+                    fontWeight: AppColors.fontWeightSemiBold,
                     height: 1.35,
                   ),
                 ),
@@ -389,112 +631,6 @@ class _DetailRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DonationHistoryEmpty extends StatelessWidget {
-  const _DonationHistoryEmpty();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.bluePrimary.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.volunteer_activism_rounded,
-                size: 52,
-                color: AppColors.bluePrimary,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Sin donaciones aún',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.darkText,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Cuando registres tus aportes, podrás consultar los comprobantes y el estado de revisión aquí.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.mediumText,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DonationHistoryError extends StatelessWidget {
-  const _DonationHistoryError({required this.message, required this.onRetry});
-
-  final String message;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.error.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Algo salió mal',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppColors.darkText,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: AppColors.mediumText,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 22),
-            FilledButton.icon(
-              onPressed: () => onRetry(),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.bluePrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar', style: TextStyle(fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -508,68 +644,98 @@ class _ReceiptImageDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.all(AppColors.space16),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480, maxHeight: 560),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
-              child: Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Comprobante adjunto',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
-                        color: AppColors.darkText,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
+          child: Container(
+            color: AppColors.cardBackground,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    AppColors.space16,
+                    AppColors.space12,
+                    AppColors.space12,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(AppColors.space8),
+                        decoration: BoxDecoration(
+                          color: AppColors.bluePrimary.withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(AppColors.radiusSm),
+                        ),
+                        child: const Icon(Icons.receipt_long_rounded,
+                            color: AppColors.bluePrimary, size: 20),
                       ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: InteractiveViewer(
-                  minScale: 1,
-                  maxScale: 4,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, progress) {
-                      if (progress == null) {
-                        return child;
-                      }
-                      return Center(
-                        child: CircularProgressIndicator(value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
-                            : null),
-                      );
-                    },
-                    errorBuilder: (_, __, ___) => const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
+                      const SizedBox(width: AppColors.space12),
+                      const Expanded(
                         child: Text(
-                          'No pudimos cargar la imagen del comprobante.',
-                          textAlign: TextAlign.center,
+                          'Comprobante adjunto',
+                          style: TextStyle(
+                            color: AppColors.darkText,
+                            fontSize: AppColors.fontSizeMd,
+                            fontWeight: AppColors.fontWeightExtraBold,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: AppColors.grayLight.withValues(alpha: 0.6),
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () => Navigator.of(context).maybePop(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: Icon(Icons.close_rounded,
+                                color: AppColors.darkText, size: 18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                    child: InteractiveViewer(
+                      minScale: 1,
+                      maxScale: 4,
+                      child: AppNetworkImage(
+                        url: imageUrl,
+                        fit: BoxFit.contain,
+                        placeholder: const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.bluePrimary,
+                          ),
+                        ),
+                        errorWidget: const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(AppColors.space24),
+                            child: Text(
+                              'No pudimos cargar la imagen del comprobante.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.mediumText,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: AppColors.space16),
+              ],
             ),
-            const SizedBox(height: 16),
-          ],
+          ),
         ),
       ),
     );

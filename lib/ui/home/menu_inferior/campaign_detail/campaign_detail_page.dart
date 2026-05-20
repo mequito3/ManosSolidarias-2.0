@@ -16,9 +16,13 @@ import '../../../../models/campaign.dart';
 import '../../../../models/user_profile.dart';
 import '../../../../services/campaign_service.dart';
 import '../../../../theme/app_colors.dart';
+import '../../../widgets/app_buttons.dart';
+import '../../../widgets/app_network_image.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/glass_circle_button.dart';
 import '../../../widgets/highlight_wrapper.dart';
+import '../../../widgets/premium_app_bar.dart';
+import '../../../widgets/premium_hero.dart';
 
 part 'campaign_detail_view.dart';
 part 'story_section.dart';
@@ -633,11 +637,10 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
       body: FutureBuilder<_CampaignDetailBundle>(
         future: _bundleFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
+          // Si falló y aún no hay data parcial cacheada, mostramos el error.
+          // Si ya hubo un primer render exitoso (_lastDetail != null), preferimos
+          // seguir mostrando la vista vieja en lugar de bloquear con un error.
+          if (snapshot.hasError && _lastDetail == null) {
             return _DetailError(
               onRetry: () {
                 setState(() {
@@ -647,13 +650,18 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
             );
           }
 
+          // STALE-WHILE-REVALIDATE: mostramos la pantalla inmediatamente con
+          // los datos que ya tenemos del summary. Cuando llega el detalle
+          // completo, FutureBuilder rebuildea con los datos enriquecidos.
           final bundle = snapshot.data;
           final detail = bundle?.detail ??
+              _lastDetail ??
               CampaignDetail(
                 summary: summary,
                 longDescription: summary.shortDescription,
               );
-          final comments = _comments.isEmpty ? (bundle?.comments ?? const []) : _comments;
+          final comments =
+              _comments.isEmpty ? (bundle?.comments ?? const []) : _comments;
 
           _lastDetail = detail;
 

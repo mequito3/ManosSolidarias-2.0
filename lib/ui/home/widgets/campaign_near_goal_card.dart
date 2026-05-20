@@ -4,6 +4,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 /// Card premium para campañas "Cerca de la meta".
 /// Diseño: foto grande izquierda + título arriba + porcentaje gigante +
@@ -80,20 +81,17 @@ class CampaignNearGoalCard extends StatelessWidget {
                             size: 32,
                           ),
                         )
-                      : Image.network(
-                          campaign.coverUrl,
+                      : AppNetworkImage(
+                          url: campaign.coverUrl,
                           fit: BoxFit.cover,
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return Shimmer.fromColors(
-                              baseColor: AppColors.bluePrimary
-                                  .withValues(alpha: 0.06),
-                              highlightColor: AppColors.bluePrimary
-                                  .withValues(alpha: 0.14),
-                              child: Container(color: Colors.white),
-                            );
-                          },
-                          errorBuilder: (_, __, ___) => Container(
+                          placeholder: Shimmer.fromColors(
+                            baseColor: AppColors.bluePrimary
+                                .withValues(alpha: 0.06),
+                            highlightColor: AppColors.bluePrimary
+                                .withValues(alpha: 0.14),
+                            child: Container(color: Colors.white),
+                          ),
+                          errorWidget: Container(
                             color: AppColors.error.withValues(alpha: 0.08),
                             child: const Icon(
                               Icons.broken_image_rounded,

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../models/solicitud.dart';
 import '../../../theme/app_colors.dart';
 import '../../widgets/app_buttons.dart';
+import '../../widgets/app_network_image.dart';
 import 'solicitud_type_step.dart';
 
 const int solicitudTitleMinCharacters = 8;
@@ -141,7 +142,7 @@ class SolicitudFormStep extends StatelessWidget {
           ],
           SolicitudFormCard(
             children: [
-              _FormSectionHeader(
+              SolicitudFormSectionHeader(
                 title: config.sectionTitle,
                 subtitle: config.chipTitle,
                 showDivider: false,
@@ -265,7 +266,7 @@ class SolicitudFormStep extends StatelessWidget {
               ),
               if (!_isKermesse) ...[
                 const SizedBox(height: 24),
-                const _FormSectionHeader(
+                const SolicitudFormSectionHeader(
                   icon: Icons.payments_rounded,
                   title: 'Meta económica',
                   subtitle: 'Monto que necesitas recaudar en bolivianos',
@@ -301,7 +302,7 @@ class SolicitudFormStep extends StatelessWidget {
               ],
               if (_isCampania) ...[
                 const SizedBox(height: 28),
-                const _FormSectionHeader(
+                const SolicitudFormSectionHeader(
                   icon: Icons.favorite_rounded,
                   title: 'Datos del beneficiario',
                   subtitle: 'A nombre de quién se recauda',
@@ -398,7 +399,7 @@ class SolicitudFormStep extends StatelessWidget {
               ],
               if (_isCampania || _isKermesse) ...[
                 const SizedBox(height: 28),
-                _FormSectionHeader(
+                SolicitudFormSectionHeader(
                   icon: Icons.photo_library_rounded,
                   title: _isCampania
                       ? 'Evidencias fotográficas'
@@ -421,7 +422,7 @@ class SolicitudFormStep extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 28),
-              _FormSectionHeader(
+              SolicitudFormSectionHeader(
                 icon: Icons.wallpaper_rounded,
                 title: _isKermesse ? 'Portada del evento' : 'Portada de la campaña',
                 subtitle: 'Opcional · JPG o PNG · máx. 3 MB',
@@ -545,7 +546,7 @@ class SolicitudFormStep extends StatelessWidget {
     return [
       // ── Sección 3: Agenda y horario ─────────────────────────────────
       const SizedBox(height: 28),
-      const _FormSectionHeader(
+      const SolicitudFormSectionHeader(
         icon: Icons.event_rounded,
         title: 'Agenda y horario',
         subtitle: 'Fecha y hora de inicio del evento',
@@ -570,7 +571,7 @@ class SolicitudFormStep extends StatelessWidget {
       ),
       // ── Sección 4: Ubicación del evento ─────────────────────────────
       const SizedBox(height: 28),
-      const _FormSectionHeader(
+      const SolicitudFormSectionHeader(
         icon: Icons.place_rounded,
         title: 'Ubicación del evento',
         subtitle: 'Punto visible en el mapa público',
@@ -594,7 +595,7 @@ class SolicitudFormStep extends StatelessWidget {
       ),
       // ── Sección 5: Impacto social esperado ──────────────────────────
       const SizedBox(height: 28),
-      const _FormSectionHeader(
+      const SolicitudFormSectionHeader(
         icon: Icons.volunteer_activism_rounded,
         title: 'Impacto social esperado',
         subtitle: 'Beneficiarios y destino de los fondos',
@@ -622,7 +623,7 @@ class SolicitudFormStep extends StatelessWidget {
       ),
       // ── Sección 6: Programación y oferta ────────────────────────────
       const SizedBox(height: 28),
-      const _FormSectionHeader(
+      const SolicitudFormSectionHeader(
         icon: Icons.restaurant_menu_rounded,
         title: 'Programación y oferta',
         subtitle: 'Lo que ofrecerás a los asistentes',
@@ -665,7 +666,7 @@ class SolicitudFormStep extends StatelessWidget {
       ],
       // ── Sección 7: Aliados y patrocinadores ─────────────────────────
       const SizedBox(height: 28),
-      const _FormSectionHeader(
+      const SolicitudFormSectionHeader(
         icon: Icons.handshake_rounded,
         title: 'Aliados y patrocinadores',
         subtitle: 'Opcional · suma confianza al evento',
@@ -1030,14 +1031,12 @@ class SolicitudCoverImagePicker extends StatelessWidget {
         ),
       );
     } else if (imageUrl != null && imageUrl!.isNotEmpty) {
-      imageWidget = ClipRRect(
+      imageWidget = AppNetworkImage(
+        url: imageUrl!,
+        width: double.infinity,
+        height: 200,
+        fit: BoxFit.cover,
         borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          imageUrl!,
-          width: double.infinity,
-          height: 200,
-          fit: BoxFit.cover,
-        ),
       );
     } else {
       imageWidget = Container(
@@ -1525,9 +1524,9 @@ class _CoverActionChip extends StatelessWidget {
 //
 // Jerarquía puramente tipográfica: número de paso pequeño + título grande
 // + subtítulo. Sin badges ni iconos para no saturar el formulario.
-class _FormSectionHeader extends StatelessWidget {
-  const _FormSectionHeader({
-    // ignore: unused_element_parameter
+class SolicitudFormSectionHeader extends StatelessWidget {
+  const SolicitudFormSectionHeader({
+    super.key,
     this.icon,
     required this.title,
     this.subtitle,

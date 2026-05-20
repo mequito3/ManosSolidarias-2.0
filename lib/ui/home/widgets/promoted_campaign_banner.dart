@@ -4,6 +4,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 /// Banner de campaña patrocinada. Empresa con RSE corporativa "impulsa" una
 /// causa: paga visibilidad y la campaña recibe más donaciones.
@@ -156,20 +157,17 @@ class PromotedCampaignBanner extends StatelessWidget {
                                   size: 30,
                                 ),
                               )
-                            : Image.network(
-                                campaign.coverUrl,
+                            : AppNetworkImage(
+                                url: campaign.coverUrl,
                                 fit: BoxFit.cover,
-                                loadingBuilder: (_, child, progress) {
-                                  if (progress == null) return child;
-                                  return Shimmer.fromColors(
-                                    baseColor: sponsorColor
-                                        .withValues(alpha: 0.06),
-                                    highlightColor: sponsorColor
-                                        .withValues(alpha: 0.14),
-                                    child: Container(color: Colors.white),
-                                  );
-                                },
-                                errorBuilder: (_, __, ___) => Container(
+                                placeholder: Shimmer.fromColors(
+                                  baseColor: sponsorColor
+                                      .withValues(alpha: 0.06),
+                                  highlightColor: sponsorColor
+                                      .withValues(alpha: 0.14),
+                                  child: Container(color: Colors.white),
+                                ),
+                                errorWidget: Container(
                                   color: AppColors.error.withValues(alpha: 0.08),
                                   child: const Icon(
                                     Icons.broken_image_rounded,

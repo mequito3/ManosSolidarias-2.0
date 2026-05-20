@@ -307,7 +307,7 @@ class _HomePageState extends State<HomePage> {
 
   void _handleNotificationsTap() {
     if (!mounted) return;
-    _notificationController.loadNotifications(forceRefresh: true);
+    _notificationController.loadNotifications();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NotificationsPage(controller: _notificationController),
@@ -367,7 +367,11 @@ class _HomePageState extends State<HomePage> {
 
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => CompletedCampaignsPage(controller: _campaignController),
+        builder: (_) => CompletedCampaignsPage(
+          controller: _campaignController,
+          campaignService: _campaignService,
+          userProfile: _profile,
+        ),
       ),
     );
   }
@@ -454,6 +458,7 @@ class _HomePageState extends State<HomePage> {
       onOpenCampaign: _openCampaignDetail,
       onSupportCampaign: _handleSupport,
       onCompleteProfile: () => _openProfileSettings(),
+      campaignService: _campaignService,
       categoryFilter: _selectedCategory, // Filtro de categoría
       onClearCategoryFilter: _clearCategoryFilter,
     );
@@ -744,6 +749,7 @@ class _HomePageState extends State<HomePage> {
             onAdminTap: widget.onOpenAdminPanel,
           ),
           drawer: _HomeDrawer(
+            profile: _profile,
             onSignOut: _handleSignOut,
             onFavoritesTap: _openFavorites,
             onMyRequestsTap: _openMyRequests,
@@ -1058,6 +1064,7 @@ class _NavItem extends StatelessWidget {
 
 class _HomeDrawer extends StatefulWidget {
   const _HomeDrawer({
+    required this.profile,
     required this.onSignOut,
     required this.onFavoritesTap,
     required this.onMyRequestsTap,
@@ -1069,6 +1076,7 @@ class _HomeDrawer extends StatefulWidget {
     required this.onCategorySelected,
   });
 
+  final UserProfile profile;
   final Future<void> Function() onSignOut;
   final VoidCallback onFavoritesTap;
   final VoidCallback onMyRequestsTap;
@@ -1106,129 +1114,43 @@ class _HomeDrawerState extends State<_HomeDrawer> {
 
     return Drawer(
       backgroundColor: AppColors.lightBackground,
+      elevation: 0,
       child: Column(
         children: [
-          // ── Gradient header ────────────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Stack(
-                children: [
-                  // Decorative rings
-                  Positioned(
-                    right: -24,
-                    top: -12,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
-                          width: 28,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    right: 40,
-                    bottom: -18,
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
-                          width: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Content
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const AppLogo(
-                          symbolSize: 48,
-                          textStyle: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Juntos hacemos la diferencia',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white.withValues(alpha: 0.95),
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Menu items ────────────────────────────────────────────────────
+          _DrawerHeader(profile: widget.profile),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(top: 12, bottom: 12),
+              padding: const EdgeInsets.only(top: 20, bottom: 8),
               children: [
-                // ── Mi cuenta ──────────────────────────────────────────────
                 _DrawerSectionLabel(label: 'Mi cuenta'),
                 _DrawerTile(
-                  icon: Icons.account_circle_rounded,
-                  color: AppColors.bluePrimary,
+                  icon: Icons.person_outline_rounded,
+                  iconColor: AppColors.bluePrimary,
                   title: 'Perfil',
-                  subtitle: 'Actualiza tu información personal',
+                  subtitle: 'Actualiza tu información',
                   onTap: widget.onProfileTap,
                 ),
                 _DrawerTile(
-                  icon: Icons.favorite_rounded,
-                  color: const Color(0xFFE91E63),
+                  icon: Icons.favorite_border_rounded,
+                  iconColor: const Color(0xFFE91E63),
                   title: 'Mis favoritos',
-                  subtitle: 'Accede rápido a tus campañas guardadas',
+                  subtitle: 'Campañas guardadas',
                   onTap: widget.onFavoritesTap,
                 ),
                 _DrawerTile(
-                  icon: Icons.campaign_rounded,
-                  color: AppColors.orangeAction,
+                  icon: Icons.campaign_outlined,
+                  iconColor: AppColors.orangeAction,
                   title: 'Mis solicitudes',
-                  subtitle: 'Gestiona las campañas que creaste',
+                  subtitle: 'Campañas que creaste',
                   onTap: widget.onMyRequestsTap,
                 ),
 
-                // ── Explorar ───────────────────────────────────────────────
                 if (availableCategories.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 18),
                   _DrawerSectionLabel(label: 'Explorar'),
                   _DrawerTile(
-                    icon: Icons.category_rounded,
-                    color: AppColors.orangeAction,
+                    icon: Icons.grid_view_rounded,
+                    iconColor: AppColors.orangeAction,
                     title: 'Categorías',
                     subtitle: '${availableCategories.length} disponibles',
                     trailing: AnimatedRotation(
@@ -1236,7 +1158,7 @@ class _HomeDrawerState extends State<_HomeDrawer> {
                       duration: const Duration(milliseconds: 200),
                       child: Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.bluePrimary.withValues(alpha: 0.6),
+                        color: AppColors.darkText.withValues(alpha: 0.45),
                         size: 20,
                       ),
                     ),
@@ -1260,7 +1182,7 @@ class _HomeDrawerState extends State<_HomeDrawer> {
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.fromLTRB(
-                                      72, 0, 20, 0),
+                                      54, 0, 20, 0),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                         vertical: 11),
@@ -1268,7 +1190,7 @@ class _HomeDrawerState extends State<_HomeDrawer> {
                                       border: Border(
                                         bottom: BorderSide(
                                           color: AppColors.dividerColor
-                                              .withValues(alpha: 0.5),
+                                              .withValues(alpha: 0.4),
                                         ),
                                       ),
                                     ),
@@ -1277,28 +1199,21 @@ class _HomeDrawerState extends State<_HomeDrawer> {
                                         Expanded(
                                           child: Text(
                                             category,
-                                            style: const TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: AppColors.darkText,
+                                            style: TextStyle(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w500,
+                                              color: AppColors.darkText
+                                                  .withValues(alpha: 0.85),
                                             ),
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 9, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            gradient: AppColors.primaryGradient,
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            '$count',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: Colors.white,
-                                            ),
+                                        Text(
+                                          '$count',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.darkText
+                                                .withValues(alpha: 0.4),
                                           ),
                                         ),
                                       ],
@@ -1312,76 +1227,225 @@ class _HomeDrawerState extends State<_HomeDrawer> {
                   ),
                 ],
 
-                // ── Actividad ──────────────────────────────────────────────
-                const SizedBox(height: 4),
+                const SizedBox(height: 18),
                 _DrawerSectionLabel(label: 'Actividad'),
                 _DrawerTile(
-                  icon: Icons.emoji_events_rounded,
-                  color: const Color(0xFFFFB300),
+                  icon: Icons.emoji_events_outlined,
+                  iconColor: const Color(0xFFFFB300),
                   title: 'Ranking solidario',
-                  subtitle: 'Top 3 de donantes y trofeos',
+                  subtitle: 'Top donantes y trofeos',
                   onTap: widget.onViewRewards,
                 ),
                 _DrawerTile(
-                  icon: Icons.check_circle_rounded,
-                  color: AppColors.greenSuccess,
+                  icon: Icons.check_circle_outline_rounded,
+                  iconColor: AppColors.greenSuccess,
                   title: 'Campañas completadas',
-                  subtitle: 'Celebra las metas alcanzadas',
+                  subtitle: 'Metas alcanzadas',
                   onTap: widget.onViewCompletedCampaigns,
                 ),
                 _DrawerTile(
                   icon: Icons.history_rounded,
-                  color: AppColors.blueSecondary,
+                  iconColor: AppColors.blueSecondary,
                   title: 'Historial de donaciones',
                   subtitle: 'Recibos y comprobantes',
                   onTap: widget.onViewDonationHistory,
                 ),
+                const SizedBox(height: 12),
               ],
             ),
           ),
 
-          // ── Logout footer ─────────────────────────────────────────────────
-          Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEBEE),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.error.withValues(alpha: 0.15),
-              ),
-            ),
-            child: ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              leading: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.error.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.logout_rounded,
-                    color: AppColors.error, size: 20),
-              ),
-              title: const Text(
-                'Cerrar sesión',
-                style: TextStyle(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  letterSpacing: -0.1,
+          // ── Logout fijo abajo ─────────────────────────────────────────────
+          SafeArea(
+            top: false,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.lightBackground,
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.dividerColor.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
                 ),
               ),
-              trailing: Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 14,
-                color: AppColors.error.withValues(alpha: 0.5),
+              child: _DrawerTile(
+                icon: Icons.logout_rounded,
+                iconColor: AppColors.error,
+                title: 'Cerrar sesión',
+                subtitle: 'Salir de tu cuenta',
+                titleColor: AppColors.error,
+                onTap: widget.onSignOut,
               ),
-              onTap: widget.onSignOut,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Drawer header ─────────────────────────────────────────────────────────────
+
+class _DrawerHeader extends StatelessWidget {
+  const _DrawerHeader({required this.profile});
+
+  final UserProfile profile;
+
+  String get _displayName {
+    final name = profile.displayName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Tu cuenta';
+  }
+
+  String? get _email {
+    return Supabase.instance.client.auth.currentUser?.email;
+  }
+
+  String get _initials {
+    final name = profile.displayName?.trim() ?? '';
+    if (name.isEmpty) {
+      final email = _email ?? '';
+      return email.isNotEmpty ? email[0].toUpperCase() : 'M';
+    }
+    final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts[1][0]).toUpperCase();
+  }
+
+  String get _roleLabel => profile.isAdmin ? 'ADMINISTRADOR' : 'MIEMBRO';
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = profile.avatarUrl?.trim();
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    final email = _email;
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: AppColors.primaryGradient,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+          child: Row(
+            children: [
+              // Avatar 56px a la izquierda
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.14),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: hasAvatar
+                    ? ClipOval(
+                        child: Image.network(
+                          avatarUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _InitialsAvatar(
+                            initials: _initials,
+                          ),
+                        ),
+                      )
+                    : _InitialsAvatar(initials: _initials),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _displayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                    ),
+                    if (email != null && email.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.78),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.fade,
+                        softWrap: false,
+                      ),
+                    ],
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        _roleLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.bluePrimary, AppColors.blueSecondary],
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.3,
+          ),
+        ),
       ),
     );
   }
@@ -1415,94 +1479,88 @@ class _DrawerSectionLabel extends StatelessWidget {
 class _DrawerTile extends StatelessWidget {
   const _DrawerTile({
     required this.icon,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
-    this.color = AppColors.bluePrimary,
+    this.titleColor,
     this.trailing,
     this.onTap,
     this.popOnTap = true,
   });
 
   final IconData icon;
-  final Color color;
+  final Color iconColor;
   final String title;
   final String subtitle;
+  final Color? titleColor;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool popOnTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () {
-            if (popOnTap) {
-              Navigator.of(context).pop();
-              // Esperar que la animación del drawer termine antes de iniciar la transición visual
-              Future.delayed(const Duration(milliseconds: 250), () {
-                onTap?.call();
-              });
-            } else {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          if (popOnTap) {
+            Navigator.of(context).pop();
+            Future.delayed(const Duration(milliseconds: 250), () {
               onTap?.call();
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                // Colored icon badge
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          letterSpacing: -0.2,
-                          color: AppColors.darkText,
-                        ),
+            });
+          } else {
+            onTap?.call();
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: iconColor,
+                size: 22,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        letterSpacing: -0.3,
+                        color: titleColor ?? AppColors.darkText,
+                        height: 1.2,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.darkText.withValues(alpha: 0.45),
-                        ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: (titleColor ?? AppColors.darkText)
+                            .withValues(alpha: 0.5),
+                        height: 1.2,
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                if (trailing != null) ...[
-                  const SizedBox(width: 8),
-                  trailing!,
-                ] else
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    size: 18,
-                    color: AppColors.darkText.withValues(alpha: 0.25),
-                  ),
-              ],
-            ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 8),
+                trailing!,
+              ] else
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 16,
+                  color: AppColors.darkText.withValues(alpha: 0.25),
+                ),
+            ],
           ),
         ),
       ),

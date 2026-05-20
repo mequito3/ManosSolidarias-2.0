@@ -29,6 +29,33 @@ class NotificationEntry {
   bool get isUnread => !isRead;
 
   String get typeLabel {
+    const labels = {
+      'donacion_aprobada': 'Donación aprobada',
+      'donacion_confirmada': 'Donación confirmada',
+      'donacion_rechazada': 'Donación rechazada',
+      'nuevo_comentario': 'Nuevo comentario',
+      'nuevo_favorito': 'Nuevo favorito',
+      'seguimiento_campania': 'Campaña que sigues',
+      'seguimiento_meta_completa': 'Meta alcanzada',
+      'seguimiento_finalizando': 'Campaña por finalizar',
+      'hito_25': '25% recaudado',
+      'hito_50': 'Mitad de la meta',
+      'hito_75': '75% recaudado',
+      'meta_alcanzada': 'Meta alcanzada',
+      'ranking_top_1': 'Top 1 del ranking',
+      'ranking_top_2': 'Top 2 del ranking',
+      'ranking_top_3': 'Top 3 del ranking',
+      'solicitud_aprobada': 'Solicitud aprobada',
+      'solicitud_rechazada': 'Solicitud rechazada',
+      'organizacion_aprobada': 'Organización aprobada',
+      'organizacion_rechazada': 'Organización rechazada',
+      'campania_publicada': 'Campaña publicada',
+      'campania_finalizando': 'Campaña por finalizar',
+    };
+    final mapped = labels[type.toLowerCase()];
+    if (mapped != null) {
+      return mapped;
+    }
     final normalized = type.replaceAll('_', ' ').trim();
     if (normalized.isEmpty) {
       return 'Notificación';

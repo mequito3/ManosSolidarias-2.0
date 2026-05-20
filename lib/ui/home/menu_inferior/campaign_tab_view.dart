@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import '../../../controllers/campaign_controller.dart';
 import '../../../models/campaign.dart';
 import '../../../models/user_profile.dart';
+import '../../../services/campaign_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../widgets/app_buttons.dart';
+import '../../widgets/app_network_image.dart';
 import '../widgets/campaign_card.dart';
 import '../widgets/campaign_near_goal_card.dart';
 import '../widgets/campaign_story_strip.dart';
 import '../widgets/featured_campaign_hero.dart';
 import '../widgets/promoted_campaign_banner.dart';
 import '../widgets/sponsor_strip.dart';
+import '../widgets/evidence_pending_banner.dart';
 import 'shared_states.dart';
 
 class CampaignTabView extends StatelessWidget {
@@ -25,6 +28,7 @@ class CampaignTabView extends StatelessWidget {
     required this.onOpenCampaign,
     required this.onSupportCampaign,
     required this.onCompleteProfile,
+    this.campaignService,
     this.categoryFilter,
     this.onClearCategoryFilter,
   });
@@ -38,6 +42,9 @@ class CampaignTabView extends StatelessWidget {
   final ValueChanged<CampaignSummary> onOpenCampaign;
   final ValueChanged<CampaignSummary> onSupportCampaign;
   final RetryCallback onCompleteProfile;
+
+  /// Necesario para mostrar el banner de evidencias pendientes (opcional).
+  final CampaignService? campaignService;
   final String? categoryFilter;
   final VoidCallback? onClearCategoryFilter;
 
@@ -105,6 +112,14 @@ class CampaignTabView extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 20),
               child: ProfileIncompleteBanner(onCompleteProfile: onCompleteProfile),
             ),
+          if (campaignService != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: EvidencePendingBanner(
+                campaignService: campaignService!,
+                userProfile: profile,
+              ),
+            ),
           // Chip de filtro activo
           if (categoryFilter != null && categoryFilter!.isNotEmpty)
             Padding(
@@ -114,13 +129,6 @@ class CampaignTabView extends StatelessWidget {
                 onClear: onClearCategoryFilter,
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: SortToggleBar(
-              selectedOption: sortOption,
-              onSelected: onSortSelected,
-            ),
-          ),
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -179,6 +187,11 @@ class CampaignTabView extends StatelessWidget {
               subtitle: 'Explora la base completa de iniciativas activas.',
             ),
             const SizedBox(height: 12),
+            SortToggleBar(
+              selectedOption: sortOption,
+              onSelected: onSortSelected,
+            ),
+            const SizedBox(height: 16),
             ..._buildAllCampaignsWithAds(visibleCampaigns, featured),
           ],
           if (visibleCampaigns.isNotEmpty && campaigns.length > visibleCampaigns.length)
@@ -710,10 +723,10 @@ class CampaignHeadlineTile extends StatelessWidget {
                             ),
                           ),
                           child: campaign.coverUrl.isNotEmpty
-                              ? Image.network(
-                                  campaign.coverUrl,
+                              ? AppNetworkImage(
+                                  url: campaign.coverUrl,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => _buildPlaceholderImage(imageSize),
+                                  errorWidget: _buildPlaceholderImage(imageSize),
                                 )
                               : _buildPlaceholderImage(imageSize),
                         ),

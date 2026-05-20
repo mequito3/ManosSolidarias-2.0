@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 /// Hero protagonista del Home: una sola campaña destacada con foto grande,
 /// gradient overlay, badge de urgencia, progreso y CTA.
@@ -308,10 +309,10 @@ class FeaturedCampaignHero extends StatelessWidget {
         ),
       );
     }
-    return Image.network(
-      campaign.coverUrl,
+    return AppNetworkImage(
+      url: campaign.coverUrl,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => Container(
+      errorWidget: Container(
         color: AppColors.bluePrimary.withValues(alpha: 0.1),
         child: const Icon(Icons.broken_image_rounded,
             color: AppColors.error, size: 48),

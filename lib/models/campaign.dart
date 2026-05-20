@@ -1,5 +1,62 @@
 import 'package:flutter/foundation.dart';
 
+/// Estado de verificación de evidencias post-meta de una campaña.
+enum VerificationStatus {
+  /// La campaña aún no alcanzó la meta — no aplica verificación.
+  noAplica,
+
+  /// La meta se alcanzó pero el creador aún no subió evidencia.
+  pendienteEvidencia,
+
+  /// El creador subió evidencia y el admin está revisando.
+  enRevision,
+
+  /// Admin aprobó la evidencia: campaña verificada.
+  verificada,
+
+  /// Pasó el plazo de 14 días sin evidencia aprobada.
+  sinVerificar,
+}
+
+extension VerificationStatusX on VerificationStatus {
+  static VerificationStatus fromDb(String? raw) {
+    switch (raw) {
+      case 'pendiente_evidencia':
+        return VerificationStatus.pendienteEvidencia;
+      case 'en_revision':
+        return VerificationStatus.enRevision;
+      case 'verificada':
+        return VerificationStatus.verificada;
+      case 'sin_verificar':
+        return VerificationStatus.sinVerificar;
+      case 'no_aplica':
+      default:
+        return VerificationStatus.noAplica;
+    }
+  }
+
+  String get dbValue {
+    switch (this) {
+      case VerificationStatus.pendienteEvidencia:
+        return 'pendiente_evidencia';
+      case VerificationStatus.enRevision:
+        return 'en_revision';
+      case VerificationStatus.verificada:
+        return 'verificada';
+      case VerificationStatus.sinVerificar:
+        return 'sin_verificar';
+      case VerificationStatus.noAplica:
+        return 'no_aplica';
+    }
+  }
+
+  bool get isVerified => this == VerificationStatus.verificada;
+  bool get isPendingEvidence =>
+      this == VerificationStatus.pendienteEvidencia ||
+      this == VerificationStatus.enRevision;
+  bool get isUnverified => this == VerificationStatus.sinVerificar;
+}
+
 class CampaignSummary {
   CampaignSummary({
     required this.id,
@@ -21,6 +78,11 @@ class CampaignSummary {
     this.status,
     this.requestId,
     this.isAnonymous = false,
+    this.verificationStatus = VerificationStatus.noAplica,
+    this.metaReachedAt,
+    this.evidenceDeadline,
+    this.evidenceCount = 0,
+    this.rejectionReason,
   });
 
   factory CampaignSummary.fromPublicView(Map<String, dynamic> json) {
@@ -51,6 +113,14 @@ class CampaignSummary {
       status: json['estado'] as String? ?? json['status'] as String?,
       requestId: json['solicitud_id'] as String? ?? json['request_id'] as String?,
       isAnonymous: (json['es_anonimo'] as bool?) ?? (json['is_anonymous'] as bool?) ?? false,
+      verificationStatus:
+          VerificationStatusX.fromDb(json['verification_status'] as String?),
+      metaReachedAt: _parseDate(json['meta_alcanzada_at']),
+      evidenceDeadline: _parseDate(
+        json['evidencias_hasta'] ?? json['evidence_deadline'],
+      ),
+      evidenceCount: (json['evidence_count'] as num?)?.toInt() ?? 0,
+      rejectionReason: json['rejection_reason'] as String?,
     );
   }
 
@@ -73,6 +143,24 @@ class CampaignSummary {
   final String? status;
   final String? requestId;
   final bool isAnonymous;
+  final VerificationStatus verificationStatus;
+  final DateTime? metaReachedAt;
+  final DateTime? evidenceDeadline;
+  final int evidenceCount;
+  final String? rejectionReason;
+
+  /// Días restantes para que el creador suba evidencia. Null si no aplica.
+  int? get daysUntilEvidenceDeadline {
+    final deadline = evidenceDeadline;
+    if (deadline == null) return null;
+    final diff = deadline.difference(DateTime.now());
+    return diff.inDays;
+  }
+
+  bool get hasEvidenceDeadlineExpired {
+    final deadline = evidenceDeadline;
+    return deadline != null && DateTime.now().isAfter(deadline);
+  }
 
   /// Nombre del beneficiario/organizador a mostrar en vista publica.
   /// Si la campania es anonima, se reemplaza por "Beneficiario anonimo".
@@ -121,7 +209,15 @@ class CampaignSummary {
     };
   }
 
-  CampaignSummary copyWith({bool? isFavorite, String? status}) {
+  CampaignSummary copyWith({
+    bool? isFavorite,
+    String? status,
+    VerificationStatus? verificationStatus,
+    DateTime? metaReachedAt,
+    DateTime? evidenceDeadline,
+    int? evidenceCount,
+    String? rejectionReason,
+  }) {
     return CampaignSummary(
       id: id,
       slug: slug,
@@ -142,6 +238,11 @@ class CampaignSummary {
       status: status ?? this.status,
       requestId: requestId,
       isAnonymous: isAnonymous,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      metaReachedAt: metaReachedAt ?? this.metaReachedAt,
+      evidenceDeadline: evidenceDeadline ?? this.evidenceDeadline,
+      evidenceCount: evidenceCount ?? this.evidenceCount,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
     );
   }
 
@@ -358,6 +459,39 @@ class CampaignUpdate {
   final DateTime publishedAt;
 }
 
+/// Tipos aceptados por el check constraint `evidencias_tipo_check` en la DB.
+enum EvidenceType { foto, video, documento, otro }
+
+extension EvidenceTypeX on EvidenceType {
+  static EvidenceType fromDb(String? raw) {
+    switch (raw) {
+      case 'foto':
+        return EvidenceType.foto;
+      case 'video':
+        return EvidenceType.video;
+      case 'documento':
+      case 'pdf': // tolerar valor histórico
+        return EvidenceType.documento;
+      case 'otro':
+      default:
+        return EvidenceType.otro;
+    }
+  }
+
+  String get dbValue {
+    switch (this) {
+      case EvidenceType.foto:
+        return 'foto';
+      case EvidenceType.video:
+        return 'video';
+      case EvidenceType.documento:
+        return 'documento';
+      case EvidenceType.otro:
+        return 'otro';
+    }
+  }
+}
+
 class CampaignEvidence {
   CampaignEvidence({
     required this.id,
@@ -365,16 +499,30 @@ class CampaignEvidence {
     required this.url,
     this.description,
     this.thumbnailUrl,
+    this.campaignId,
+    this.uploadedBy,
+    this.storagePath,
+    this.filename,
+    this.mimeType,
+    this.fileSizeBytes,
+    this.createdAt,
   });
 
   factory CampaignEvidence.fromJson(Map<String, dynamic> json) {
-    final type = json['tipo'] as String? ?? json['type'] as String? ?? 'unknown';
+    final rawType = json['tipo'] as String? ?? json['type'] as String?;
     return CampaignEvidence(
       id: json['id']?.toString() ?? UniqueKey().toString(),
-      type: type,
+      type: rawType ?? 'otro',
       url: json['url'] as String? ?? json['archivo_url'] as String? ?? '',
       description: json['descripcion'] as String? ?? json['description'] as String?,
       thumbnailUrl: json['thumbnail_url'] as String?,
+      campaignId: json['campania_id'] as String?,
+      uploadedBy: json['uploaded_by'] as String?,
+      storagePath: json['storage_path'] as String?,
+      filename: json['filename'] as String?,
+      mimeType: json['mime_type'] as String?,
+      fileSizeBytes: (json['file_size_bytes'] as num?)?.toInt(),
+      createdAt: CampaignSummary._parseDate(json['created_at']),
     );
   }
 
@@ -383,6 +531,27 @@ class CampaignEvidence {
   final String url;
   final String? description;
   final String? thumbnailUrl;
+  final String? campaignId;
+  final String? uploadedBy;
+  final String? storagePath;
+  final String? filename;
+  final String? mimeType;
+  final int? fileSizeBytes;
+  final DateTime? createdAt;
+
+  EvidenceType get typeEnum => EvidenceTypeX.fromDb(type);
+
+  bool get isImage =>
+      typeEnum == EvidenceType.foto ||
+      (mimeType?.startsWith('image/') ?? false);
+  bool get isVideo =>
+      typeEnum == EvidenceType.video ||
+      (mimeType?.startsWith('video/') ?? false);
+  bool get isPdf =>
+      mimeType == 'application/pdf' ||
+      (filename?.toLowerCase().endsWith('.pdf') ?? false);
+  bool get isDocument =>
+      typeEnum == EvidenceType.documento && !isPdf;
 }
 
 class CampaignComment {

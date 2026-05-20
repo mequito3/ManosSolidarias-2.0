@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../controllers/organization_controller.dart';
 import '../../../models/organization.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 import '../widgets/home_section.dart';
 import '../widgets/organization_card.dart';
 import 'shared_states.dart';
@@ -276,10 +277,10 @@ class _FeaturedOrgHero extends StatelessWidget {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(17),
                               child: organization.hasLogo
-                                  ? Image.network(
-                                      organization.logoUrl!,
+                                  ? AppNetworkImage(
+                                      url: organization.logoUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Container(
+                                      errorWidget: Container(
                                         color: AppColors.bluePrimary
                                             .withValues(alpha: 0.08),
                                         child: const Icon(

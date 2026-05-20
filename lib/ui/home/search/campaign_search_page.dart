@@ -6,6 +6,7 @@ import '../../../models/campaign.dart';
 import '../../../models/category.dart' as my_category;
 import '../../../services/campaign_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 class CampaignSearchPage extends StatefulWidget {
   const CampaignSearchPage({
@@ -462,12 +463,12 @@ class _SearchResultTileState extends State<_SearchResultTile> {
     if (widget.campaign.coverUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          widget.campaign.coverUrl,
+        child: AppNetworkImage(
+          url: widget.campaign.coverUrl,
           width: 80,
           height: 80,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => _buildFallbackIcon(),
+          errorWidget: _buildFallbackIcon(),
         ),
       );
     }

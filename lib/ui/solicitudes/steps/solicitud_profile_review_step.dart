@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../models/solicitud.dart';
 import '../../../models/user_profile.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 class SolicitudProfileReviewStep extends StatelessWidget {
   const SolicitudProfileReviewStep({
@@ -669,46 +670,34 @@ class _QrPreview extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             color: AppColors.bluePrimary.withValues(alpha: 0.04),
-            child: Image.network(
-              url,
+            child: AppNetworkImage(
+              url: url,
               fit: BoxFit.contain,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) {
-                  return child;
-                }
-                final total = loadingProgress.expectedTotalBytes;
-                final loaded = loadingProgress.cumulativeBytesLoaded;
-                return Center(
-                  child: CircularProgressIndicator(
-                    value: total != null && total > 0 ? loaded / total : null,
-                    color: AppColors.bluePrimary,
-                  ),
-                );
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.white,
-                  alignment: Alignment.center,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.broken_image_outlined,
-                        color: AppColors.darkText.withValues(alpha: 0.6),
-                        size: 32,
+              placeholder: const Center(
+                child: CircularProgressIndicator(color: AppColors.bluePrimary),
+              ),
+              errorWidget: Container(
+                color: Colors.white,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.broken_image_outlined,
+                      color: AppColors.darkText.withValues(alpha: 0.6),
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No pudimos cargar el código QR.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.7),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'No pudimos cargar el código QR.',
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 /// Strip horizontal estilo Instagram Stories: cada campaña aparece como una
 /// burbuja circular con foto, anillo de progreso y título debajo.
@@ -115,10 +116,10 @@ class _StoryItem extends StatelessWidget {
                               size: 26,
                             ),
                           )
-                        : Image.network(
-                            campaign.coverUrl,
+                        : AppNetworkImage(
+                            url: campaign.coverUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorWidget: Container(
                               color:
                                   AppColors.error.withValues(alpha: 0.08),
                               child: const Icon(

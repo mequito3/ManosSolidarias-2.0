@@ -172,21 +172,18 @@ class _CoverHeader extends StatelessWidget {
               height: 260,
               width: double.infinity,
               child: hasImage
-              ? Image.network(
-                  summary.coverUrl,
+              ? AppNetworkImage(
+                  url: summary.coverUrl,
                   fit: BoxFit.cover,
-                  loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
-                    return Container(
-                      color: AppColors.bluePrimary.withValues(alpha: 0.06),
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.bluePrimary,
-                        ),
+                  placeholder: Container(
+                    color: AppColors.bluePrimary.withValues(alpha: 0.06),
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.bluePrimary,
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 )
               : Container(
                   decoration: BoxDecoration(
@@ -711,82 +708,70 @@ class _MilestoneProgressBar extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Barra base + barra de progreso + diamantes superpuestos
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            return SizedBox(
-              height: 18,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.centerLeft,
-                children: [
-                  // Track base
-                  Container(
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: bgColor,
-                      borderRadius: BorderRadius.circular(99),
-                    ),
-                  ),
-                  // Fill
-                  FractionallySizedBox(
-                    widthFactor: clamped,
-                    child: Container(
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(99),
-                      ),
-                    ),
-                  ),
-                  // Hitos
-                  for (final m in _milestones)
-                    Positioned(
-                      left: (width * m) - 9,
-                      child: _MilestoneDiamond(
-                        reached: clamped >= m,
-                        color: color,
-                      ),
-                    ),
-                ],
+        // Barra base + barra de progreso + diamantes superpuestos.
+        // Uso `Align(alignment: Alignment(2m - 1, 0))` para que en m=1.0 el
+        // diamante quede con su lado derecho pegado al borde, sin desbordar.
+        SizedBox(
+          height: 18,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.centerLeft,
+            children: [
+              // Track base
+              Container(
+                height: 10,
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(99),
+                ),
               ),
-            );
-          },
+              // Fill
+              FractionallySizedBox(
+                widthFactor: clamped,
+                child: Container(
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              // Hitos — Align maneja los bordes automáticamente
+              for (final m in _milestones)
+                Align(
+                  alignment: Alignment(2 * m - 1, 0),
+                  child: _MilestoneDiamond(
+                    reached: clamped >= m,
+                    color: color,
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
-        // Labels de hitos
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            return SizedBox(
-              height: 14,
-              child: Stack(
-                children: [
-                  for (final m in _milestones)
-                    Positioned(
-                      left: (width * m) - 16,
-                      child: SizedBox(
-                        width: 32,
-                        child: Text(
-                          '${(m * 100).toInt()}%',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight:
-                                clamped >= m ? FontWeight.w800 : FontWeight.w600,
-                            color: clamped >= m
-                                ? color
-                                : AppColors.darkText.withValues(alpha: 0.4),
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ),
+        // Labels de hitos — mismo patrón Align para no cortar el "100%"
+        SizedBox(
+          height: 14,
+          child: Stack(
+            children: [
+              for (final m in _milestones)
+                Align(
+                  alignment: Alignment(2 * m - 1, 0),
+                  child: Text(
+                    '${(m * 100).toInt()}%',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight:
+                          clamped >= m ? FontWeight.w800 : FontWeight.w600,
+                      color: clamped >= m
+                          ? color
+                          : AppColors.darkText.withValues(alpha: 0.4),
+                      letterSpacing: 0.3,
                     ),
-                ],
-              ),
-            );
-          },
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );

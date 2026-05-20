@@ -7,6 +7,7 @@ import '../services/profile_service.dart';
 import '../services/donor_trophy_service.dart';
 import '../controllers/donor_trophy_controller.dart';
 import '../ui/home/menu_inferior/campaign_detail/campaign_detail_page.dart';
+import '../ui/home/campaign_evidence_page.dart';
 import '../pages/organization_detail_page.dart';
 import '../ui/rewards/donor_trophies_page.dart';
 
@@ -48,6 +49,8 @@ class NotificationNavigationHelper {
       case 'donaciones_confirmada': // Typo común
       case 'donacion_aprobada':
       case 'donation_approved':
+      case 'donacion_rechazada':
+      case 'donation_rejected':
         debugPrint('🎯 Navegando a campaña por donación');
         await _navigateToCampaign(context, payload);
         break;
@@ -102,6 +105,17 @@ class NotificationNavigationHelper {
       case 'goal_reached':
         debugPrint('🎯 Navegando a campaña por hito alcanzado');
         await _navigateToCampaign(context, payload);
+        break;
+
+      // Notificaciones de evidencias -> abrir CampaignEvidencePage
+      case 'evidencia_solicitada':
+      case 'evidencia_recordatorio_7d':
+      case 'evidencia_recordatorio_3d':
+      case 'evidencia_recordatorio_1d':
+      case 'evidencia_rechazada':
+      case 'evidencia_aprobada':
+        debugPrint('📎 Navegando a página de evidencias');
+        await _navigateToEvidence(context, payload);
         break;
 
       // Notificaciones de reconocimientos/trofeos -> abrir perfil o trofeos
@@ -272,10 +286,23 @@ class NotificationNavigationHelper {
 
       debugPrint('✅ PASO 4: Obteniendo campaña con ID: $id');
       final campaignDetail = await campaignService.fetchCampaignDetail(id);
-      
+
       if (campaignDetail == null) {
-        debugPrint('❌ fetchCampaignDetail retornó NULL para ID: $id');
-        throw Exception('Campaña no encontrada en la base de datos');
+        debugPrint('ℹ️ Campaña no existe (probablemente eliminada): $id');
+        if (!context.mounted) return;
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Esta campaña ya no está disponible.\nPuede que haya sido eliminada o pausada.',
+            ),
+            backgroundColor: Colors.grey.shade800,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        return;
       }
       debugPrint('✅ Campaña obtenida: ${campaignDetail.summary.title}');
       debugPrint('✅ Estado de campaña: ${campaignDetail.summary.status}');
@@ -323,6 +350,76 @@ class NotificationNavigationHelper {
       _showErrorSnackbar(
         context, 
         'No se pudo cargar la campaña.\nMotivo: ${error.toString().replaceAll('Exception: ', '')}',
+      );
+    }
+  }
+
+  /// Navega a la página de evidencias de una campaña (subir/revisar).
+  static Future<void> _navigateToEvidence(
+    BuildContext context,
+    Map<String, dynamic> payload,
+  ) async {
+    final campaignId = payload['campaign_id'] as String?;
+    if (campaignId == null) {
+      _showErrorSnackbar(context, 'La notificación no contiene la campaña.');
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+        ),
+      ),
+    );
+
+    try {
+      final client = Supabase.instance.client;
+      final campaignService = CampaignService(client);
+      final profileService = ProfileService(client);
+
+      final userId = client.auth.currentUser?.id;
+      if (userId == null) {
+        throw Exception('Usuario no autenticado');
+      }
+      final userProfile = await profileService.fetchProfileByUserId(userId);
+      final campaignDetail = await campaignService.fetchCampaignDetail(campaignId);
+
+      if (campaignDetail == null) {
+        if (!context.mounted) return;
+        try {
+          Navigator.of(context).pop();
+        } catch (_) {}
+        _showErrorSnackbar(context, 'Esta campaña ya no está disponible.');
+        return;
+      }
+
+      if (!context.mounted) return;
+      Navigator.of(context).pop(); // cierra el loader
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => CampaignEvidencePage(
+            campaign: campaignDetail.summary,
+            campaignService: campaignService,
+            currentUserId: userId,
+            isAdmin: userProfile?.isAdmin ?? false,
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('❌ Error al cargar campaña para evidencias: $error');
+      if (!context.mounted) return;
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {}
+      _showErrorSnackbar(
+        context,
+        'No se pudo abrir la página de evidencias.',
       );
     }
   }

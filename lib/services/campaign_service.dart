@@ -59,108 +59,64 @@ class CampaignService {
     }
   }
 
+  /// Detalle completo de una campaña.
+  ///
+  /// Usa el RPC consolidado `get_campaign_full_detail` que devuelve TODO
+  /// (campaña + creador + recompensas + evidencias + instrucciones de pago
+  /// + stats públicos) en **un solo round-trip**. Reemplaza 6 queries
+  /// secuenciales/paralelas que hacíamos antes.
   Future<CampaignDetail?> fetchCampaignDetail(String campaignId) async {
     try {
-      // IMPORTANTE: NO filtrar por estado aquí
-      // Debe poder cargar campañas archivadas (que llegaron a 100%)
-      final detailResponse = await _client
-          .from('campanias')
-          .select('*, categorias(nombre)')
-          .eq('id', campaignId)
-          .maybeSingle();
+      final response = await _client.rpc(
+        'get_campaign_full_detail',
+        params: {'p_campaign_id': campaignId},
+      );
 
-      if (detailResponse == null) {
+      if (response == null) {
         return null;
       }
 
-      // Intentar obtener perfil del creador de forma segura
-      try {
-        final creadorId = detailResponse['creador_id'] as String?;
-        if (creadorId != null && creadorId.isNotEmpty) {
-          final profileResponse = await _client
-              .from('profiles')
-              .select('display_name, avatar_url')
-              .eq('user_id', creadorId)
-              .maybeSingle();
-          
-          if (profileResponse != null) {
-            detailResponse['creator'] = profileResponse;
-            debugPrint('✅ Creator profile loaded: ${profileResponse['display_name']}');
-          }
-        }
-      } catch (profileError) {
-        // Si falla la carga del perfil, continuamos sin él
-        debugPrint('⚠️ Could not load creator profile: $profileError');
+      final root = Map<String, dynamic>.from(response as Map);
+      final campaignRaw = root['campaign'];
+      if (campaignRaw == null) {
+        return null;
       }
 
-  var rewards = <Map<String, dynamic>>[];
-      try {
-        final response = await _client
-            .from('recompensas')
-            .select()
-            .eq('campania_id', campaignId);
-        rewards = (response as List<dynamic>).cast<Map<String, dynamic>>();
-      } catch (error) {
-        debugPrint('CampaignService.fetchCampaignDetail rewards error: $error');
+      final detailJson = Map<String, dynamic>.from(campaignRaw as Map);
+
+      final creator = root['creator'];
+      if (creator is Map) {
+        detailJson['creator'] = Map<String, dynamic>.from(creator);
       }
 
-      // La tabla 'actualizaciones' (novedades de campaña) aún no existe en el schema.
-      // Se deja como lista vacía hasta que se cree en Supabase.
-      final updates = <Map<String, dynamic>>[];
-
-      var evidences = <Map<String, dynamic>>[];
-      try {
-        final response = await _client
-            .from('evidencias')
-            .select()
-            .eq('campania_id', campaignId)
-            .order('created_at', ascending: false);
-        evidences = (response as List<dynamic>).cast<Map<String, dynamic>>();
-      } catch (error) {
-        debugPrint('CampaignService.fetchCampaignDetail evidences error: $error');
+      final publicStats = root['public_stats'];
+      if (publicStats is Map) {
+        final statsMap = Map<String, dynamic>.from(publicStats);
+        detailJson
+          ..addAll(statsMap)
+          ..['donor_count'] = statsMap['donadores'];
       }
+
+      final rewardsRaw = root['rewards'] as List? ?? const [];
+      final rewards = rewardsRaw
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+      final evidencesRaw = root['evidences'] as List? ?? const [];
+      final evidences = evidencesRaw
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
 
       Map<String, dynamic>? paymentInstructionRow;
-      try {
-        final response = await _client.rpc(
-          'get_campaign_payment_instructions',
-          params: {'p_campaign_id': campaignId},
-        );
-
-        if (response is List && response.isNotEmpty) {
-          final first = response.first;
-          if (first is Map<String, dynamic>) {
-            paymentInstructionRow = first;
-          }
-        } else if (response is Map<String, dynamic>) {
-          paymentInstructionRow = response;
-        }
-      } catch (error) {
-        debugPrint('CampaignService.fetchCampaignDetail payment instructions error: $error');
-      }
-
-      Map<String, dynamic>? publicViewRow;
-      try {
-        publicViewRow = await _client
-            .from('v_campania_publica')
-            .select('monto_objetivo, monto_actual, porcentaje, donadores')
-            .eq('id', campaignId)
-            .maybeSingle();
-      } catch (error) {
-        debugPrint('CampaignService.fetchCampaignDetail public view error: $error');
-      }
-
-      final detailJson = Map<String, dynamic>.from(detailResponse);
-      if (publicViewRow != null) {
-        detailJson
-          ..addAll(publicViewRow)
-          ..['donor_count'] = publicViewRow['donadores'];
+      final paymentRaw = root['payment_instructions'];
+      if (paymentRaw is Map) {
+        paymentInstructionRow = Map<String, dynamic>.from(paymentRaw);
       }
 
       return CampaignDetail.fromJson(
         detailJson,
         rewards: rewards,
-        updates: updates,
+        updates: const [],
         evidences: evidences,
         paymentInstructionRow: paymentInstructionRow,
       );
@@ -531,14 +487,18 @@ class CampaignService {
   }
 
   /// Obtiene todas las solicitudes de campaña del usuario actual
-  /// Incluye solicitudes pendientes, aprobadas y rechazadas
+  /// Incluye solicitudes pendientes, aprobadas y rechazadas.
+  ///
+  /// Optimizado: usa 3 queries (solicitudes, campañas relacionadas en batch,
+  /// donaciones aprobadas en batch) en vez de 1 + 2N queries secuenciales.
   Future<List<CampaignSummary>> fetchMyRequests() async {
     try {
       if (!hasAuthenticatedUser) {
-        throw CampaignServiceException('Debes iniciar sesión para ver tus solicitudes.');
+        throw CampaignServiceException(
+            'Debes iniciar sesión para ver tus solicitudes.');
       }
 
-      // Obtener solicitudes del usuario
+      // 1) Solicitudes del usuario
       final requestsResponse = await _client
           .from('solicitudes')
           .select('''
@@ -553,64 +513,89 @@ class CampaignService {
           .eq('user_id', currentUserId!)
           .order('created_at', ascending: false);
 
-      final List<Map<String, dynamic>> requestsData = 
+      final List<Map<String, dynamic>> requestsData =
           (requestsResponse as List).cast<Map<String, dynamic>>();
 
-      final summaries = <CampaignSummary>[];
-      
-      for (final request in requestsData) {
-        final requestId = request['id'] as String;
-        
-        // Buscar campaña asociada a esta solicitud
-        Map<String, dynamic>? campaniaData;
+      if (requestsData.isEmpty) {
+        return const <CampaignSummary>[];
+      }
+
+      final requestIds = requestsData
+          .map((r) => r['id'] as String)
+          .toList(growable: false);
+
+      // 2) Campañas asociadas a esas solicitudes (una sola query con IN)
+      final Map<String, Map<String, dynamic>> campaignsByRequestId = {};
+      try {
+        final campaignsResponse = await _client
+            .from('campanias')
+            .select('id, slug, solicitud_id, monto_objetivo, monto_actual')
+            .inFilter('solicitud_id', requestIds);
+        for (final row
+            in (campaignsResponse as List).cast<Map<String, dynamic>>()) {
+          final solicitudId = row['solicitud_id'] as String?;
+          if (solicitudId != null) {
+            campaignsByRequestId[solicitudId] = row;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching campaigns in batch: $e');
+      }
+
+      // 3) Conteo de donantes para esas campañas (una sola query con IN)
+      final Map<String, int> donorCountsByCampaignId = {};
+      final campaignIds = campaignsByRequestId.values
+          .map((c) => c['id'] as String?)
+          .whereType<String>()
+          .toList(growable: false);
+      if (campaignIds.isNotEmpty) {
         try {
-          final campaniaResponse = await _client
-              .from('campanias')
-              .select('id, slug, monto_objetivo, monto_actual')
-              .eq('solicitud_id', requestId)
-              .maybeSingle();
-          
-          if (campaniaResponse != null) {
-            campaniaData = campaniaResponse;
+          final donationsResponse = await _client
+              .from('donaciones')
+              .select('campania_id')
+              .inFilter('campania_id', campaignIds)
+              .eq('estado', 'aprobada');
+          for (final row
+              in (donationsResponse as List).cast<Map<String, dynamic>>()) {
+            final campaniaId = row['campania_id'] as String?;
+            if (campaniaId != null) {
+              donorCountsByCampaignId.update(
+                campaniaId,
+                (v) => v + 1,
+                ifAbsent: () => 1,
+              );
+            }
           }
         } catch (e) {
-          debugPrint('Error fetching campaign for request $requestId: $e');
+          debugPrint('Error counting donors in batch: $e');
         }
+      }
 
-        // Calcular montos y progreso
-        final goalAmount = campaniaData != null 
+      // 4) Armar los CampaignSummary
+      return requestsData.map((request) {
+        final requestId = request['id'] as String;
+        final campaniaData = campaignsByRequestId[requestId];
+
+        final goalAmount = campaniaData != null
             ? ((campaniaData['monto_objetivo'] as num?)?.toDouble() ?? 0.0)
             : ((request['monto_objetivo'] as num?)?.toDouble() ?? 0.0);
         final raisedAmount = campaniaData != null
             ? ((campaniaData['monto_actual'] as num?)?.toDouble() ?? 0.0)
             : 0.0;
-        final completionPercentage = goalAmount > 0 
+        final completionPercentage = goalAmount > 0
             ? (raisedAmount / goalAmount * 100).clamp(0.0, 100.0)
             : 0.0;
 
-        // Contar donantes si hay campaña
-        int donorCount = 0;
-        if (campaniaData != null) {
-          try {
-            final donationsList = await _client
-                .from('donaciones')
-                .select('id')
-                .eq('campania_id', campaniaData['id'])
-                .eq('estado', 'aprobada');
-            donorCount = (donationsList as List).length;
-          } catch (e) {
-            debugPrint('Error counting donors: $e');
-          }
-        }
+        final donorCount = campaniaData != null
+            ? (donorCountsByCampaignId[campaniaData['id'] as String?] ?? 0)
+            : 0;
 
-        // Truncar descripción para shortDescription
         final descripcion = request['descripcion'] as String? ?? '';
-        final shortDesc = descripcion.length > 150 
+        final shortDesc = descripcion.length > 150
             ? '${descripcion.substring(0, 150)}...'
             : descripcion;
 
-        // Crear summary combinando datos
-        final summary = CampaignSummary(
+        return CampaignSummary(
           id: campaniaData?['id'] as String? ?? requestId,
           slug: campaniaData?['slug'] as String? ?? '',
           title: request['titulo'] as String? ?? 'Sin título',
@@ -626,11 +611,7 @@ class CampaignService {
           status: request['estado'] as String?,
           requestId: requestId,
         );
-
-        summaries.add(summary);
-      }
-
-      return summaries;
+      }).toList(growable: false);
     } on CampaignServiceException {
       rethrow;
     } catch (error, stackTrace) {
@@ -708,6 +689,197 @@ class CampaignService {
       Error.throwWithStackTrace(
         CampaignServiceException('No pudimos eliminar la solicitud. Intenta nuevamente.'),
         stackTrace,
+      );
+    }
+  }
+
+  // ─── EVIDENCIAS DE CAMPAÑAS COMPLETADAS ───────────────────────────────────
+
+  static const String _evidencesBucket = 'evidencias-campania';
+  static const int _maxEvidenceBytes = 20 * 1024 * 1024; // 20 MB
+
+  /// Lista las evidencias de una campaña (ordenadas por fecha desc).
+  Future<List<CampaignEvidence>> fetchEvidencesByCampaign(
+    String campaignId,
+  ) async {
+    try {
+      final response = await _client
+          .from('evidencias')
+          .select()
+          .eq('campania_id', campaignId)
+          .order('created_at', ascending: false);
+      final rows = (response as List).cast<Map<String, dynamic>>();
+      return rows.map(CampaignEvidence.fromJson).toList();
+    } catch (error) {
+      debugPrint('CampaignService.fetchEvidencesByCampaign error: $error');
+      return const [];
+    }
+  }
+
+  /// Sube un archivo de evidencia a Storage + inserta registro en la tabla.
+  /// La ruta sigue la convención `{campania_id}/{timestamp}_{filename}` para
+  /// que las RLS policies puedan validar ownership por carpeta.
+  Future<CampaignEvidence> uploadEvidence({
+    required String campaignId,
+    required Uint8List data,
+    required String filename,
+    required String mimeType,
+    required EvidenceType type,
+    String? description,
+  }) async {
+    if (!hasAuthenticatedUser) {
+      throw CampaignServiceException('Inicia sesión para subir evidencia.');
+    }
+    if (data.length > _maxEvidenceBytes) {
+      throw CampaignServiceException(
+        'El archivo excede los 20 MB permitidos.',
+      );
+    }
+
+    final safeName = filename.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final storagePath = '$campaignId/${timestamp}_$safeName';
+
+    try {
+      await _client.storage.from(_evidencesBucket).uploadBinary(
+            storagePath,
+            data,
+            fileOptions: FileOptions(
+              contentType: mimeType,
+              upsert: false,
+            ),
+          );
+
+      final publicUrl = _client.storage
+          .from(_evidencesBucket)
+          .getPublicUrl(storagePath);
+
+      final insertResponse = await _client
+          .from('evidencias')
+          .insert({
+            'campania_id': campaignId,
+            'uploaded_by': currentUserId,
+            'tipo': type.dbValue,
+            'url': publicUrl,
+            'storage_path': storagePath,
+            'filename': safeName,
+            'mime_type': mimeType,
+            'file_size_bytes': data.length,
+            'descripcion': description?.trim().isEmpty == true
+                ? null
+                : description?.trim(),
+          })
+          .select()
+          .single();
+
+      return CampaignEvidence.fromJson(
+          (insertResponse as Map).cast<String, dynamic>());
+    } on StorageException catch (error) {
+      debugPrint('uploadEvidence storage error: ${error.message}');
+      throw CampaignServiceException(
+        'No pudimos subir el archivo: ${error.message}',
+      );
+    } on PostgrestException catch (error) {
+      debugPrint('uploadEvidence db error: ${error.message}');
+      throw CampaignServiceException(
+        error.message.isNotEmpty
+            ? error.message
+            : 'No pudimos registrar la evidencia.',
+      );
+    } catch (error) {
+      debugPrint('uploadEvidence error: $error');
+      throw CampaignServiceException(
+        'No pudimos subir la evidencia. Intenta nuevamente.',
+      );
+    }
+  }
+
+  /// Campañas del usuario actual que requieren subir/completar evidencia
+  /// (estado pendiente_evidencia o en_revision). Usado por el banner del home.
+  Future<List<CampaignSummary>> fetchMyPendingEvidenceCampaigns() async {
+    if (!hasAuthenticatedUser) return const [];
+    try {
+      final response = await _client
+          .from('campanias')
+          .select(
+            'id, slug, titulo, descripcion_corta, portada_url, '
+            'monto_objetivo, monto_actual, estado, '
+            'verification_status, meta_alcanzada_at, evidencias_hasta, '
+            'creador_id, es_anonimo',
+          )
+          .eq('creador_id', currentUserId!)
+          .inFilter('verification_status',
+              ['pendiente_evidencia', 'en_revision'])
+          .order('evidencias_hasta', ascending: true);
+      final rows = (response as List).cast<Map<String, dynamic>>();
+      return rows.map(CampaignSummary.fromPublicView).toList();
+    } catch (error) {
+      debugPrint('fetchMyPendingEvidenceCampaigns error: $error');
+      return const [];
+    }
+  }
+
+  /// El creador elimina una evidencia propia (solo mientras esté en revisión).
+  Future<void> deleteEvidence(CampaignEvidence evidence) async {
+    if (!hasAuthenticatedUser) {
+      throw CampaignServiceException('Inicia sesión para borrar evidencia.');
+    }
+    try {
+      if (evidence.storagePath != null) {
+        await _client.storage
+            .from(_evidencesBucket)
+            .remove([evidence.storagePath!]);
+      }
+      await _client
+          .from('evidencias')
+          .delete()
+          .eq('id', evidence.id);
+    } catch (error) {
+      debugPrint('deleteEvidence error: $error');
+      throw CampaignServiceException(
+        'No pudimos eliminar la evidencia.',
+      );
+    }
+  }
+
+  /// Admin: aprueba la verificación de una campaña.
+  Future<void> adminApproveVerification(String campaignId) async {
+    if (!hasAuthenticatedUser) {
+      throw CampaignServiceException('Inicia sesión para verificar.');
+    }
+    try {
+      await _client.rpc('admin_verify_campania', params: {
+        'p_campania_id': campaignId,
+        'p_admin_id': currentUserId,
+      });
+    } on PostgrestException catch (error) {
+      throw CampaignServiceException(
+        error.message.isNotEmpty
+            ? error.message
+            : 'No pudimos verificar la campaña.',
+      );
+    }
+  }
+
+  /// Admin: rechaza la evidencia y pide al creador subir más.
+  Future<void> adminRejectVerification({
+    required String campaignId,
+    required String reason,
+  }) async {
+    if (!hasAuthenticatedUser) {
+      throw CampaignServiceException('Inicia sesión para rechazar.');
+    }
+    try {
+      await _client.rpc('admin_reject_campania_evidence', params: {
+        'p_campania_id': campaignId,
+        'p_admin_id': currentUserId,
+        'p_reason': reason,
+      });
+    } on PostgrestException catch (error) {
+      throw CampaignServiceException(
+        error.message.isNotEmpty
+            ? error.message
+            : 'No pudimos rechazar la evidencia.',
       );
     }
   }

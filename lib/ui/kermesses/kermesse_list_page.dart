@@ -11,6 +11,7 @@ import '../../services/location_geocoder.dart';
 import '../../theme/app_colors.dart';
 import '../home/menu_inferior/shared_states.dart';
 import '../home/widgets/home_section.dart';
+import '../widgets/app_network_image.dart';
 import '../widgets/glass_circle_button.dart';
 
 class KermesseListPage extends StatefulWidget {
@@ -253,11 +254,10 @@ class _KermesseFeatureCard extends StatelessWidget {
                     fit: StackFit.expand,
                     children: [
                       if (kermesse.hasCover)
-                        Image.network(
-                          kermesse.coverUrl!,
+                        AppNetworkImage(
+                          url: kermesse.coverUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              _KermessePlaceholder(id: kermesse.id),
+                          errorWidget: _KermessePlaceholder(id: kermesse.id),
                         )
                       else
                         _KermessePlaceholder(id: kermesse.id),
@@ -841,11 +841,10 @@ class _DetailHeroBanner extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           if (kermesse.hasCover)
-            Image.network(
-              kermesse.coverUrl!,
+            AppNetworkImage(
+              url: kermesse.coverUrl!,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) =>
-                  _KermessePlaceholder(id: kermesse.id),
+              errorWidget: _KermessePlaceholder(id: kermesse.id),
             )
           else
             _KermessePlaceholder(id: kermesse.id),
@@ -1336,10 +1335,10 @@ class _KermesseGallery extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             child: AspectRatio(
               aspectRatio: 4 / 3,
-              child: Image.network(
-                url,
+              child: AppNetworkImage(
+                url: url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorWidget: Container(
                   color: AppColors.grayNeutral.withValues(alpha: 0.2),
                   alignment: Alignment.center,
                   child: const Icon(Icons.broken_image_outlined, color: AppColors.grayNeutral),

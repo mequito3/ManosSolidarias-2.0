@@ -6,6 +6,7 @@ import 'package:shimmer/shimmer.dart';
 
 import '../../../models/campaign.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 // ─── Helpers compartidos por las 3 variantes de card ──────────────
 String _thousandSep(int value) {
@@ -386,14 +387,11 @@ class _CampaignHeroImage extends StatelessWidget {
         ),
       );
     }
-    return Image.network(
-      imageUrl,
+    return AppNetworkImage(
+      url: imageUrl,
       fit: BoxFit.cover,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return _imageShimmer();
-      },
-      errorBuilder: (_, __, ___) => Container(
+      placeholder: _imageShimmer(),
+      errorWidget: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: [
             AppColors.error.withValues(alpha: 0.1),
@@ -680,16 +678,13 @@ class CampaignProgressTile extends StatelessWidget {
                               child: Icon(Icons.volunteer_activism_rounded,
                                   color: AppColors.bluePrimary, size: 28)),
                         )
-                      : Image.network(
-                          campaign.coverUrl,
+                      : AppNetworkImage(
+                          url: campaign.coverUrl,
                           width: 72,
                           height: 72,
                           fit: BoxFit.cover,
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return _imageShimmer(width: 72, height: 72);
-                          },
-                          errorBuilder: (_, __, ___) => Container(
+                          placeholder: _imageShimmer(width: 72, height: 72),
+                          errorWidget: Container(
                             color: AppColors.error.withValues(alpha: 0.08),
                             child: const Icon(Icons.broken_image_rounded,
                                 color: AppColors.error, size: 24),
@@ -854,16 +849,13 @@ class CampaignHeadlineTile extends StatelessWidget {
                               child: Icon(Icons.eco_rounded,
                                   color: AppColors.greenSuccess, size: 24)),
                         )
-                      : Image.network(
-                          campaign.coverUrl,
+                      : AppNetworkImage(
+                          url: campaign.coverUrl,
                           width: 60,
                           height: 60,
                           fit: BoxFit.cover,
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return _imageShimmer(width: 60, height: 60);
-                          },
-                          errorBuilder: (_, __, ___) => Container(
+                          placeholder: _imageShimmer(width: 60, height: 60),
+                          errorWidget: Container(
                             color: AppColors.error.withValues(alpha: 0.08),
                             child: const Icon(Icons.broken_image_rounded,
                                 color: AppColors.error, size: 20),

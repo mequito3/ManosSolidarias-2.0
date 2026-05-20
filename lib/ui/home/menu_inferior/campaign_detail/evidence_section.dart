@@ -51,39 +51,30 @@ class _EvidenceImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    return AppNetworkImage(
+      url: imageUrl,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
       borderRadius: BorderRadius.circular(borderRadius),
-      child: Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-        loadingBuilder: (context, child, progress) {
-          if (progress == null) return child;
-          return Container(
-            color: AppColors.bluePrimary.withValues(alpha: 0.06),
-            child: Center(
-              child: SizedBox(
-                width: 26,
-                height: 26,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.bluePrimary,
-                  value: progress.expectedTotalBytes != null
-                      ? progress.cumulativeBytesLoaded /
-                          progress.expectedTotalBytes!
-                      : null,
-                ),
-              ),
+      placeholder: Container(
+        color: AppColors.bluePrimary.withValues(alpha: 0.06),
+        child: const Center(
+          child: SizedBox(
+            width: 26,
+            height: 26,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.bluePrimary,
             ),
-          );
-        },
-        errorBuilder: (_, __, ___) => Container(
-          color: AppColors.darkText.withValues(alpha: 0.08),
-          child: const Center(
-            child: Icon(Icons.broken_image_outlined,
-                size: 32, color: AppColors.darkText),
           ),
+        ),
+      ),
+      errorWidget: Container(
+        color: AppColors.darkText.withValues(alpha: 0.08),
+        child: const Center(
+          child: Icon(Icons.broken_image_outlined,
+              size: 32, color: AppColors.darkText),
         ),
       ),
     );
@@ -412,29 +403,21 @@ class _EvidencePageContent extends StatelessWidget {
         maxScale: 5.0,
         panEnabled: true,
         child: Center(
-          child: Image.network(
-            previewUrl,
+          child: AppNetworkImage(
+            url: previewUrl,
             fit: BoxFit.contain,
             width: double.infinity,
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              final value = progress.expectedTotalBytes != null
-                  ? progress.cumulativeBytesLoaded /
-                      progress.expectedTotalBytes!
-                  : null;
-              return Center(
-                child: SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CircularProgressIndicator(
-                    value: value,
-                    color: Colors.white70,
-                    strokeWidth: 2.5,
-                  ),
+            placeholder: const Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(
+                  color: Colors.white70,
+                  strokeWidth: 2.5,
                 ),
-              );
-            },
-            errorBuilder: (_, __, ___) => const Center(
+              ),
+            ),
+            errorWidget: const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

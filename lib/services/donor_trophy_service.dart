@@ -8,7 +8,10 @@ class DonorTrophyService {
 
   final SupabaseClient _client;
 
-  Future<List<DonorTrophyEntry>> fetchLeaderboard({int limit = 20}) async {
+  /// Trae el ranking de donantes.
+  /// Por defecto 13 entradas (3 podio + 10 del resto) — alineado con el límite
+  /// que muestra la UI para no transferir filas que no se renderizan.
+  Future<List<DonorTrophyEntry>> fetchLeaderboard({int limit = 13}) async {
     try {
     final List<dynamic> response = await _client
       .rpc('get_donor_leaderboard', params: {'p_limit': limit})

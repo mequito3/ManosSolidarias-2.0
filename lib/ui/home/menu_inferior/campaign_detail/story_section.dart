@@ -680,33 +680,26 @@ class _StoryImageTile extends StatelessWidget {
           children: [
             Hero(
               tag: 'story_img_$url',
-              child: Image.network(
-                url,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
+              child: AppNetworkImage(
+                url: url,
+                fit: BoxFit.cover,
+                placeholder: Container(
                   color: AppColors.bluePrimary.withValues(alpha: 0.06),
-                  child: Center(
+                  child: const Center(
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: AppColors.bluePrimary,
-                      value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
-                          : null,
                     ),
                   ),
-                );
-              },
-              errorBuilder: (_, __, ___) => Container(
-                color: AppColors.grayNeutral.withValues(alpha: 0.1),
-                child: const Center(
-                  child: Icon(Icons.broken_image_outlined,
-                      color: AppColors.grayNeutral, size: 32),
+                ),
+                errorWidget: Container(
+                  color: AppColors.grayNeutral.withValues(alpha: 0.1),
+                  child: const Center(
+                    child: Icon(Icons.broken_image_outlined,
+                        color: AppColors.grayNeutral, size: 32),
+                  ),
                 ),
               ),
-            ),
             ),
             // Gradiente inferior muy suave para visibilidad de los controles
             Positioned(
@@ -817,27 +810,20 @@ class _StoryImageViewerDialogState extends State<_StoryImageViewerDialog> {
                 maxScale: 5,
                 child: Hero(
                   tag: 'story_img_${urls[index]}',
-                  child: Image.network(
-                    urls[index],
+                  child: AppNetworkImage(
+                    url: urls[index],
                     fit: BoxFit.contain,
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return Center(
+                    placeholder: const Center(
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         color: Colors.white70,
-                        value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
-                            : null,
                       ),
-                    );
-                  },
-                  errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.broken_image_outlined,
-                        color: Colors.white38, size: 52),
+                    ),
+                    errorWidget: const Center(
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.white38, size: 52),
+                    ),
                   ),
-                ),
               ),
             );
             },

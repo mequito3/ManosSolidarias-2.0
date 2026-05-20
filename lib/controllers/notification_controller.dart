@@ -42,19 +42,13 @@ class NotificationController extends ChangeNotifier {
   void subscribeToRealtime() {
     final currentUserId = _service.client.auth.currentUser?.id;
     if (currentUserId == null) {
-      debugPrint('⚠️ No se puede suscribir: usuario no autenticado');
+      debugPrint('NotificationController.subscribeToRealtime: usuario no autenticado');
       return;
     }
     if (_channel != null) {
-      debugPrint('⚠️ Ya existe un canal activo');
       return;
     }
 
-    debugPrint('🔔 === INICIANDO SUSCRIPCIÓN REALTIME ===');
-    debugPrint('🔔 Usuario actual: $currentUserId');
-    debugPrint('🔔 Creando canal con filtro: user-notifications-$currentUserId');
-
-    // Canal con filtro del lado del servidor usando eq (equals)
     final channel = _service.client.channel('user-notifications-$currentUserId');
 
     channel
@@ -68,13 +62,9 @@ class NotificationController extends ChangeNotifier {
           value: currentUserId,
         ),
         callback: (payload) {
-          final raw = Map<String, dynamic>.from(payload.newRecord);
-          final notifTipo = raw['tipo'] as String?;
-          final notifId = raw['id'] as String?;
-          
-          debugPrint('🔔 INSERT RECIBIDO: id=$notifId, tipo=$notifTipo');
-          debugPrint('✅ Agregando notificación');
-          _insertRealtimeNotification(raw);
+          _insertRealtimeNotification(
+            Map<String, dynamic>.from(payload.newRecord),
+          );
         },
       )
       ..onPostgresChanges(
@@ -87,10 +77,9 @@ class NotificationController extends ChangeNotifier {
           value: currentUserId,
         ),
         callback: (payload) {
-          final raw = Map<String, dynamic>.from(payload.newRecord);
-          
-          debugPrint('🔔 UPDATE RECIBIDO - Actualizando');
-          _updateRealtimeNotification(raw);
+          _updateRealtimeNotification(
+            Map<String, dynamic>.from(payload.newRecord),
+          );
         },
       )
       ..onPostgresChanges(
@@ -103,30 +92,21 @@ class NotificationController extends ChangeNotifier {
           value: currentUserId,
         ),
         callback: (payload) {
-          final raw = Map<String, dynamic>.from(payload.oldRecord);
-          final id = raw['id'] as String?;
-          
-          debugPrint('🔔 DELETE RECIBIDO: id=$id');
-          
-          if (id == null) {
-            return;
-          }
-          
-          _notifications = _notifications.where((entry) => entry.id != id).toList(growable: false);
+          final id = payload.oldRecord['id'] as String?;
+          if (id == null) return;
+          _notifications = _notifications
+              .where((entry) => entry.id != id)
+              .toList(growable: false);
           notifyListeners();
         },
       );
 
     channel.subscribe((status, error) {
-      if (status == RealtimeSubscribeStatus.subscribed) {
-        debugPrint('✅ Suscripción EXITOSA - Notificaciones en tiempo real activas');
-      } else if (status == RealtimeSubscribeStatus.closed) {
-        debugPrint('⚠️ Canal cerrado');
-      } else if (error != null) {
-        debugPrint('❌ Error en suscripción: $error');
+      if (error != null) {
+        debugPrint('NotificationController.subscribe error: $error');
       }
     });
-    
+
     _channel = channel;
   }
 
@@ -231,36 +211,18 @@ class NotificationController extends ChangeNotifier {
 
   void _insertRealtimeNotification(Map<String, dynamic> data) {
     try {
-      debugPrint('🔔 === PROCESANDO INSERT REALTIME ===');
-      debugPrint('🔔 Datos recibidos: $data');
-      
       final entry = NotificationEntry.fromJson(data);
-      debugPrint('📬 Nueva notificación parseada: ${entry.type}');
-      debugPrint('📬 ID: ${entry.id}');
-      debugPrint('📬 Mensaje: ${entry.message.substring(0, entry.message.length > 50 ? 50 : entry.message.length)}...');
-      debugPrint('📬 Leída: ${entry.isRead}');
-
       final existingIndex = _notifications.indexWhere((item) => item.id == entry.id);
       if (existingIndex != -1) {
-        debugPrint('⚠️ Notificación ya existe en índice $existingIndex - actualizando');
         _notifications = List.of(_notifications)..[existingIndex] = entry;
       } else {
-        debugPrint('✨ Agregando nueva notificación al inicio de la lista');
         _notifications = <NotificationEntry>[entry, ..._notifications];
       }
-
-      final unreadCount = _notifications.where((n) => n.isUnread).length;
-      debugPrint('📊 Total notificaciones: ${_notifications.length}');
-      debugPrint('📊 No leídas: $unreadCount');
-
       _hasLoaded = true;
-      
-      debugPrint('🔔 Llamando notifyListeners()...');
       notifyListeners();
-      debugPrint('✅ notifyListeners() completado - UI debería actualizarse');
     } catch (e, stackTrace) {
-      debugPrint('❌ Error al insertar notificación: $e');
-      debugPrint('❌ StackTrace: $stackTrace');
+      debugPrint('NotificationController._insertRealtimeNotification error: $e');
+      debugPrint('$stackTrace');
     }
   }
 

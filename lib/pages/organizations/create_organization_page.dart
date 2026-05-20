@@ -10,7 +10,14 @@ import '../../models/organization.dart';
 import '../../models/user_profile.dart';
 import '../../services/organization_service.dart';
 import '../../theme/app_colors.dart';
+import '../../ui/solicitudes/steps/solicitud_form_step.dart'
+    show
+        SolicitudFormCard,
+        SolicitudFormSectionHeader,
+        SolicitudInlineInfo,
+        solicitudFieldDecoration;
 import '../../ui/widgets/app_buttons.dart';
+import '../../ui/widgets/app_network_image.dart';
 import '../../ui/widgets/app_snackbar.dart';
 import '../../ui/widgets/location_picker_dialog.dart';
 
@@ -129,7 +136,7 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
         child: Form(
           key: _formKey,
           child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             children: [
               _buildIntroCard(theme),
               const SizedBox(height: 16),
@@ -167,52 +174,101 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
 
   Widget _buildIntroCard(ThemeData theme) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.info_outline,
-            size: 20,
-            color: AppColors.bluePrimary,
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Los datos serán revisados por el equipo antes de la aprobación',
-              style: TextStyle(
-                color: AppColors.darkText.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-            ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 4,
+              decoration: const BoxDecoration(
+                color: AppColors.bluePrimary,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  bottomLeft: Radius.circular(20),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'REGISTRO DE ORGANIZACIÓN',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.bluePrimary,
+                        letterSpacing: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Cuéntanos sobre tu organización',
+                      style: TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.darkText,
+                        letterSpacing: -0.4,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'El equipo revisará los datos antes de aprobar el perfil.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkText.withValues(alpha: 0.60),
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildFormFields(ThemeData theme) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Card 1: Información básica
-        _buildSectionCard(
-          theme: theme,
-          title: 'Información básica',
-          color: AppColors.bluePrimary,
+        SolicitudFormCard(
           children: [
+            const SolicitudFormSectionHeader(
+              title: 'Información básica',
+              subtitle: 'Datos principales de la organización',
+              showDivider: false,
+            ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre',
-                hintText: 'Fundación Alas Solidarias',
-                prefixIcon: Icon(Icons.business_rounded, size: 20),
-                isDense: true,
-              ),
               textCapitalization: TextCapitalization.words,
+              decoration: solicitudFieldDecoration(
+                label: 'Nombre',
+                hint: 'Ej. Fundación Alas Solidarias',
+              ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Requerido';
@@ -223,37 +279,39 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               value: _selectedType,
-              decoration: const InputDecoration(
-                labelText: 'Tipo',
-                prefixIcon: Icon(Icons.category_rounded, size: 20),
-                isDense: true,
+              isExpanded: true,
+              decoration: solicitudFieldDecoration(label: 'Tipo'),
+              hint: Text(
+                'Selecciona el tipo',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.darkText.withValues(alpha: 0.40),
+                ),
               ),
               items: _typeOptions
                   .map(
                     (option) => DropdownMenuItem<String>(
                       value: option,
-                      child: Text(option, style: TextStyle(fontSize: 14)),
+                      child: Text(option, style: const TextStyle(fontSize: 15)),
                     ),
                   )
                   .toList(),
               onChanged: (value) => setState(() => _selectedType = value),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _descriptionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Descripción',
-                hintText: 'Actividades e impacto social',
-                prefixIcon: Icon(Icons.description_rounded, size: 20),
-                alignLabelWithHint: true,
-                isDense: true,
+              maxLines: 4,
+              minLines: 3,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: solicitudFieldDecoration(
+                label: 'Descripción',
+                hint: 'Actividades e impacto social',
+                helper: 'Mínimo 40 caracteres.',
               ),
-              maxLines: 3,
-              minLines: 2,
-              style: const TextStyle(fontSize: 14),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Requerido';
@@ -266,37 +324,35 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
             ),
           ],
         ),
-        
-        const SizedBox(height: 12),
-        
+
+        const SizedBox(height: 16),
+
         // Card 2: Contacto
-        _buildSectionCard(
-          theme: theme,
-          title: 'Información de contacto',
-          color: AppColors.greenSuccess,
+        SolicitudFormCard(
           children: [
+            const SolicitudFormSectionHeader(
+              title: 'Información de contacto',
+              subtitle: 'Cómo pueden ubicarte donantes y equipo',
+              accent: AppColors.greenSuccess,
+              showDivider: false,
+            ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _phoneCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono',
-                hintText: '+591 70000000',
-                prefixIcon: Icon(Icons.phone_rounded, size: 20),
-                isDense: true,
-              ),
               keyboardType: TextInputType.phone,
-              style: const TextStyle(fontSize: 14),
+              decoration: solicitudFieldDecoration(
+                label: 'Teléfono',
+                hint: '+591 70000000',
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _emailCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Correo',
-                hintText: 'contacto@organizacion.org',
-                prefixIcon: Icon(Icons.email_rounded, size: 20),
-                isDense: true,
-              ),
               keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(fontSize: 14),
+              decoration: solicitudFieldDecoration(
+                label: 'Correo',
+                hint: 'contacto@organizacion.org',
+              ),
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {
@@ -309,124 +365,71 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _websiteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Web (opcional)',
-                hintText: 'www.organizacion.org',
-                prefixIcon: Icon(Icons.language_rounded, size: 20),
-                isDense: true,
-              ),
               keyboardType: TextInputType.url,
-              style: const TextStyle(fontSize: 14),
+              decoration: solicitudFieldDecoration(
+                label: 'Web (opcional)',
+                hint: 'www.organizacion.org',
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _addressCtrl,
-              decoration: InputDecoration(
-                labelText: 'Dirección',
-                hintText: 'Calle 15 de Abril, La Paz',
-                prefixIcon: const Icon(Icons.location_on_rounded, size: 20),
+              maxLines: 2,
+              decoration: solicitudFieldDecoration(
+                label: 'Dirección',
+                hint: 'Calle 15 de Abril, La Paz',
+              ).copyWith(
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.map_outlined, size: 20),
                   onPressed: _openLocationPicker,
                   tooltip: 'Mapa',
                 ),
-                isDense: true,
               ),
-              maxLines: 2,
-              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const SolicitudInlineInfo(
+              icon: Icons.info_outline_rounded,
+              message: 'Añade al menos teléfono o correo.',
             ),
           ],
         ),
-        
-        const SizedBox(height: 12),
-        
+
+        const SizedBox(height: 16),
+
         // Card 3: Documentación (galería)
         _buildDocumentationCard(theme),
-        
-        const SizedBox(height: 12),
-        
+
+        const SizedBox(height: 16),
+
         // Card 4: Redes sociales
         _buildSocialMediaCard(theme),
-        
-        const SizedBox(height: 12),
-        
+
+        const SizedBox(height: 16),
+
         // Card 5: Logo
         _buildLogoCard(theme),
-        
-        const SizedBox(height: 12),
-        
+
+        const SizedBox(height: 16),
+
         // Card 6: Confirmación
         _buildConfirmationCard(theme),
       ],
     );
   }
-  
-  Widget _buildSectionCard({
-    required ThemeData theme,
-    required String title,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.grayNeutral.withValues(alpha: 0.12),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 3,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: AppColors.darkText,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...children,
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildDocumentationCard(ThemeData theme) {
-    return _buildSectionCard(
-      theme: theme,
-      title: 'Documentación',
-      color: AppColors.orangeAction,
+    return SolicitudFormCard(
       children: [
-        Text(
-          'Fotos del lugar donde operan',
-          style: TextStyle(
-            color: AppColors.darkText.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
+        const SolicitudFormSectionHeader(
+          title: 'Documentación',
+          subtitle: 'Fotos del lugar donde operan',
+          accent: AppColors.orangeAction,
+          showDivider: false,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         if (_galleryItems.isNotEmpty)
           GridView.builder(
             shrinkWrap: true,
@@ -447,31 +450,27 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
           )
         else
           Container(
-            height: 100,
+            height: 120,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.grayNeutral.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.grayNeutral.withValues(alpha: 0.15),
-                style: BorderStyle.solid,
-                width: 1,
-              ),
+              color: AppColors.lightBackground,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.dividerColor, width: 1),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.add_photo_alternate_outlined,
-                  size: 28,
-                  color: AppColors.grayNeutral.withValues(alpha: 0.5),
+                  size: 30,
+                  color: AppColors.darkText.withValues(alpha: 0.35),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Sin fotos',
                   style: TextStyle(
-                    color: AppColors.darkText.withValues(alpha: 0.4),
-                    fontSize: 12,
+                    color: AppColors.darkText.withValues(alpha: 0.45),
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -486,7 +485,7 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
                   : _openGallerySourceSheet,
               icon: const Icon(Icons.add_photo_alternate, size: 18),
               label: Text(
-                _isUploadingGallery ? 'Subiendo...' : 'Agregar',
+                _isUploadingGallery ? 'Subiendo…' : 'Agregar',
                 style: const TextStyle(fontSize: 13),
               ),
             ),
@@ -507,35 +506,29 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
   }
 
   Widget _buildSocialMediaCard(ThemeData theme) {
-    return _buildSectionCard(
-      theme: theme,
-      title: 'Redes sociales (opcional)',
-      color: AppColors.bluePrimary,
+    return SolicitudFormCard(
       children: [
-        Text(
-          'Perfiles oficiales de la organización',
-          style: TextStyle(
-            color: AppColors.darkText.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
+        const SolicitudFormSectionHeader(
+          title: 'Redes sociales',
+          subtitle: 'Perfiles oficiales (opcional)',
+          showDivider: false,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         for (int index = 0; index < _socialControllers.length; index++)
           Padding(
-            padding: EdgeInsets.only(bottom: index == _socialControllers.length - 1 ? 0 : 12),
+            padding: EdgeInsets.only(
+              bottom: index == _socialControllers.length - 1 ? 0 : 12,
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: TextFormField(
                     controller: _socialControllers[index],
-                    decoration: InputDecoration(
-                      labelText: 'Red ${index + 1}',
-                      hintText: '@usuario o URL',
-                      prefixIcon: const Icon(Icons.share_rounded, size: 20),
-                      isDense: true,
-                    ),
                     keyboardType: TextInputType.url,
-                    style: const TextStyle(fontSize: 14),
+                    decoration: solicitudFieldDecoration(
+                      label: 'Red ${index + 1}',
+                      hint: '@usuario o URL',
+                    ),
                     validator: (value) {
                       final trimmed = value?.trim() ?? '';
                       if (trimmed.isEmpty) {
@@ -559,10 +552,13 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
             ),
           ),
         const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: _addSocialLink,
-          icon: const Icon(Icons.add, size: 18),
-          label: const Text('Agregar red', style: TextStyle(fontSize: 13)),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _addSocialLink,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Agregar red', style: TextStyle(fontSize: 13)),
+          ),
         ),
       ],
     );
@@ -570,53 +566,45 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
 
   Widget _buildLogoCard(ThemeData theme) {
     final hasLogo = _logoPreviewBytes != null || (_uploadedLogoUrl?.isNotEmpty ?? false);
-    return _buildSectionCard(
-      theme: theme,
-      title: 'Logo (opcional)',
-      color: AppColors.bluePrimary,
+    return SolicitudFormCard(
       children: [
-        Text(
-          'Logo de la organización',
-          style: TextStyle(
-            color: AppColors.darkText.withValues(alpha: 0.6),
-            fontSize: 12,
-          ),
+        const SolicitudFormSectionHeader(
+          title: 'Logo',
+          subtitle: 'Imagen identificadora (opcional)',
+          showDivider: false,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         if (hasLogo)
           Center(
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: _logoPreviewBytes != null
                   ? Image.memory(_logoPreviewBytes!, height: 160, fit: BoxFit.cover)
-                  : Image.network(_uploadedLogoUrl!, height: 160, fit: BoxFit.cover),
+                  : AppNetworkImage(url: _uploadedLogoUrl!, height: 160, fit: BoxFit.cover),
             ),
           )
         else
           Container(
-            height: 100,
+            height: 120,
             decoration: BoxDecoration(
-              color: AppColors.grayNeutral.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: AppColors.grayNeutral.withValues(alpha: 0.15),
-                width: 1,
-              ),
+              color: AppColors.lightBackground,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.dividerColor, width: 1),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   Icons.image_outlined,
-                  size: 28,
-                  color: AppColors.grayNeutral.withValues(alpha: 0.5),
+                  size: 30,
+                  color: AppColors.darkText.withValues(alpha: 0.35),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Sin logo',
                   style: TextStyle(
-                    color: AppColors.darkText.withValues(alpha: 0.4),
-                    fontSize: 12,
+                    color: AppColors.darkText.withValues(alpha: 0.45),
+                    fontSize: 13,
                   ),
                 ),
               ],
@@ -629,7 +617,7 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
               onPressed: _uploadingLogo ? null : _openLogoSourceSheet,
               icon: const Icon(Icons.upload, size: 18),
               label: Text(
-                _uploadingLogo ? 'Subiendo...' : hasLogo ? 'Cambiar' : 'Subir',
+                _uploadingLogo ? 'Subiendo…' : hasLogo ? 'Cambiar' : 'Subir',
                 style: const TextStyle(fontSize: 13),
               ),
             ),
@@ -646,20 +634,26 @@ class _CreateOrganizationPageState extends State<CreateOrganizationPage> {
       ],
     );
   }
-  
+
   Widget _buildConfirmationCard(ThemeData theme) {
-    return CheckboxListTile(
-      value: _acceptsVerification,
-      onChanged: (value) => setState(() => _acceptsVerification = value ?? false),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-      controlAffinity: ListTileControlAffinity.leading,
-      title: Text(
-        'Autorizo al equipo a validar la información',
-        style: TextStyle(
-          color: AppColors.darkText,
-          fontSize: 13,
+    return SolicitudFormCard(
+      children: [
+        CheckboxListTile(
+          value: _acceptsVerification,
+          onChanged: (value) =>
+              setState(() => _acceptsVerification = value ?? false),
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          title: const Text(
+            'Autorizo al equipo a validar la información',
+            style: TextStyle(
+              color: AppColors.darkText,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 

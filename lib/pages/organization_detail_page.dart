@@ -9,6 +9,7 @@ import '../models/organization.dart';
 import '../services/campaign_service.dart';
 import '../services/location_geocoder.dart';
 import '../theme/app_colors.dart';
+import '../ui/widgets/app_network_image.dart';
 import '../ui/widgets/glass_circle_button.dart';
 import '../ui/widgets/highlight_wrapper.dart';
 
@@ -363,36 +364,29 @@ class OrganizationDetailPage extends StatelessWidget {
                   ),
                   itemCount: galleryUrls.length,
                   itemBuilder: (context, index) {
-                    return ClipRRect(
+                    return AppNetworkImage(
+                      url: galleryUrls[index],
+                      fit: BoxFit.cover,
                       borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        galleryUrls[index],
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: AppColors.darkText.withValues(alpha: 0.05),
-                          child: Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color:
-                                  AppColors.darkText.withValues(alpha: 0.3),
-                              size: 28,
-                            ),
+                      placeholder: Container(
+                        color: AppColors.darkText.withValues(alpha: 0.05),
+                        child: const Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                                AppColors.bluePrimary),
                           ),
                         ),
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            color:
-                                AppColors.darkText.withValues(alpha: 0.05),
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation(
-                                    AppColors.bluePrimary),
-                              ),
-                            ),
-                          );
-                        },
+                      ),
+                      errorWidget: Container(
+                        color: AppColors.darkText.withValues(alpha: 0.05),
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: AppColors.darkText.withValues(alpha: 0.3),
+                            size: 28,
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -455,10 +449,10 @@ class OrganizationDetailPage extends StatelessWidget {
                   color: AppColors.bluePrimary.withValues(alpha: 0.55),
                 ),
               )
-            : Image.network(
-                url,
+            : AppNetworkImage(
+                url: url,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                errorWidget: Container(
                   color: AppColors.bluePrimary.withValues(alpha: 0.08),
                   child: Icon(
                     Icons.business_rounded,
@@ -717,10 +711,10 @@ class _OrgCampaignTile extends StatelessWidget {
             child: campaign.coverUrl.isNotEmpty
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      campaign.coverUrl,
+                    child: AppNetworkImage(
+                      url: campaign.coverUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorWidget: const Icon(
                         Icons.volunteer_activism_rounded,
                         color: AppColors.bluePrimary,
                         size: 26,
@@ -920,14 +914,11 @@ class _OrgCoverHero extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.network(
-            imageUrl,
+          AppNetworkImage(
+            url: imageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _fallbackGradient(),
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return _fallbackGradient();
-            },
+            placeholder: _fallbackGradient(),
+            errorWidget: _fallbackGradient(),
           ),
           // Overlay sutil para conectar con el header blanco abajo
           const DecoratedBox(

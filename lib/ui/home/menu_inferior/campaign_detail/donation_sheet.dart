@@ -12,35 +12,12 @@ class _DonationPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      // Solo permitir volver con el botón de back si el usuario lo presiona intencionalmente
-      onWillPop: () async {
-        // Permitir que se cierre, pero esto previene cierres accidentales por gestos
-        return true;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.bluePrimary),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Hacer Donación',
-          style: TextStyle(
-            color: AppColors.bluePrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        ),
-        body: _DonationSheet(
-          detail: detail,
-          campaignService: campaignService,
-        ),
+    return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+      appBar: const PremiumAppBar(title: 'Hacer donación'),
+      body: _DonationSheet(
+        detail: detail,
+        campaignService: campaignService,
       ),
     );
   }
@@ -108,6 +85,43 @@ class _DonationSheetState extends State<_DonationSheet> {
   void initState() {
     super.initState();
     _loadMaxAllowedAmount();
+    _amountController.addListener(_onAmountChanged);
+  }
+
+  void _onAmountChanged() {
+    if (mounted) setState(() {});
+  }
+
+  /// Habilitamos el botón solo si todos los campos obligatorios están OK.
+  bool get _canSubmit {
+    if (_submitting || _loadingMaxAmount || _isPickingReceipt) return false;
+    final amount = _parseAmount(_amountController.text);
+    if (amount == null || amount <= 0) return false;
+    final max = _maxAllowedAmount;
+    if (max != null && max <= 0) return false;
+    if (max != null && amount > max) return false;
+    if (!_hasReceipt) return false;
+    if (_receiptError != null) return false;
+    return true;
+  }
+
+  /// Mensaje breve que indica qué falta para habilitar el botón.
+  /// Null si todo está OK o si ya estamos enviando.
+  String? get _missingReason {
+    if (_canSubmit || _submitting) return null;
+    if (_loadingMaxAmount) return 'Validando el monto disponible…';
+    final amount = _parseAmount(_amountController.text);
+    if (amount == null || amount <= 0) return 'Ingresá el monto que querés donar.';
+    final max = _maxAllowedAmount;
+    if (max != null && max <= 0) {
+      return 'La campaña ya alcanzó su meta.';
+    }
+    if (max != null && amount > max) {
+      return 'Máximo: Bs ${_formatPlainAmount(max)}.';
+    }
+    if (!_hasReceipt) return 'Adjuntá el comprobante de pago para continuar.';
+    if (_receiptError != null) return _receiptError;
+    return null;
   }
 
   /// Carga el monto máximo permitido para esta campaña
@@ -141,6 +155,7 @@ class _DonationSheetState extends State<_DonationSheet> {
 
   @override
   void dispose() {
+    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _messageController.dispose();
     super.dispose();
@@ -148,136 +163,63 @@ class _DonationSheetState extends State<_DonationSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final summary = widget.detail.summary;
     final methodInstructionWidgets = _buildMethodInstructionWidgets(context);
 
-    return SingleChildScrollView(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 16,
-        bottom: bottomInset + 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Header con gradiente
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.bluePrimary.withValues(alpha: 0.08),
-                      AppColors.greenSuccess.withValues(alpha: 0.08),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.bluePrimary.withValues(alpha: 0.1),
-                    width: 1,
-                  ),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+            // Hero premium con stats reales de la campaña
+            PremiumHero(
+              icon: Icons.favorite_rounded,
+              iconGradient: AppColors.primaryGradient,
+              iconShadowColor: AppColors.bluePrimary,
+              title: 'Apoyá esta campaña',
+              subtitle: summary.title,
+              backgroundColors: [
+                AppColors.bluePrimary.withValues(alpha: 0.10),
+                AppColors.greenHope.withValues(alpha: 0.07),
+              ],
+              blobColors: [
+                AppColors.bluePrimary.withValues(alpha: 0.12),
+                AppColors.greenHope.withValues(alpha: 0.10),
+              ],
+              stats: [
+                PremiumStatPill(
+                  icon: Icons.savings_rounded,
+                  label: 'Recaudado',
+                  value: _formatCompactBs(summary.raisedAmount),
+                  color: AppColors.greenHope,
                 ),
-                child: Column(
-                  children: [
-                    // Icono corazón grande
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            AppColors.bluePrimary,
-                            AppColors.greenSuccess,
-                          ],
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.bluePrimary.withValues(alpha: 0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.favorite,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Apoya esta campaña',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.darkText,
-                            letterSpacing: -0.5,
-                          ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      summary.title,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.bluePrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.bluePrimary.withValues(alpha: 0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.people_outline,
-                            size: 18,
-                            color: AppColors.bluePrimary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Únete a los donadores',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppColors.bluePrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                PremiumStatPill(
+                  icon: Icons.flag_rounded,
+                  label: 'Meta',
+                  value: _formatCompactBs(summary.goalAmount),
+                  color: AppColors.bluePrimary,
                 ),
-              ),
-              const SizedBox(height: 28),
-              
-              // Sección de monto
-              Text(
-                '💰 ¿Cuánto quieres aportar?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                    ),
-              ),
-              const SizedBox(height: 16),
+                PremiumStatPill(
+                  icon: Icons.people_rounded,
+                  label: 'Donantes',
+                  value: '${summary.donorCount}',
+                  color: AppColors.orangeAction,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppColors.space24),
+
+            // Sección de monto
+            _SectionLabel(
+              icon: Icons.attach_money_rounded,
+              text: '¿Cuánto querés aportar?',
+            ),
+            const SizedBox(height: AppColors.space16),
               
               // Montos sugeridos - Chips modernos
               Wrap(
@@ -365,6 +307,16 @@ class _DonationSheetState extends State<_DonationSheet> {
                         color: AppColors.bluePrimary,
                         fontWeight: FontWeight.w700,
                       ),
+                  helperText: _loadingMaxAmount
+                      ? 'Verificando cuánto falta para la meta…'
+                      : (_maxAllowedAmount != null && _maxAllowedAmount! > 0)
+                          ? 'Falta Bs ${_formatPlainAmount(_maxAllowedAmount!)} para la meta.'
+                          : null,
+                  helperStyle: const TextStyle(
+                    color: AppColors.mediumText,
+                    fontSize: AppColors.fontSizeSm,
+                    fontWeight: AppColors.fontWeightSemiBold,
+                  ),
                   filled: true,
                   fillColor: AppColors.grayNeutral.withValues(alpha: 0.05),
                   border: OutlineInputBorder(
@@ -442,14 +394,11 @@ class _DonationSheetState extends State<_DonationSheet> {
               const SizedBox(height: 32),
               
               // Método de pago
-              Text(
-                '💳 ¿Cómo realizaste el pago?',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.darkText,
-                    ),
+              _SectionLabel(
+                icon: Icons.account_balance_wallet_rounded,
+                text: '¿Cómo realizaste el pago?',
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppColors.space16),
               
               // Tarjetas de métodos de pago
               Column(
@@ -548,136 +497,29 @@ class _DonationSheetState extends State<_DonationSheet> {
                       height: 1.4,
                     ),
               ),
-              // Mensaje de error mejorado
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 20),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.orangeAction.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.orangeAction.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeAction.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.error_outline,
-                          color: AppColors.orangeAction,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.orangeAction,
-                                fontWeight: FontWeight.w600,
-                                height: 1.3,
-                              ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              
-              // Botón de confirmación mejorado
-              Container(
-                width: double.infinity,
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: _submitting
-                      ? null
-                      : const LinearGradient(
-                          colors: [
-                            AppColors.bluePrimary,
-                            Color(0xFF4CAF50),
-                          ],
-                        ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: _submitting
-                      ? null
-                      : [
-                          BoxShadow(
-                            color: AppColors.bluePrimary.withValues(alpha: 0.4),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: _submitting ? null : _submit,
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _submitting
-                          ? Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  'Registrando donación...',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                ),
-                              ],
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.favorite,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 10),
-                                Text(
-                                  'Confirmar donación',
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
-                                      ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      );
-    }
+        _StickyConfirmBar(
+          submitting: _submitting,
+          canSubmit: _canSubmit,
+          missingReason: _missingReason,
+          errorMessage: _errorMessage,
+          onSubmit: _submit,
+        ),
+      ],
+    );
+  }
 
   Future<void> _submit() async {
+    if (_loadingMaxAmount) {
+      setState(() =>
+          _errorMessage = 'Estamos validando la meta. Esperá un momento…');
+      return;
+    }
+
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) {
       return;
@@ -686,6 +528,17 @@ class _DonationSheetState extends State<_DonationSheet> {
     final amount = _parseAmount(_amountController.text);
     if (amount == null || amount <= 0) {
       setState(() => _errorMessage = 'Ingresa un monto válido');
+      return;
+    }
+
+    final maxAmount = _maxAllowedAmount;
+    if (maxAmount != null && amount > maxAmount) {
+      setState(() {
+        _errorMessage = maxAmount <= 0
+            ? 'La campaña ya alcanzó su meta. ¡Gracias por querer ayudar!'
+            : 'El monto máximo disponible es Bs ${_formatPlainAmount(maxAmount)}. '
+                'Ajustá tu aporte para no superar la meta.';
+      });
       return;
     }
 
@@ -847,35 +700,31 @@ class _DonationSheetState extends State<_DonationSheet> {
             Center(
               child: GestureDetector(
                 onTap: () => _showQrPreview(instructions.qrUrl!),
-                child: ClipRRect(
+                child: AppNetworkImage(
+                  url: instructions.qrUrl!,
+                  height: 180,
+                  width: 180,
+                  fit: BoxFit.cover,
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    instructions.qrUrl!,
+                  errorWidget: Container(
                     height: 180,
                     width: 180,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        height: 180,
-                        width: 180,
-                        alignment: Alignment.center,
-                        color: AppColors.grayNeutral.withValues(alpha: 0.12),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.broken_image_outlined, color: AppColors.orangeAction),
-                            const SizedBox(height: 6),
-                            Text(
-                              'No pudimos cargar el QR',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.darkText.withValues(alpha: 0.7),
-                                  ),
-                            ),
-                          ],
+                    alignment: Alignment.center,
+                    color: AppColors.grayNeutral.withValues(alpha: 0.12),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.broken_image_outlined, color: AppColors.orangeAction),
+                        const SizedBox(height: 6),
+                        Text(
+                          'No pudimos cargar el QR',
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.darkText.withValues(alpha: 0.7),
+                              ),
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1108,7 +957,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '✅ Comprobante adjunto',
+                      'Comprobante adjunto',
                       style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: AppColors.greenSuccess,
@@ -1233,14 +1082,11 @@ class _DonationSheetState extends State<_DonationSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '📎 Comprobante de pago',
-          style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.darkText,
-              ),
+        _SectionLabel(
+          icon: Icons.receipt_long_rounded,
+          text: 'Comprobante de pago',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppColors.space12),
         
         // Card de upload mejorada
         GestureDetector(
@@ -1453,26 +1299,24 @@ class _DonationSheetState extends State<_DonationSheet> {
           child: InteractiveViewer(
             minScale: 0.8,
             maxScale: 5,
-            child: Image.network(
-              url,
+            child: AppNetworkImage(
+              url: url,
               fit: BoxFit.contain,
-              errorBuilder: (imageContext, error, stackTrace) {
-                return Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.broken_image_outlined, color: AppColors.orangeAction, size: 48),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No pudimos abrir el QR en este momento.',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(dialogContext).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                );
-              },
+              errorWidget: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.broken_image_outlined, color: AppColors.orangeAction, size: 48),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No pudimos abrir el QR en este momento.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(dialogContext).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -1896,6 +1740,14 @@ class _DonationSheetState extends State<_DonationSheet> {
     );
   }
 
+  String _formatCompactBs(double value) {
+    if (value >= 1000000) return 'Bs ${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) {
+      return 'Bs ${(value / 1000).toStringAsFixed(value >= 10000 ? 0 : 1)}K';
+    }
+    return 'Bs ${value.toStringAsFixed(0)}';
+  }
+
   Widget _buildIconButton({
     required IconData icon,
     required VoidCallback? onPressed,
@@ -1933,6 +1785,174 @@ class _DonationSheetState extends State<_DonationSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Barra fija en la parte inferior con el botón "Confirmar donación".
+/// Sube sola con el teclado y se queda habilitado solo cuando el formulario
+/// tiene todos los campos obligatorios completos.
+class _StickyConfirmBar extends StatelessWidget {
+  const _StickyConfirmBar({
+    required this.submitting,
+    required this.canSubmit,
+    required this.missingReason,
+    required this.errorMessage,
+    required this.onSubmit,
+  });
+
+  final bool submitting;
+  final bool canSubmit;
+  final String? missingReason;
+  final String? errorMessage;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppColors.space20,
+            AppColors.space12,
+            AppColors.space20,
+            AppColors.space12 + viewInsets,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (errorMessage != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppColors.space12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.30),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        color: AppColors.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppColors.space8),
+                      Expanded(
+                        child: Text(
+                          errorMessage!,
+                          style: const TextStyle(
+                            color: AppColors.error,
+                            fontSize: AppColors.fontSizeSm,
+                            fontWeight: AppColors.fontWeightSemiBold,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppColors.space12),
+              ] else if (!canSubmit && missingReason != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppColors.space12, vertical: AppColors.space8),
+                  decoration: BoxDecoration(
+                    color: AppColors.orangeAction.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                    border: Border.all(
+                      color: AppColors.orangeAction.withValues(alpha: 0.25),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.orangeAction,
+                        size: 16,
+                      ),
+                      const SizedBox(width: AppColors.space8),
+                      Expanded(
+                        child: Text(
+                          missingReason!,
+                          style: const TextStyle(
+                            color: AppColors.orangeAction,
+                            fontSize: AppColors.fontSizeXs,
+                            fontWeight: AppColors.fontWeightExtraBold,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppColors.space8),
+              ],
+              AppPrimaryButton(
+                label: submitting
+                    ? 'Registrando donación…'
+                    : 'Confirmar donación',
+                icon: submitting ? null : Icons.favorite_rounded,
+                onPressed: (submitting || !canSubmit) ? null : onSubmit,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Section header chico con icono coloreado + título — usado dentro del form
+/// para separar bloques (monto, método de pago, comprobante).
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.bluePrimary.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(AppColors.radiusSm),
+          ),
+          child: Icon(icon, color: AppColors.bluePrimary, size: 20),
+        ),
+        const SizedBox(width: AppColors.space12),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: AppColors.darkText,
+              fontSize: AppColors.fontSizeMd,
+              fontWeight: AppColors.fontWeightExtraBold,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

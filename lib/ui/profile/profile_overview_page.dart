@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,6 +5,8 @@ import '../../models/user_profile.dart';
 import '../../services/profile_service.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/app_buttons.dart';
+import '../widgets/app_network_image.dart';
+import '../widgets/premium_app_bar.dart';
 import 'profile_settings_page.dart';
 
 class ProfileOverviewPage extends StatefulWidget {
@@ -41,9 +41,7 @@ class _ProfileOverviewPageState extends State<ProfileOverviewPage> {
   }
 
   Future<void> _refreshProfile() async {
-    if (!mounted) {
-      return;
-    }
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final latest = await widget.profileService.fetchProfileByUserId(_profile.userId);
@@ -51,9 +49,7 @@ class _ProfileOverviewPageState extends State<ProfileOverviewPage> {
         setState(() => _profile = latest);
       }
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -71,192 +67,176 @@ class _ProfileOverviewPageState extends State<ProfileOverviewPage> {
     }
   }
 
+  String get _initials {
+    final name = _profile.displayName?.trim() ?? '';
+    if (name.isEmpty) {
+      final email = _userEmail ?? '';
+      return email.isNotEmpty ? email[0].toUpperCase() : 'M';
+    }
+    final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts[1][0]).toUpperCase();
+  }
+
+  String? _formatDocument() {
+    if ((_profile.documentType?.isNotEmpty ?? false) &&
+        (_profile.documentNumber?.isNotEmpty ?? false)) {
+      return '${_profile.documentType}: ${_profile.documentNumber}';
+    }
+    return _profile.documentNumber ?? _profile.documentType;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final verified = _profile.meetsCompletionCriteria;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) {
-          Navigator.of(context).pop(_profile);
-        }
+        if (!didPop) Navigator.of(context).pop(_profile);
       },
       child: Scaffold(
         backgroundColor: AppColors.lightBackground,
-        appBar: AppBar(
-          title: const Text('Mi perfil'),
+        appBar: PremiumAppBar(
+          title: 'Mi perfil',
+          onBack: () => Navigator.of(context).pop(_profile),
           actions: [
-            IconButton(
+            PremiumAppBarAction(
+              icon: Icons.edit_rounded,
               tooltip: 'Editar perfil',
-              icon: const Icon(Icons.edit_outlined),
               onPressed: _loading ? null : _openSettings,
             ),
           ],
         ),
-        body: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: _refreshProfile,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        body: RefreshIndicator(
+          onRefresh: _refreshProfile,
+          color: AppColors.bluePrimary,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+            padding: const EdgeInsets.fromLTRB(
+              AppColors.space20,
+              AppColors.space12,
+              AppColors.space20,
+              AppColors.space32,
+            ),
+            child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _ProfileHeader(profile: _profile, loading: _loading),
-                    const SizedBox(height: 16),
-                    _ProfileSection(
-                      title: 'Contacto',
-                      children: [
-                        _ProfileRow(
-                          icon: Icons.mail_outline,
-                          label: 'Correo',
-                          value: _userEmail ?? '—',
-                        ),
-                        _ProfileRow(
-                          icon: Icons.phone_outlined,
-                          label: 'Teléfono',
-                          value: _profile.phone,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.location_on_outlined,
-                          label: 'Departamento',
-                          value: _profile.city,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.home_outlined,
-                          label: 'Dirección',
-                          value: _profile.address,
-                        ),
-                      ],
+                    _ProfileHero(
+                      profile: _profile,
+                      email: _userEmail,
+                      initials: _initials,
+                      verified: verified,
+                      loading: _loading,
+                      onEdit: _loading ? null : _openSettings,
                     ),
-                    const SizedBox(height: 16),
-                    _ProfileSection(
-                      title: 'Identidad',
-                      children: [
-                        _ProfileRow(
-                          icon: Icons.badge_outlined,
-                          label: 'Nombre completo',
-                          value: _profile.displayName,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.credit_card_outlined,
-                          label: 'Documento',
-                          value: _formatDocument(),
-                        ),
-                        _ProfileRow(
-                          icon: Icons.info_outline,
-                          label: 'Presentación',
-                          value: _profile.bio,
-                          multiline: true,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _ProfileSection(
-                      title: 'Datos financieros',
-                      children: [
-                        _ProfileRow(
-                          icon: Icons.person_outline,
-                          label: 'Titular de cuenta',
-                          value: _profile.bankHolder,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.account_balance_outlined,
-                          label: 'Banco',
-                          value: _profile.bankName,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.confirmation_number_outlined,
-                          label: 'Tipo de cuenta',
-                          value: _profile.bankAccountType,
-                        ),
-                        _ProfileRow(
-                          icon: Icons.numbers,
-                          label: 'Número de cuenta',
-                          value: _profile.bankAccountNumber,
-                          obscure: !_showAccountNumber,
-                          action: (_profile.bankAccountNumber?.trim().isNotEmpty ?? false)
-                              ? IconButton(
-                                  tooltip: _showAccountNumber ? 'Ocultar cuenta' : 'Ver cuenta',
-                                  icon: Icon(
-                                    _showAccountNumber
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                  ),
-                                  onPressed: () => setState(() => _showAccountNumber = !_showAccountNumber),
-                                  splashRadius: 18,
-                                )
-                              : null,
-                        ),
-                        if (_profile.donationQrUrl != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: AppColors.space16),
+                    _StatusBanner(verified: verified),
+                            const SizedBox(height: AppColors.space16),
+                            _ProfileSection(
+                              icon: Icons.contact_mail_rounded,
+                              iconColor: AppColors.bluePrimary,
+                              title: 'Contacto',
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'QR de donación',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: AppColors.darkText.withValues(alpha: 0.85),
-                                          ),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: () => setState(() => _showQr = !_showQr),
-                                      icon: Icon(_showQr ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                                      label: Text(_showQr ? 'Ocultar' : 'Ver'),
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: AppColors.bluePrimary,
-                                      ),
-                                    ),
-                                  ],
+                                _ProfileRow(
+                                  icon: Icons.mail_outline_rounded,
+                                  label: 'Correo',
+                                  value: _userEmail,
                                 ),
-                                const SizedBox(height: 8),
-                                AnimatedCrossFade(
-                                  duration: const Duration(milliseconds: 200),
-                                  crossFadeState:
-                                      _showQr ? CrossFadeState.showFirst : CrossFadeState.showSecond,
-                                  firstChild: ClipRRect(
-                                    borderRadius: BorderRadius.circular(18),
-                                    child: AspectRatio(
-                                      aspectRatio: 1,
-                                      child: Image.network(
-                                        _profile.donationQrUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Center(
-                                          child: Icon(Icons.qr_code_2_outlined, size: 48, color: AppColors.grayNeutral),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  secondChild: Container(
-                                    height: 160,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.grayNeutral.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(color: AppColors.grayNeutral.withValues(alpha: 0.35)),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(Icons.qr_code_2_outlined, size: 48, color: AppColors.grayNeutral),
-                                    ),
-                                  ),
+                                _ProfileRow(
+                                  icon: Icons.phone_iphone_rounded,
+                                  label: 'Teléfono',
+                                  value: _profile.phone,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.location_on_rounded,
+                                  label: 'Departamento',
+                                  value: _profile.city,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.home_rounded,
+                                  label: 'Dirección',
+                                  value: _profile.address,
+                                  multiline: true,
                                 ),
                               ],
                             ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                            const SizedBox(height: AppColors.space16),
+                            _ProfileSection(
+                              icon: Icons.badge_rounded,
+                              iconColor: AppColors.greenHope,
+                              title: 'Identidad',
+                              children: [
+                                _ProfileRow(
+                                  icon: Icons.person_rounded,
+                                  label: 'Nombre completo',
+                                  value: _profile.displayName,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.credit_card_rounded,
+                                  label: 'Documento',
+                                  value: _formatDocument(),
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.auto_stories_rounded,
+                                  label: 'Presentación',
+                                  value: _profile.bio,
+                                  multiline: true,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppColors.space16),
+                            _ProfileSection(
+                              icon: Icons.account_balance_wallet_rounded,
+                              iconColor: AppColors.orangeAction,
+                              title: 'Datos financieros',
+                              children: [
+                                _ProfileRow(
+                                  icon: Icons.person_outline_rounded,
+                                  label: 'Titular de cuenta',
+                                  value: _profile.bankHolder,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.account_balance_rounded,
+                                  label: 'Banco',
+                                  value: _profile.bankName,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.list_alt_rounded,
+                                  label: 'Tipo de cuenta',
+                                  value: _profile.bankAccountType,
+                                ),
+                                _ProfileRow(
+                                  icon: Icons.tag_rounded,
+                                  label: 'Número de cuenta',
+                                  value: _profile.bankAccountNumber,
+                                  obscure: !_showAccountNumber,
+                                  action: (_profile.bankAccountNumber?.trim().isNotEmpty ?? false)
+                                      ? _RowToggleButton(
+                                          visible: _showAccountNumber,
+                                          onTap: () => setState(
+                                              () => _showAccountNumber = !_showAccountNumber),
+                                        )
+                                      : null,
+                                ),
+                                if (_profile.donationQrUrl != null) ...[
+                                  const SizedBox(height: AppColors.space12),
+                                  _QrPanel(
+                                    url: _profile.donationQrUrl!,
+                                    visible: _showQr,
+                                    onToggle: () => setState(() => _showQr = !_showQr),
+                                  ),
+                                ],
+                              ],
+                            ),
+                    const SizedBox(height: AppColors.space24),
                     AppPrimaryButton(
-                      label: 'Actualizar datos',
-                      icon: Icons.settings_outlined,
+                      label: 'Editar mi perfil',
+                      icon: Icons.tune_rounded,
                       onPressed: _loading ? null : _openSettings,
                     ),
-                    const SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -266,160 +246,321 @@ class _ProfileOverviewPageState extends State<ProfileOverviewPage> {
       ),
     );
   }
-
-  String? _formatDocument() {
-    if ((_profile.documentType?.isNotEmpty ?? false) && (_profile.documentNumber?.isNotEmpty ?? false)) {
-      return '${_profile.documentType}: ${_profile.documentNumber}';
-    }
-    return _profile.documentNumber ?? _profile.documentType;
-  }
 }
 
-class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.profile, required this.loading});
+// ─── Compact, soft profile card (no harsh blue header) ──────────────────────
+
+class _ProfileHero extends StatelessWidget {
+  const _ProfileHero({
+    required this.profile,
+    required this.email,
+    required this.initials,
+    required this.verified,
+    required this.loading,
+    required this.onEdit,
+  });
 
   final UserProfile profile;
+  final String? email;
+  final String initials;
+  final bool verified;
   final bool loading;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColor = profile.meetsCompletionCriteria ? AppColors.greenHope : AppColors.orangeAction;
-    final statusLabel = profile.meetsCompletionCriteria ? 'Perfil verificado' : 'Información pendiente';
+    final hasAvatar = (profile.avatarUrl?.trim().isNotEmpty ?? false);
+    final ringColor =
+        verified ? AppColors.greenHope : AppColors.orangeAction;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CircleAvatar(
-              radius: 48,
-              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.12),
-              backgroundImage: profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : null,
-              child: profile.avatarUrl == null
-                  ? const Icon(Icons.person_outline, color: AppColors.bluePrimary, size: 48)
-                  : null,
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, innerConstraints) {
-                  final maxContentWidth = innerConstraints.maxWidth;
-                  final statusChip = Chip(
-                    backgroundColor: statusColor.withValues(alpha: 0.12),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          profile.meetsCompletionCriteria
-                              ? Icons.verified_outlined
-                              : Icons.pending_outlined,
-                          size: 16,
-                          color: statusColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            statusLabel,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(26),
-                      side: BorderSide(color: statusColor.withValues(alpha: 0.25), width: 1),
-                    ),
-                  );
-
-                  const double chipHorizontalPadding = 16;
-                  final availableForName = math.max(0.0, maxContentWidth - 12 - chipHorizontalPadding - 120);
-
-                  final headerLine = Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      ConstrainedBox(
-                        constraints: BoxConstraints(maxWidth: availableForName > 0 ? availableForName : maxContentWidth),
-                        child: Text(
-                          profile.displayName ?? 'Miembro Solidario',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.darkText,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      statusChip,
-                    ],
-                  );
-
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      headerLine,
-                      const SizedBox(height: 8),
-                      Text(
-                        profile.bio?.isNotEmpty == true
-                            ? profile.bio!
-                            : 'Completa tu historia para conectar con donantes y acelerar la aprobación de tus campañas.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.darkText.withValues(alpha: 0.72),
-                          height: 1.45,
-                        ),
-                      ),
-                      if (loading)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 12),
-                          child: LinearProgressIndicator(),
-                        ),
-                    ],
-                  );
-                },
+    return Container(
+      padding: const EdgeInsets.all(AppColors.space20),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        boxShadow: AppColors.shadowMd,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: ringColor.withValues(alpha: 0.55),
+                width: 2,
               ),
             ),
-          ],
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.grayLight,
+              ),
+              child: ClipOval(
+                child: hasAvatar
+                    ? AppNetworkImage(
+                        url: profile.avatarUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: _InitialsAvatar(initials: initials),
+                      )
+                    : _InitialsAvatar(initials: initials),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppColors.space16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  profile.displayName?.trim().isNotEmpty == true
+                      ? profile.displayName!
+                      : 'Miembro Solidario',
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: AppColors.fontSizeLg,
+                    fontWeight: AppColors.fontWeightExtraBold,
+                    letterSpacing: -0.3,
+                    height: 1.2,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (email != null && email!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    email!,
+                    style: const TextStyle(
+                      color: AppColors.mediumText,
+                      fontSize: AppColors.fontSizeSm,
+                      fontWeight: AppColors.fontWeightMedium,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: AppColors.space8),
+                _HeroBadge(verified: verified),
+                if (loading)
+                  Padding(
+                    padding: const EdgeInsets.only(top: AppColors.space8),
+                    child: SizedBox(
+                      width: 100,
+                      child: LinearProgressIndicator(
+                        backgroundColor:
+                            AppColors.grayLight.withValues(alpha: 0.6),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.bluePrimary),
+                        minHeight: 2,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InitialsAvatar extends StatelessWidget {
+  const _InitialsAvatar({required this.initials});
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.bluePrimary.withValues(alpha: 0.10),
+      ),
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: AppColors.bluePrimary,
+            fontSize: AppColors.fontSizeXl,
+            fontWeight: AppColors.fontWeightExtraBold,
+            letterSpacing: -0.3,
+          ),
         ),
       ),
     );
   }
 }
 
-class _ProfileSection extends StatelessWidget {
-  const _ProfileSection({required this.title, required this.children});
+class _HeroBadge extends StatelessWidget {
+  const _HeroBadge({required this.verified});
+  final bool verified;
 
+  @override
+  Widget build(BuildContext context) {
+    final color = verified ? AppColors.greenHope : AppColors.orangeAction;
+    final label = verified ? 'Perfil verificado' : 'Información pendiente';
+    final icon =
+        verified ? Icons.verified_rounded : Icons.pending_actions_rounded;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppColors.radiusRound),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: AppColors.fontSizeXs,
+              fontWeight: AppColors.fontWeightBold,
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Status banner under hero ────────────────────────────────────────────────
+
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.verified});
+  final bool verified;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = verified ? AppColors.greenHope : AppColors.orangeAction;
+    final title = verified
+        ? '¡Tu perfil está completo!'
+        : 'Completa tu perfil para publicar campañas';
+    final subtitle = verified
+        ? 'Los donantes pueden confiar en tus datos y aprobar tus solicitudes más rápido.'
+        : 'Añade tu información financiera y de contacto para enviar solicitudes de campaña.';
+    final icon =
+        verified ? Icons.verified_rounded : Icons.info_outline_rounded;
+
+    return Container(
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        boxShadow: AppColors.shadowMd,
+        border: Border(
+          left: BorderSide(color: color, width: 4),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppColors.space8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(AppColors.radiusMd),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: AppColors.space12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: AppColors.fontSizeMd,
+                    fontWeight: AppColors.fontWeightBold,
+                    height: 1.25,
+                  ),
+                ),
+                const SizedBox(height: AppColors.space4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.mediumText,
+                    fontSize: AppColors.fontSizeBase,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section card ────────────────────────────────────────────────────────────
+
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.children,
+  });
+
+  final IconData icon;
+  final Color iconColor;
   final String title;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        boxShadow: AppColors.shadowMd,
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppColors.space20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: AppColors.darkText,
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(width: AppColors.space12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.darkText,
+                      fontSize: AppColors.fontSizeLg,
+                      fontWeight: AppColors.fontWeightBold,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppColors.space16),
+            const Divider(height: 1, color: AppColors.grayLight),
+            const SizedBox(height: AppColors.space8),
             ...children,
           ],
         ),
@@ -427,6 +568,8 @@ class _ProfileSection extends StatelessWidget {
     );
   }
 }
+
+// ─── Row inside a section ────────────────────────────────────────────────────
 
 class _ProfileRow extends StatelessWidget {
   const _ProfileRow({
@@ -447,46 +590,194 @@ class _ProfileRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final displayValue = value?.trim().isNotEmpty == true
-        ? (obscure ? '••••••••' : value!.trim())
+    final hasValue = value?.trim().isNotEmpty == true;
+    final displayValue = hasValue
+        ? (obscure ? '•••• •••• ••••' : value!.trim())
         : 'Sin registrar';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppColors.space12),
       child: Row(
-        crossAxisAlignment: multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        crossAxisAlignment:
+            multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.bluePrimary.withValues(alpha: 0.85), size: 20),
-          const SizedBox(width: 12),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppColors.radiusSm),
+            ),
+            child: Icon(icon, color: AppColors.bluePrimary, size: 18),
+          ),
+          const SizedBox(width: AppColors.space12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.darkText.withValues(alpha: 0.65),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
+                  label.toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.lightText.withValues(alpha: 0.95),
+                    fontSize: AppColors.fontSizeXs,
+                    fontWeight: AppColors.fontWeightBold,
+                    letterSpacing: 0.8,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   displayValue,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.darkText,
-                        height: multiline ? 1.4 : 1.2,
-                        fontSize: 14,
-                      ),
+                  style: TextStyle(
+                    color: hasValue
+                        ? AppColors.darkText
+                        : AppColors.lightText,
+                    fontSize: AppColors.fontSizeBase,
+                    fontWeight: hasValue
+                        ? AppColors.fontWeightSemiBold
+                        : AppColors.fontWeightMedium,
+                    fontStyle: hasValue ? FontStyle.normal : FontStyle.italic,
+                    height: multiline ? 1.45 : 1.25,
+                  ),
                 ),
               ],
             ),
           ),
           if (action != null) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: AppColors.space8),
             action!,
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RowToggleButton extends StatelessWidget {
+  const _RowToggleButton({required this.visible, required this.onTap});
+
+  final bool visible;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.bluePrimary.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(AppColors.radiusSm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppColors.radiusSm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppColors.space8),
+          child: Icon(
+            visible
+                ? Icons.visibility_off_rounded
+                : Icons.visibility_rounded,
+            color: AppColors.bluePrimary,
+            size: 18,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Donation QR card inside finance section ─────────────────────────────────
+
+class _QrPanel extends StatelessWidget {
+  const _QrPanel({
+    required this.url,
+    required this.visible,
+    required this.onToggle,
+  });
+
+  final String url;
+  final bool visible;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: BoxDecoration(
+        color: AppColors.bluePrimary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        border: Border.all(
+          color: AppColors.bluePrimary.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.qr_code_2_rounded,
+                  color: AppColors.bluePrimary, size: 20),
+              const SizedBox(width: AppColors.space8),
+              const Expanded(
+                child: Text(
+                  'QR de donación',
+                  style: TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: AppColors.fontSizeBase,
+                    fontWeight: AppColors.fontWeightBold,
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: onToggle,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.bluePrimary,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppColors.space12, vertical: AppColors.space4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                  ),
+                ),
+                icon: Icon(
+                  visible
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  size: 18,
+                ),
+                label: Text(visible ? 'Ocultar' : 'Ver'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppColors.space12),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState:
+                visible ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            firstChild: AspectRatio(
+              aspectRatio: 1,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                child: AppNetworkImage(
+                  url: url,
+                  fit: BoxFit.cover,
+                  errorWidget: const Center(
+                    child: Icon(Icons.qr_code_2_rounded,
+                        size: 56, color: AppColors.grayNeutral),
+                  ),
+                ),
+              ),
+            ),
+            secondChild: Container(
+              height: 180,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                border: Border.all(
+                  color: AppColors.grayNeutral.withValues(alpha: 0.5),
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: const Center(
+                child: Icon(Icons.qr_code_2_rounded,
+                    size: 64, color: AppColors.grayNeutral),
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/organization.dart';
 import '../../../theme/app_colors.dart';
+import '../../widgets/app_network_image.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OrganizationHighlightCard — Card horizontal full-width: logo a la izquierda
@@ -245,12 +246,12 @@ class _OrgLogoSquare extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (url != null && url!.isNotEmpty) {
-      return Image.network(
-        url!,
+      return AppNetworkImage(
+        url: url!,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => _fallback(),
+        errorWidget: _fallback(),
       );
     }
     return _fallback();
