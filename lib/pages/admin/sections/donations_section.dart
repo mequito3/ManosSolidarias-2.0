@@ -854,14 +854,11 @@ class _DonationDetailContent extends StatelessWidget {
                     child: const CircularProgressIndicator(color: AppColors.greenSuccess),
                   )
                 else ...[
-                  Container(
+                  // Approve — gradiente verde (semántico = éxito)
+                  DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.greenHopeDark, AppColors.greenHope],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
+                      gradient: AppColors.successGradient,
+                      borderRadius: BorderRadius.circular(AppColors.radiusMd),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.greenSuccess.withValues(alpha: 0.38),
@@ -874,93 +871,77 @@ class _DonationDetailContent extends StatelessWidget {
                       onPressed: onApprove == null
                           ? null
                           : () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                  title: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.greenSuccess.withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(10),
-                                        ),
-                                        child: const Icon(Icons.check_circle_rounded, color: AppColors.greenSuccess, size: 22),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      const Expanded(child: Text('¿Aprobar donación?')),
-                                    ],
-                                  ),
-                                  content: const Text('Confirma que revisaste el comprobante y deseas aprobar esta donación.'),
-                                  actions: [
-                                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                    FilledButton(
-                                      onPressed: () => Navigator.pop(ctx, true),
-                                      style: FilledButton.styleFrom(backgroundColor: AppColors.greenSuccess),
-                                      child: const Text('Aprobar'),
-                                    ),
-                                  ],
-                                ),
+                              final confirmed = await _showDonationConfirmDialog(
+                                context,
+                                icon: Icons.check_circle_rounded,
+                                iconColor: AppColors.greenSuccess,
+                                confirmColor: AppColors.greenSuccess,
+                                title: '¿Aprobar donación?',
+                                message: 'Confirma que revisaste el comprobante y deseas aprobar esta donación.',
+                                confirmText: 'Aprobar',
                               );
                               if (confirmed == true) onApprove!();
                             },
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 52),
+                        minimumSize: const Size(double.infinity, 54),
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                        ),
                       ),
                       icon: const Icon(Icons.check_circle_rounded, size: 20),
-                      label: const Text('Aprobar donación', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                      label: const Text(
+                        'Aprobar donación',
+                        style: TextStyle(
+                          fontSize: AppColors.fontSizeMd,
+                          fontWeight: AppColors.fontWeightBold,
+                          letterSpacing: AppColors.letterSpacingWide,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppColors.space12),
+                  // Reject — outlined rojo (semántico = destructivo)
                   OutlinedButton.icon(
                     onPressed: onReject == null
                         ? null
                         : () async {
-                            final confirmed = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                title: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.error.withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: const Icon(Icons.cancel_rounded, color: AppColors.error, size: 22),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    const Expanded(child: Text('¿Rechazar donación?')),
-                                  ],
-                                ),
-                                content: const Text('Esta acción notificará al donante que su comprobante fue rechazado.'),
-                                actions: [
-                                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-                                  FilledButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-                                    child: const Text('Rechazar'),
-                                  ),
-                                ],
-                              ),
+                            final confirmed = await _showDonationConfirmDialog(
+                              context,
+                              icon: Icons.cancel_rounded,
+                              iconColor: AppColors.error,
+                              confirmColor: AppColors.error,
+                              title: '¿Rechazar donación?',
+                              message: 'Esta acción notificará al donante que su comprobante fue rechazado.',
+                              confirmText: 'Rechazar',
                             );
                             if (confirmed == true) onReject!();
                           },
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: AppColors.error.withValues(alpha: 0.5), width: 1.5),
+                      minimumSize: const Size(double.infinity, 54),
+                      padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
+                      side: BorderSide(
+                        color: AppColors.error.withValues(alpha: 0.55),
+                        width: 2,
+                      ),
+                      backgroundColor: AppColors.error.withValues(alpha: 0.04),
                       foregroundColor: AppColors.error,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                      ),
                     ),
                     icon: const Icon(Icons.cancel_outlined, size: 20),
-                    label: const Text('Rechazar donación', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                    label: const Text(
+                      'Rechazar donación',
+                      style: TextStyle(
+                        fontSize: AppColors.fontSizeMd,
+                        fontWeight: AppColors.fontWeightSemiBold,
+                        letterSpacing: AppColors.letterSpacingWide,
+                      ),
+                    ),
                   ),
                 ],
                 const SizedBox(height: 8),
@@ -1105,3 +1086,46 @@ class _DonationInfoRow extends StatelessWidget {
 }
 
 String _formatCurrency(double value) => 'Bs ${value.toStringAsFixed(2)}';
+
+Future<bool?> _showDonationConfirmDialog(
+  BuildContext context, {
+  required IconData icon,
+  required Color iconColor,
+  required Color confirmColor,
+  required String title,
+  required String message,
+  required String confirmText,
+}) {
+  return showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Text(title)),
+        ],
+      ),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: FilledButton.styleFrom(backgroundColor: confirmColor),
+          child: Text(confirmText),
+        ),
+      ],
+    ),
+  );
+}
