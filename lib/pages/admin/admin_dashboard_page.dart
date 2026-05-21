@@ -512,6 +512,7 @@ class _AdminAvatarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasAvatar = (profile.avatarUrl ?? '').trim().isNotEmpty;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppColors.space8,
@@ -526,25 +527,113 @@ class _AdminAvatarButton extends StatelessWidget {
             customBorder: const CircleBorder(),
             onTap: onTap,
             child: Container(
-              width: 34,
-              height: 34,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.primaryGradient,
-              ),
-              child: Center(
-                child: Text(
-                  _initial,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: AppColors.fontWeightExtraBold,
-                    fontSize: AppColors.fontSizeBase,
-                  ),
+                gradient: hasAvatar ? null : AppColors.primaryGradient,
+                color: hasAvatar ? Colors.white : null,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.bluePrimary.withValues(alpha: 0.30),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipOval(
+                child: hasAvatar
+                    ? Image.network(
+                        profile.avatarUrl!.trim(),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _initialFallback(),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return _initialFallback();
+                        },
+                      )
+                    : _initialFallback(),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _initialFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppColors.primaryGradient,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        _initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: AppColors.fontWeightExtraBold,
+          fontSize: AppColors.fontSizeBase,
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminProfileSheetAvatar extends StatelessWidget {
+  const _AdminProfileSheetAvatar({required this.profile, required this.initial});
+  final UserProfile profile;
+  final String initial;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAvatar = (profile.avatarUrl ?? '').trim().isNotEmpty;
+    final fallback = Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: AppColors.primaryGradient,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: AppColors.fontSize2xl,
+          fontWeight: AppColors.fontWeightExtraBold,
+        ),
+      ),
+    );
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.bluePrimary.withValues(alpha: 0.30),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: hasAvatar
+            ? Image.network(
+                profile.avatarUrl!.trim(),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => fallback,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return fallback;
+                },
+              )
+            : fallback,
       ),
     );
   }
@@ -579,24 +668,7 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
             ),
           ),
           const SizedBox(height: AppColors.space20),
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
-              shape: BoxShape.circle,
-            ),
-            child: Center(
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: AppColors.fontSize2xl,
-                  fontWeight: AppColors.fontWeightExtraBold,
-                ),
-              ),
-            ),
-          ),
+          _AdminProfileSheetAvatar(profile: profile, initial: initial),
           const SizedBox(height: AppColors.space12),
           Text(
             profile.displayName ?? 'Administrador',
