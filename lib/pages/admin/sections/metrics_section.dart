@@ -5,6 +5,14 @@ import '../../../theme/app_colors.dart';
 import '../../../services/pdf_export_service.dart';
 import '../../../ui/widgets/premium_hero.dart';
 
+// Decoración compartida para todas las cards del panel: fondo blanco con
+// sombra sutil (mismo lenguaje que el resto del admin).
+BoxDecoration get _kCardDecoration => BoxDecoration(
+      color: AppColors.cardBackground,
+      borderRadius: BorderRadius.circular(AppColors.radiusMd),
+      boxShadow: AppColors.shadowSm,
+    );
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main panel
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,27 +87,26 @@ class AdminMetricsPanel extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: TextButton.icon(
             onPressed: () => _exportPdf(context, metrics, activeCampaigns),
-            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
             label: const Text('Exportar PDF'),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.bluePrimary,
-              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.08),
               padding: const EdgeInsets.symmetric(
-                horizontal: AppColors.space16,
+                horizontal: AppColors.space12,
                 vertical: AppColors.space8,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                borderRadius: BorderRadius.circular(AppColors.radiusSm),
               ),
               textStyle: const TextStyle(
-                fontWeight: AppColors.fontWeightExtraBold,
+                fontWeight: AppColors.fontWeightBold,
                 fontSize: AppColors.fontSizeSm,
                 letterSpacing: 0.2,
               ),
             ),
           ),
         ),
-        const SizedBox(height: AppColors.space16),
+        const SizedBox(height: AppColors.space8),
 
         // ── Donantes recurrentes (info contextual al donantes del hero) ──
         Container(
@@ -107,19 +114,20 @@ class AdminMetricsPanel extends StatelessWidget {
             horizontal: AppColors.space16,
             vertical: AppColors.space12,
           ),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(AppColors.radiusMd),
-            boxShadow: AppColors.shadowSm,
-            border: Border.all(
-              color: AppColors.orangeAction.withValues(alpha: 0.20),
-            ),
-          ),
+          decoration: _kCardDecoration,
           child: Row(
             children: [
-              const Icon(Icons.repeat_rounded,
-                  color: AppColors.orangeAction, size: 18),
-              const SizedBox(width: AppColors.space8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.orangeAction.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                ),
+                child: const Icon(Icons.repeat_rounded,
+                    color: AppColors.orangeAction, size: 16),
+              ),
+              const SizedBox(width: AppColors.space12),
               Expanded(
                 child: Text(
                   '${metrics.repeatDonorsPercentage.toStringAsFixed(0)}% de los donantes son recurrentes',
@@ -136,8 +144,8 @@ class AdminMetricsPanel extends StatelessWidget {
         const SizedBox(height: AppColors.space20),
 
         // ── Crecimiento donaciones ────────────────────────────────────────
-        _MetricsSectionLabel(label: 'Crecimiento'),
-        const SizedBox(height: 10),
+        const _MetricsSectionLabel(label: 'Crecimiento'),
+        const SizedBox(height: AppColors.space12),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -165,8 +173,8 @@ class AdminMetricsPanel extends StatelessWidget {
         const SizedBox(height: 14),
 
         // ── Financiero ───────────────────────────────────────────────────
-        _MetricsSectionLabel(label: 'Financiero'),
-        const SizedBox(height: 10),
+        const _MetricsSectionLabel(label: 'Financiero'),
+        const SizedBox(height: AppColors.space12),
         Row(
           children: [
             Expanded(
@@ -192,8 +200,8 @@ class AdminMetricsPanel extends StatelessWidget {
         // ── Campañas activas ─────────────────────────────────────────────
         if (activeCampaigns.isNotEmpty) ...[
           const SizedBox(height: 14),
-          _MetricsSectionLabel(label: 'Campañas activas'),
-          const SizedBox(height: 10),
+          const _MetricsSectionLabel(label: 'Campañas activas'),
+          const SizedBox(height: AppColors.space12),
           Row(
             children: [
               Expanded(
@@ -232,7 +240,7 @@ class AdminMetricsPanel extends StatelessWidget {
 
         // ── Tareas pendientes ────────────────────────────────────────────
         _pendingHeader(metrics),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppColors.space12),
         Row(
           children: [
             Expanded(
@@ -280,44 +288,36 @@ class AdminMetricsPanel extends StatelessWidget {
           height: 18,
           decoration: BoxDecoration(
             color: AppColors.orangeAction,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(AppColors.radiusXs),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppColors.space8),
         const Text(
           'Tareas pendientes',
           style: TextStyle(
-            fontWeight: FontWeight.w700,
+            fontWeight: AppColors.fontWeightExtraBold,
             color: AppColors.darkText,
-            fontSize: 13,
+            fontSize: AppColors.fontSizeMd,
+            letterSpacing: -0.2,
           ),
         ),
         const Spacer(),
         if (total > 0)
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppColors.space12, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.orangeAction.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
-              border: Border.all(
-                  color: AppColors.orangeAction.withValues(alpha: 0.3)),
+              color: AppColors.orangeAction.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(AppColors.radiusRound),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.notifications_active_rounded,
-                    size: 12, color: AppColors.orangeAction),
-                const SizedBox(width: 4),
-                Text(
-                  '$total',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.orangeAction,
-                  ),
-                ),
-              ],
+            child: Text(
+              '$total',
+              style: const TextStyle(
+                fontSize: AppColors.fontSizeSm,
+                fontWeight: AppColors.fontWeightExtraBold,
+                color: AppColors.orangeAction,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
       ],
@@ -400,19 +400,20 @@ class _MetricsSectionLabel extends StatelessWidget {
       children: [
         Container(
           width: 4,
-          height: 16,
+          height: 18,
           decoration: BoxDecoration(
             gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(AppColors.radiusXs),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppColors.space8),
         Text(
           label,
           style: const TextStyle(
-            fontWeight: FontWeight.w700,
+            fontWeight: AppColors.fontWeightExtraBold,
             color: AppColors.darkText,
-            fontSize: 13,
+            fontSize: AppColors.fontSizeMd,
+            letterSpacing: -0.2,
           ),
         ),
       ],
@@ -451,45 +452,29 @@ class _GrowthCard extends StatelessWidget {
     final color = isPos ? AppColors.greenSuccess : AppColors.error;
 
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: _kCardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: AppColors.fontSizeXs,
+                  color: AppColors.mediumText,
+                  fontWeight: AppColors.fontWeightSemiBold,
+                  letterSpacing: 0.3,
                 ),
-                child: Icon(
-                    isPos
-                        ? Icons.trending_up_rounded
-                        : Icons.trending_down_rounded,
-                    size: 14,
-                    color: color),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 6, vertical: 3),
+                    horizontal: AppColors.space8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(6),
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -498,14 +483,14 @@ class _GrowthCard extends StatelessWidget {
                         isPos
                             ? Icons.arrow_upward_rounded
                             : Icons.arrow_downward_rounded,
-                        size: 9,
+                        size: 11,
                         color: color),
                     const SizedBox(width: 2),
                     Text(
                       '${growthRate.abs().toStringAsFixed(1)}%',
                       style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
+                        fontSize: AppColors.fontSizeXs,
+                        fontWeight: AppColors.fontWeightExtraBold,
                         color: color,
                       ),
                     ),
@@ -514,35 +499,27 @@ class _GrowthCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 9,
-              color: AppColors.mediumText,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppColors.space8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 currentValue.toString(),
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: color,
+                style: const TextStyle(
+                  fontSize: AppColors.fontSize2xl,
+                  fontWeight: AppColors.fontWeightExtraBold,
+                  color: AppColors.darkText,
+                  letterSpacing: -0.5,
                   height: 1.0,
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               Padding(
-                padding: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
                   'vs $previousValue',
                   style: const TextStyle(
-                    fontSize: 9,
+                    fontSize: AppColors.fontSizeXs,
                     color: AppColors.mediumText,
                   ),
                 ),
@@ -577,50 +554,48 @@ class _SimpleStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: _kCardDecoration,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
-            ),
-            child: Icon(icon, size: 15, color: iconColor),
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                ),
+                child: Icon(icon, size: 14, color: iconColor),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppColors.space12),
           Text(
             value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: iconColor,
+            style: const TextStyle(
+              fontSize: AppColors.fontSizeXl,
+              fontWeight: AppColors.fontWeightExtraBold,
+              color: AppColors.darkText,
+              letterSpacing: -0.4,
               height: 1.1,
             ),
-            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.darkText,
-              fontWeight: FontWeight.w600,
+              fontSize: AppColors.fontSizeXs,
+              color: AppColors.mediumText,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: 0.2,
             ),
-            textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
@@ -628,9 +603,10 @@ class _SimpleStatCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               sub!,
-              style: const TextStyle(
-                  fontSize: 9, color: AppColors.mediumText),
-              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: AppColors.fontSizeXs,
+                color: AppColors.mediumText.withValues(alpha: 0.85),
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -661,47 +637,43 @@ class _FinancialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: _kCardDecoration,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 28,
+            height: 28,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
+              color: color.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(AppColors.radiusSm),
             ),
-            child: Icon(icon, size: 18, color: color),
+            child: Icon(icon, size: 14, color: color),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _fmt(amount),
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: color,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: AppColors.mediumText,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+          const SizedBox(height: AppColors.space12),
+          Text(
+            _fmt(amount),
+            style: const TextStyle(
+              fontSize: AppColors.fontSizeLg,
+              fontWeight: AppColors.fontWeightExtraBold,
+              color: AppColors.darkText,
+              letterSpacing: -0.4,
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: AppColors.fontSizeXs,
+              color: AppColors.mediumText,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -728,34 +700,19 @@ class _ProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final pct = progressPercent.clamp(0.0, 100.0);
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.greenSuccess.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(
-            color: AppColors.greenSuccess.withValues(alpha: 0.2)),
-      ),
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: _kCardDecoration,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppColors.greenSuccess.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
-                ),
-                child: const Icon(Icons.insights_rounded,
-                    size: 14, color: AppColors.greenSuccess),
-              ),
-              const SizedBox(width: 10),
               const Expanded(
                 child: Text(
                   'Progreso promedio',
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                    fontSize: AppColors.fontSizeSm,
+                    fontWeight: AppColors.fontWeightSemiBold,
                     color: AppColors.darkText,
                   ),
                 ),
@@ -763,32 +720,32 @@ class _ProgressCard extends StatelessWidget {
               Text(
                 '${pct.toStringAsFixed(1)}%',
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
+                  fontSize: AppColors.fontSizeLg,
+                  fontWeight: AppColors.fontWeightExtraBold,
                   color: AppColors.greenSuccess,
+                  letterSpacing: -0.3,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppColors.space8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(AppColors.radiusXs),
             child: LinearProgressIndicator(
               value: pct / 100,
-              backgroundColor: AppColors.greenSuccess.withValues(alpha: 0.15),
+              backgroundColor:
+                  AppColors.greenSuccess.withValues(alpha: 0.12),
               valueColor: const AlwaysStoppedAnimation<Color>(
                   AppColors.greenSuccess),
-              minHeight: 8,
+              minHeight: 6,
             ),
           ),
-          const SizedBox(height: 6),
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Avance de todas las campañas activas',
-              style: TextStyle(
-                  fontSize: 10, color: AppColors.mediumText),
-            ),
+          const SizedBox(height: AppColors.space8),
+          const Text(
+            'Avance de todas las campañas activas',
+            style: TextStyle(
+                fontSize: AppColors.fontSizeXs,
+                color: AppColors.mediumText),
           ),
         ],
       ),
@@ -819,30 +776,20 @@ class _PendingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isEmpty = count == 0;
     final isUrgent = count > 5;
-    final displayColor = isEmpty ? AppColors.grayDark : iconColor;
+    final displayColor = isEmpty ? AppColors.mediumText : iconColor;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.all(AppColors.space16),
       decoration: BoxDecoration(
-        color: isEmpty ? AppColors.lightBackground : Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusLg),
-        border: Border.all(
-          color: isUrgent
-              ? AppColors.error.withValues(alpha: 0.5)
-              : isEmpty
-                  ? AppColors.dividerColor
-                  : displayColor.withValues(alpha: 0.25),
-          width: isUrgent ? 2 : 1.5,
-        ),
-        boxShadow: isEmpty
-            ? null
-            : [
-                BoxShadow(
-                  color: displayColor.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
-                )
-              ],
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        boxShadow: AppColors.shadowSm,
+        border: isUrgent
+            ? Border.all(
+                color: AppColors.error.withValues(alpha: 0.45),
+                width: 1.5,
+              )
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,76 +797,68 @@ class _PendingCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 28,
+                height: 28,
                 decoration: BoxDecoration(
-                  color: isEmpty
-                      ? AppColors.grayDark.withValues(alpha: 0.08)
-                      : displayColor.withValues(alpha: 0.12),
-                  borderRadius:
-                      BorderRadius.circular(AppColors.radiusMd),
+                  color: displayColor.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
                 ),
-                child: Icon(icon,
-                    size: 16,
-                    color: isEmpty
-                        ? AppColors.grayDark.withValues(alpha: 0.4)
-                        : displayColor),
+                child: Icon(icon, size: 14, color: displayColor),
               ),
               const Spacer(),
               if (isUrgent)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 5, vertical: 2),
+                      horizontal: AppColors.space8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppColors.error,
-                    borderRadius: BorderRadius.circular(4),
+                    color: AppColors.error.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(AppColors.radiusRound),
                   ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.warning_amber_rounded,
-                          size: 9, color: Colors.white),
-                      SizedBox(width: 2),
-                      Text(
-                        'URG',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
+                  child: const Text(
+                    'URGENTE',
+                    style: TextStyle(
+                      fontSize: AppColors.fontSizeXs,
+                      fontWeight: AppColors.fontWeightExtraBold,
+                      color: AppColors.error,
+                      letterSpacing: 0.6,
+                    ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppColors.space12),
           Text(
             count.toString(),
             style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
+              fontSize: AppColors.fontSize2xl,
+              fontWeight: AppColors.fontWeightExtraBold,
               color: isEmpty
-                  ? AppColors.grayDark.withValues(alpha: 0.35)
-                  : displayColor,
-              height: 0.95,
+                  ? AppColors.mediumText.withValues(alpha: 0.55)
+                  : AppColors.darkText,
+              letterSpacing: -0.5,
+              height: 1.0,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 11,
-              color: isEmpty ? AppColors.mediumText : AppColors.darkText,
-              fontWeight: FontWeight.w700,
+            style: const TextStyle(
+              fontSize: AppColors.fontSizeXs,
+              color: AppColors.darkText,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: 0.2,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           if (sub != null) ...[
             const SizedBox(height: 2),
             Text(
               sub!,
               style: const TextStyle(
-                  fontSize: 9, color: AppColors.mediumText),
+                fontSize: AppColors.fontSizeXs,
+                color: AppColors.mediumText,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
