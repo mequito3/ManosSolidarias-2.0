@@ -640,195 +640,169 @@ class _AdminProfileSheetAvatar extends StatelessWidget {
 }
 
 void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
-  final initial = (profile.displayName?.trim().isNotEmpty ?? false)
-      ? profile.displayName!.characters.first.toUpperCase()
-      : 'A';
+  final rawName = profile.displayName?.trim();
+  final displayName = (rawName?.isNotEmpty ?? false)
+      ? _capitalizeWords(rawName!)
+      : 'Administrador';
+  final initial = displayName.characters.first.toUpperCase();
   final email = Supabase.instance.client.auth.currentUser?.email;
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (_) => Container(
-      margin: const EdgeInsets.all(AppColors.space12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppColors.radiusXl),
-        boxShadow: AppColors.shadowLg,
+    isScrollControlled: true,
+    builder: (sheetContext) => Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppColors.radiusXl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Hero header (gradient azul + identidad) ─────────────
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: AppColors.primaryGradient,
-              ),
-              padding: const EdgeInsets.fromLTRB(
-                AppColors.space20,
-                AppColors.space12,
-                AppColors.space20,
-                AppColors.space20,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Drag handle
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+      child: Container(
+        margin: const EdgeInsets.all(AppColors.space12),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          boxShadow: AppColors.shadowLg,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Hero header (gradient azul + identidad) ──────────
+                Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.primaryGradient,
                   ),
-                  const SizedBox(height: AppColors.space16),
-                  _AdminProfileSheetAvatar(profile: profile, initial: initial),
-                  const SizedBox(height: AppColors.space12),
-                  Text(
-                    profile.displayName ?? 'Administrador',
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: AppColors.fontSizeXl,
-                      fontWeight: AppColors.fontWeightExtraBold,
-                      letterSpacing: -0.4,
-                      shadows: [
-                        Shadow(color: Colors.black26, blurRadius: 6),
-                      ],
-                    ),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    AppColors.space12,
+                    AppColors.space20,
+                    AppColors.space20,
                   ),
-                  if ((email ?? '').isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      email!,
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        fontSize: AppColors.fontSizeSm,
-                        fontWeight: AppColors.fontWeightMedium,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: AppColors.space12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppColors.space12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      borderRadius:
-                          BorderRadius.circular(AppColors.radiusRound),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        width: 1,
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.verified_rounded,
-                          size: 14,
-                          color: Colors.white,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        SizedBox(width: 6),
+                      ),
+                      const SizedBox(height: AppColors.space16),
+                      _AdminProfileSheetAvatar(
+                        profile: profile,
+                        initial: initial,
+                      ),
+                      const SizedBox(height: AppColors.space12),
+                      Text(
+                        displayName,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: AppColors.fontSizeXl,
+                          fontWeight: AppColors.fontWeightExtraBold,
+                          letterSpacing: -0.4,
+                          shadows: [
+                            Shadow(color: Colors.black26, blurRadius: 6),
+                          ],
+                        ),
+                      ),
+                      if ((email ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 2),
                         Text(
+                          email!,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: AppColors.fontSizeSm,
+                            fontWeight: AppColors.fontWeightMedium,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: AppColors.space12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppColors.space12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          borderRadius:
+                              BorderRadius.circular(AppColors.radiusRound),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.45),
+                            width: 1,
+                          ),
+                        ),
+                        child: const Text(
                           'Administrador del sistema',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: AppColors.fontSizeXs,
                             fontWeight: AppColors.fontWeightExtraBold,
-                            letterSpacing: 0.4,
+                            letterSpacing: 0.6,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Body: detalles de cuenta ───────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppColors.space20,
-                AppColors.space20,
-                AppColors.space20,
-                AppColors.space16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _ProfileSectionLabel(text: 'Detalles de cuenta'),
-                  const SizedBox(height: AppColors.space12),
-                  if ((profile.phone ?? '').trim().isNotEmpty)
-                    _ProfileInfoTile(
-                      icon: Icons.phone_rounded,
-                      label: 'Teléfono',
-                      value: profile.phone!.trim(),
-                    ),
-                  if ((profile.city ?? '').trim().isNotEmpty)
-                    _ProfileInfoTile(
-                      icon: Icons.place_rounded,
-                      label: 'Ciudad',
-                      value: profile.city!.trim(),
-                    ),
-                  if ((profile.phone ?? '').trim().isEmpty &&
-                      (profile.city ?? '').trim().isEmpty)
-                    const _ProfileEmptyTile(),
-                  const SizedBox(height: AppColors.space12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppColors.space12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.lightBackground,
-                      borderRadius:
-                          BorderRadius.circular(AppColors.radiusSm),
-                      border: Border.all(
-                        color: AppColors.dividerColor,
-                        width: 1,
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.shield_outlined,
-                          size: 16,
-                          color:
-                              AppColors.mediumText.withValues(alpha: 0.85),
-                        ),
-                        const SizedBox(width: AppColors.space8),
-                        const Expanded(
-                          child: Text(
-                            'Sesión segura. Solo administradores tienen acceso a este panel.',
-                            style: TextStyle(
-                              color: AppColors.mediumText,
-                              fontSize: AppColors.fontSizeXs,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                // ── Body: detalles de cuenta ────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space20,
+                    AppColors.space20,
+                    AppColors.space20,
+                    AppColors.space20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _ProfileSectionLabel(text: 'Detalles de cuenta'),
+                      const SizedBox(height: AppColors.space12),
+                      if ((profile.phone ?? '').trim().isNotEmpty)
+                        _ProfileInfoTile(
+                          label: 'Teléfono',
+                          value: profile.phone!.trim(),
+                        ),
+                      if ((profile.city ?? '').trim().isNotEmpty)
+                        _ProfileInfoTile(
+                          label: 'Ciudad',
+                          value: profile.city!.trim(),
+                        ),
+                      if ((profile.phone ?? '').trim().isEmpty &&
+                          (profile.city ?? '').trim().isEmpty)
+                        const _ProfileEmptyTile(),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     ),
   );
+}
+
+String _capitalizeWords(String input) {
+  return input
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .map((part) {
+        if (part.length == 1) return part.toUpperCase();
+        return part.characters.first.toUpperCase() +
+            part.substring(1).toLowerCase();
+      })
+      .join(' ');
 }
 
 class _ProfileSectionLabel extends StatelessWidget {
@@ -865,12 +839,10 @@ class _ProfileSectionLabel extends StatelessWidget {
 
 class _ProfileInfoTile extends StatelessWidget {
   const _ProfileInfoTile({
-    required this.icon,
     required this.label,
     required this.value,
   });
 
-  final IconData icon;
   final String label;
   final String value;
 
@@ -878,50 +850,37 @@ class _ProfileInfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppColors.space8),
-      padding: const EdgeInsets.all(AppColors.space12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space16,
+        vertical: AppColors.space12,
+      ),
       decoration: BoxDecoration(
         color: AppColors.lightBackground,
         borderRadius: BorderRadius.circular(AppColors.radiusMd),
         border: Border.all(color: AppColors.dividerColor, width: 1),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: AppColors.mediumText,
+              fontSize: AppColors.fontSizeXs,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: 0.6,
             ),
-            child: Icon(icon, size: 18, color: AppColors.bluePrimary),
           ),
-          const SizedBox(width: AppColors.space12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.mediumText,
-                    fontSize: AppColors.fontSizeXs,
-                    fontWeight: AppColors.fontWeightSemiBold,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.darkText,
-                    fontSize: AppColors.fontSizeBase,
-                    fontWeight: AppColors.fontWeightSemiBold,
-                  ),
-                ),
-              ],
+          const SizedBox(height: 4),
+          SelectableText(
+            value,
+            maxLines: 2,
+            style: const TextStyle(
+              color: AppColors.darkText,
+              fontSize: AppColors.fontSizeBase,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: -0.1,
             ),
           ),
         ],
@@ -938,32 +897,17 @@ class _ProfileEmptyTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppColors.space16),
       decoration: BoxDecoration(
-        color: AppColors.bluePrimary.withValues(alpha: 0.05),
+        color: AppColors.lightBackground,
         borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(
-          color: AppColors.bluePrimary.withValues(alpha: 0.18),
-          width: 1,
-        ),
+        border: Border.all(color: AppColors.dividerColor, width: 1),
       ),
-      child: const Row(
-        children: [
-          Icon(
-            Icons.info_outline_rounded,
-            size: 18,
-            color: AppColors.bluePrimary,
-          ),
-          SizedBox(width: AppColors.space12),
-          Expanded(
-            child: Text(
-              'Aún no agregaste teléfono ni ciudad a tu perfil.',
-              style: TextStyle(
-                color: AppColors.darkText,
-                fontSize: AppColors.fontSizeSm,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
+      child: const Text(
+        'Aún no agregaste teléfono ni ciudad a tu perfil.',
+        style: TextStyle(
+          color: AppColors.mediumText,
+          fontSize: AppColors.fontSizeSm,
+          height: 1.45,
+        ),
       ),
     );
   }
