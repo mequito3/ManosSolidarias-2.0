@@ -12,6 +12,8 @@ import '../../../services/admin_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../ui/widgets/app_snackbar.dart';
 import '../../../ui/widgets/image_redaction_editor.dart';
+import '../../../ui/widgets/premium_empty_state.dart';
+import '../../../ui/widgets/premium_hero.dart';
 import 'admin_section_widgets.dart';
 
 class CampaignRequestsSection extends StatefulWidget {
@@ -48,9 +50,18 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 		return Column(
 			crossAxisAlignment: CrossAxisAlignment.start,
 			children: [
-				const AdminSectionHeading(
+				PremiumSectionHeader(
 					title: 'Solicitudes solidarias',
-					description: 'Revisa campañas y kermesses enviadas por los organizadores.',
+					accentGradient: AppColors.actionGradient,
+					count: widget.items.isEmpty ? null : widget.items.length,
+					countColor: AppColors.orangeAction,
+				),
+				const SizedBox(height: 6),
+				Text(
+					'Revisa campañas y kermesses enviadas por los organizadores.',
+					style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+								color: AppColors.darkText.withValues(alpha: 0.68),
+							),
 				),
 				const SizedBox(height: 14),
 				SingleChildScrollView(
@@ -97,7 +108,35 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 				),
 				const SizedBox(height: 18),
 				if (filtered.isEmpty)
-					const AdminEmptyState(message: 'No hay solicitudes de campaña pendientes.')
+					Padding(
+						padding: const EdgeInsets.symmetric(vertical: 12),
+						child: PremiumEmptyState(
+							icon: Icons.inbox_rounded,
+							iconColor: AppColors.orangeAction,
+							title: _activeFilter == null
+									? 'Todo al día'
+									: 'Sin solicitudes en este filtro',
+							description: _activeFilter == null
+									? 'No hay solicitudes pendientes por revisar. Las nuevas aparecerán acá apenas los organizadores las envíen.'
+									: 'Probá con otro filtro para ver las solicitudes pendientes.',
+							blobColors: [
+								AppColors.orangeAction.withValues(alpha: 0.10),
+								AppColors.greenHope.withValues(alpha: 0.08),
+							],
+							hintChips: const [
+								PremiumHintChip(
+									icon: Icons.check_circle_outline_rounded,
+									label: 'Bandeja vacía',
+									color: AppColors.greenSuccess,
+								),
+								PremiumHintChip(
+									icon: Icons.notifications_active_outlined,
+									label: 'Alertas activas',
+									color: AppColors.bluePrimary,
+								),
+							],
+						),
+					)
 				else
 					...filtered.indexed.map(
 						(entry) => Padding(
