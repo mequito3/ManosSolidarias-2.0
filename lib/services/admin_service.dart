@@ -14,212 +14,53 @@ class AdminService {
 
   String? get _currentUserId => _client.auth.currentUser?.id;
 
+  /// Métricas consolidadas del dashboard admin.
+  ///
+  /// Usa el RPC `get_admin_dashboard_metrics()` que devuelve TODO calculado
+  /// server-side con agregados SQL en un solo round-trip. Reemplaza 8 queries
+  /// y ~150 líneas de loops O(N) en Dart que procesaban las listas completas.
   Future<AdminDashboardMetrics> fetchDashboardMetrics() async {
     try {
-      final now = DateTime.now();
-      final startOfMonth = DateTime(now.year, now.month, 1);
-      final startOfLastMonth = DateTime(now.year, now.month - 1, 1);
-      final endOfLastMonth = DateTime(now.year, now.month, 0, 23, 59, 59);
+      final response = await _client.rpc('get_admin_dashboard_metrics');
 
-      final pendingRequestsFuture = _client
-          .from('solicitudes')
-          .select('id')
-          .eq('estado', 'pendiente');
-
-      final pendingDonationsFuture = _client
-          .from('donaciones')
-          .select('id')
-          .eq('estado', 'pendiente');
-
-      final pendingOrganizationsFuture = _client
-          .from('organizaciones')
-          .select('id')
-          .eq('estado', 'pendiente');
-
-      final activeCampaignsFuture = _client
-          .from('campanias')
-          .select('id')
-          .inFilter('estado', ['activa', 'finalizada']);
-
-      final totalApprovedFuture = _fetchApprovedDonationSum();
-      
-      // Nuevas métricas avanzadas - con manejo de errores
-      final allRequestsFuture = _client
-          .from('solicitudes')
-          .select('id, estado, created_at, updated_at')
-          .then((data) => data)
-          .catchError((error) {
-            debugPrint('Error fetching requests: $error');
-            return <Map<String, dynamic>>[];
-          });
-      
-      final allDonationsFuture = _client
-          .from('donaciones')
-          .select('id, user_id, monto, created_at, estado')
-          .then((data) => data)
-          .catchError((error) {
-            debugPrint('Error fetching donations: $error');
-            return <Map<String, dynamic>>[];
-          });
-      
-      final campaignsCompletedFuture = _client
-          .from('campanias')
-          .select('id, categoria_id, categorias(nombre)')
-          .eq('estado', 'finalizada')
-          .then((data) => data)
-          .catchError((error) {
-            debugPrint('Error fetching completed campaigns: $error');
-            return <Map<String, dynamic>>[];
-          });
-
-      final results = await Future.wait<dynamic>([
-        pendingRequestsFuture,
-        pendingDonationsFuture,
-        pendingOrganizationsFuture,
-        activeCampaignsFuture,
-        totalApprovedFuture,
-        allRequestsFuture,
-        allDonationsFuture,
-        campaignsCompletedFuture,
-      ]);
-
-    final pendingRequests = (results[0] as List<dynamic>).length;
-    final pendingDonations = (results[1] as List<dynamic>).length;
-    final pendingOrganizations = (results[2] as List<dynamic>).length;
-    final activeCampaigns = (results[3] as List<dynamic>).length;
-    final totalApprovedAmount = results[4] as double;
-    
-    // Procesar métricas avanzadas
-    final allRequests = (results[5] as List<dynamic>).cast<Map<String, dynamic>>();
-    final allDonations = (results[6] as List<dynamic>).cast<Map<String, dynamic>>();
-    final campaignsCompleted = (results[7] as List<dynamic>).cast<Map<String, dynamic>>();
-    
-    // Tasa de aprobación
-    final approvedRequests = allRequests.where((r) => r['estado'] == 'aprobada').length;
-    final totalProcessed = allRequests.where((r) => r['estado'] != 'pendiente').length;
-    final approvalRate = totalProcessed > 0 ? (approvedRequests / totalProcessed * 100) : 0.0;
-    
-    // Tiempo promedio de respuesta (usando updated_at vs created_at)
-    double avgResponseHours = 0;
-    int validatedCount = 0;
-    for (final req in allRequests) {
-      try {
-        if (req['updated_at'] != null && req['created_at'] != null && req['estado'] != 'pendiente') {
-          final created = DateTime.parse(req['created_at'] as String);
-          final updated = DateTime.parse(req['updated_at'] as String);
-          final diffHours = updated.difference(created).inHours;
-          if (diffHours > 0) {
-            avgResponseHours += diffHours;
-            validatedCount++;
-          }
-        }
-      } catch (e) {
-        // Ignorar errores de parsing de fechas
-        continue;
+      if (response == null) {
+        return _emptyMetrics();
       }
-    }
-    avgResponseHours = validatedCount > 0 ? avgResponseHours / validatedCount : 24.0;
-    
-    // Donantes únicos y recurrentes
-    final donorIds = <String>{};
-    final donorCounts = <String, int>{};
-    try {
-      for (final donation in allDonations) {
-        final userId = donation['user_id'] as String?;
-        if (userId != null && userId.isNotEmpty) {
-          donorIds.add(userId);
-          donorCounts[userId] = (donorCounts[userId] ?? 0) + 1;
-        }
-      }
+
+      final json = Map<String, dynamic>.from(response as Map);
+
+      double asDouble(dynamic v) => (v as num?)?.toDouble() ?? 0.0;
+      int asInt(dynamic v) => (v as num?)?.toInt() ?? 0;
+      String asString(dynamic v) => v?.toString() ?? '';
+
+      return AdminDashboardMetrics(
+        pendingRequests: asInt(json['pendingRequests']),
+        pendingDonations: asInt(json['pendingDonations']),
+        pendingOrganizations: asInt(json['pendingOrganizations']),
+        activeCampaigns: asInt(json['activeCampaigns']),
+        totalApprovedAmount: asDouble(json['totalApprovedAmount']),
+        approvalRate: asDouble(json['approvalRate']),
+        avgResponseTimeHours: asDouble(json['avgResponseTimeHours']),
+        totalDonors: asInt(json['totalDonors']),
+        repeatDonorsPercentage: asDouble(json['repeatDonorsPercentage']),
+        campaignsCompletedThisMonth:
+            asInt(json['campaignsCompletedThisMonth']),
+        donationsThisMonth: asInt(json['donationsThisMonth']),
+        donationsLastMonth: asInt(json['donationsLastMonth']),
+        donationGrowthRate: asDouble(json['donationGrowthRate']),
+        avgDonationAmount: asDouble(json['avgDonationAmount']),
+        topCampaignCategory:
+            asString(json['topCampaignCategory']).isEmpty
+                ? 'N/A'
+                : asString(json['topCampaignCategory']),
+      );
     } catch (e) {
-      debugPrint('Error processing donors: $e');
+      debugPrint('Error in fetchDashboardMetrics RPC: $e');
+      return _emptyMetrics();
     }
-    final totalDonors = donorIds.length;
-    final repeatDonors = donorCounts.values.where((count) => count > 1).length;
-    final repeatDonorsPercentage = totalDonors > 0 ? (repeatDonors / totalDonors * 100) : 0.0;
-    
-    // Donaciones por mes
-    int donationsThisMonth = 0;
-    int donationsLastMonth = 0;
-    try {
-      donationsThisMonth = allDonations.where((d) {
-        try {
-          final createdAt = DateTime.tryParse(d['created_at'] as String? ?? '');
-          return createdAt != null && createdAt.isAfter(startOfMonth);
-        } catch (e) {
-          return false;
-        }
-      }).length;
-      
-      donationsLastMonth = allDonations.where((d) {
-        try {
-          final createdAt = DateTime.tryParse(d['created_at'] as String? ?? '');
-          return createdAt != null && 
-                 createdAt.isAfter(startOfLastMonth) && 
-                 createdAt.isBefore(endOfLastMonth);
-        } catch (e) {
-          return false;
-        }
-      }).length;
-    } catch (e) {
-      debugPrint('Error calculating monthly donations: $e');
-    }
-    
-    final donationGrowthRate = donationsLastMonth > 0 
-        ? ((donationsThisMonth - donationsLastMonth) / donationsLastMonth * 100) 
-        : (donationsThisMonth > 0 ? 100.0 : 0.0);
-    
-    // Monto promedio de donación
-    double avgDonationAmount = 0.0;
-    try {
-      final approvedDonations = allDonations.where((d) => d['estado'] == 'aprobada').toList();
-      double totalDonationAmount = 0;
-      for (final donation in approvedDonations) {
-        totalDonationAmount += (donation['monto'] as num?)?.toDouble() ?? 0;
-      }
-      avgDonationAmount = approvedDonations.isNotEmpty 
-          ? totalDonationAmount / approvedDonations.length 
-          : 0.0;
-    } catch (e) {
-      debugPrint('Error calculating average donation: $e');
-    }
-    
-    // Categoría más popular: calcula la categoría con más campañas finalizadas
-    String topCategory = 'N/A';
-    if (campaignsCompleted.isNotEmpty) {
-      final categoryCounts = <String, int>{};
-      for (final c in campaignsCompleted) {
-        final cat = (c['categorias'] as Map<String, dynamic>?)?['nombre'] as String?;
-        if (cat != null) categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
-      }
-      if (categoryCounts.isNotEmpty) {
-        topCategory = categoryCounts.entries
-            .reduce((a, b) => a.value >= b.value ? a : b)
-            .key;
-      }
-    }
+  }
 
-    return AdminDashboardMetrics(
-      pendingRequests: pendingRequests,
-      pendingDonations: pendingDonations,
-      pendingOrganizations: pendingOrganizations,
-      activeCampaigns: activeCampaigns,
-      totalApprovedAmount: totalApprovedAmount,
-      approvalRate: approvalRate,
-      avgResponseTimeHours: avgResponseHours,
-      totalDonors: totalDonors,
-      repeatDonorsPercentage: repeatDonorsPercentage,
-      campaignsCompletedThisMonth: campaignsCompleted.length,
-      donationsThisMonth: donationsThisMonth,
-      donationsLastMonth: donationsLastMonth,
-      donationGrowthRate: donationGrowthRate,
-      avgDonationAmount: avgDonationAmount,
-      topCampaignCategory: topCategory,
-    );
-    } catch (e) {
-      debugPrint('Error in fetchDashboardMetrics: $e');
-      // Retornar métricas por defecto en caso de error
-      return const AdminDashboardMetrics(
+  AdminDashboardMetrics _emptyMetrics() => const AdminDashboardMetrics(
         pendingRequests: 0,
         pendingDonations: 0,
         pendingOrganizations: 0,
@@ -236,8 +77,6 @@ class AdminService {
         avgDonationAmount: 0,
         topCampaignCategory: 'N/A',
       );
-    }
-  }
 
   Future<List<Category>> fetchActiveCategories() async {
     try {
@@ -524,39 +363,59 @@ class AdminService {
         throw const AdminServiceException('La donación ya no está disponible.');
       }
 
-      String? campaignTitle;
-      String? campaignStatus;
       final campaignId = donation['campania_id'] as String?;
-      if (campaignId != null && campaignId.isNotEmpty) {
-        final campaign = await _client
-            .from('campanias')
-            .select('titulo, estado')
-            .eq('id', campaignId)
-            .maybeSingle();
-        campaignTitle = _trimOrNull(campaign?['titulo'] as String?);
-        campaignStatus = _trimOrNull(campaign?['estado'] as String?);
-      }
-
-      String? donorName;
-      String? donorEmail;
-      String? donorPhone;
       final donorId = donation['user_id'] as String?;
+      final rewardId = donation['recompensa_id'] as String?;
+
+      // 3 lookups secundarios EN PARALELO: campaña, perfil del donor, recompensa.
+      final results = await Future.wait<dynamic>([
+        if (campaignId != null && campaignId.isNotEmpty)
+          _client
+              .from('campanias')
+              .select('titulo, estado')
+              .eq('id', campaignId)
+              .maybeSingle()
+              .catchError((Object _) => null)
+        else
+          Future<Map<String, dynamic>?>.value(null),
+        if (donorId != null && donorId.isNotEmpty)
+          _client
+              .from('profiles')
+              .select('display_name, telefono')
+              .eq('user_id', donorId)
+              .maybeSingle()
+              .catchError((Object _) => null)
+        else
+          Future<Map<String, dynamic>?>.value(null),
+        if (rewardId != null && rewardId.isNotEmpty)
+          _client
+              .from('recompensas')
+              .select('titulo')
+              .eq('id', rewardId)
+              .maybeSingle()
+              .catchError((Object _) => null)
+        else
+          Future<Map<String, dynamic>?>.value(null),
+      ]);
+
+      final campaign = results[0] as Map<String, dynamic>?;
+      final profile = results[1] as Map<String, dynamic>?;
+      final reward = results[2] as Map<String, dynamic>?;
+
+      final campaignTitle = _trimOrNull(campaign?['titulo'] as String?);
+      final campaignStatus = _trimOrNull(campaign?['estado'] as String?);
+      final donorName = _trimOrNull(profile?['display_name'] as String?);
+      final donorPhone = _trimOrNull(profile?['telefono'] as String?);
+      final rewardTitle = _trimOrNull(reward?['titulo'] as String?);
+
+      // Email del donor: solo si tenemos permisos admin. NO bloquea: si falla
+      // dejamos null y el UI muestra "—".
+      String? donorEmail;
       if (donorId != null && donorId.isNotEmpty) {
-        // Obtener datos del perfil
-        final profile = await _client
-            .from('profiles')
-            .select('display_name, telefono')
-            .eq('user_id', donorId)
-            .maybeSingle();
-        donorName = _trimOrNull(profile?['display_name'] as String?);
-        donorPhone = _trimOrNull(profile?['telefono'] as String?);
-        
-        // Obtener email de auth.users
         try {
           final user = await _client.auth.admin.getUserById(donorId);
           donorEmail = user.user?.email;
         } catch (_) {
-          // Si no tenemos permisos admin, intentar desde la sesión actual
           final currentUser = _client.auth.currentUser;
           if (currentUser?.id == donorId) {
             donorEmail = currentUser?.email;
@@ -564,23 +423,11 @@ class AdminService {
         }
       }
 
-      String? rewardTitle;
-      final rewardId = donation['recompensa_id'] as String?;
-      if (rewardId != null && rewardId.isNotEmpty) {
-        final reward = await _client
-            .from('recompensas')
-            .select('titulo')
-            .eq('id', rewardId)
-            .maybeSingle();
-        rewardTitle = _trimOrNull(reward?['titulo'] as String?);
-      }
-
-      // Crear un mapa con los datos adicionales que no están en la tabla donaciones
       final enrichedDonation = Map<String, dynamic>.from(donation);
-      enrichedDonation['numero_operacion'] = null; // Campo futuro
-      enrichedDonation['entidad_bancaria'] = null; // Campo futuro
-      enrichedDonation['ip_registro'] = null; // Campo futuro
-      
+      enrichedDonation['numero_operacion'] = null;
+      enrichedDonation['entidad_bancaria'] = null;
+      enrichedDonation['ip_registro'] = null;
+
       return AdminDonationDetail.fromJson(
         enrichedDonation,
         campaignTitle: campaignTitle,
@@ -634,44 +481,45 @@ class AdminService {
         throw const AdminServiceException('La organización ya no está disponible.');
       }
 
-      Map<String, dynamic>? ownerProfile;
       final ownerId = organization['owner_id'] as String?;
-      if (ownerId != null && ownerId.isNotEmpty) {
-        ownerProfile = await _client
-            .from('profiles')
-            .select('user_id, display_name, telefono, ciudad, documento_tipo, documento_numero')
-            .eq('user_id', ownerId)
-            .maybeSingle();
-      }
 
-      final documents = <Map<String, dynamic>>[];
-      try {
-        dynamic response;
-        if (ownerId != null && ownerId.isNotEmpty) {
-          response = await _client
-              .from('kyc_documentos')
+      // Perfil del owner + documentos KYC en PARALELO.
+      final results = await Future.wait<dynamic>([
+        if (ownerId != null && ownerId.isNotEmpty)
+          _client
+              .from('profiles')
               .select(
-                'id, tipo, archivo_url, estado, notas_admin, created_at, updated_at, owner_type, owner_org_id, owner_user_id',
-              )
-              .or(
-                'and(owner_type.eq.organizacion,owner_org_id.eq.$organizationId),and(owner_type.eq.user,owner_user_id.eq.$ownerId)',
-              )
-              .order('created_at', ascending: true);
-        } else {
-          response = await _client
-              .from('kyc_documentos')
-              .select(
-                'id, tipo, archivo_url, estado, notas_admin, created_at, updated_at, owner_type, owner_org_id, owner_user_id',
-              )
-              .eq('owner_type', 'organizacion')
-              .eq('owner_org_id', organizationId)
-              .order('created_at', ascending: true);
-        }
+                  'user_id, display_name, telefono, ciudad, documento_tipo, documento_numero')
+              .eq('user_id', ownerId)
+              .maybeSingle()
+              .catchError((Object _) => null)
+        else
+          Future<Map<String, dynamic>?>.value(null),
+        (ownerId != null && ownerId.isNotEmpty
+                ? _client
+                    .from('kyc_documentos')
+                    .select(
+                      'id, tipo, archivo_url, estado, notas_admin, created_at, updated_at, owner_type, owner_org_id, owner_user_id',
+                    )
+                    .or(
+                      'and(owner_type.eq.organizacion,owner_org_id.eq.$organizationId),and(owner_type.eq.user,owner_user_id.eq.$ownerId)',
+                    )
+                    .order('created_at', ascending: true)
+                : _client
+                    .from('kyc_documentos')
+                    .select(
+                      'id, tipo, archivo_url, estado, notas_admin, created_at, updated_at, owner_type, owner_org_id, owner_user_id',
+                    )
+                    .eq('owner_type', 'organizacion')
+                    .eq('owner_org_id', organizationId)
+                    .order('created_at', ascending: true))
+            .then((value) =>
+                (value as List<dynamic>).cast<Map<String, dynamic>>())
+            .catchError((Object _) => <Map<String, dynamic>>[]),
+      ]);
 
-        documents.addAll((response as List<dynamic>).cast<Map<String, dynamic>>());
-      } on PostgrestException catch (error) {
-        throw AdminServiceException(error.message);
-      }
+      final ownerProfile = results[0] as Map<String, dynamic>?;
+      final documents = results[1] as List<Map<String, dynamic>>;
 
       return AdminOrganizationDetail.fromJson(
         organization,
@@ -724,23 +572,6 @@ class AdminService {
     } catch (_) {
       throw const AdminServiceException('No pudimos actualizar la donación.');
     }
-  }
-
-  Future<double> _fetchApprovedDonationSum() async {
-    final response = await _client
-        .from('donaciones')
-        .select('monto')
-        .eq('estado', 'aprobada');
-
-    final rows = (response as List<dynamic>).cast<Map<String, dynamic>>();
-    double total = 0;
-    for (final row in rows) {
-      final monto = row['monto'];
-      if (monto is num) {
-        total += monto.toDouble();
-      }
-    }
-    return total;
   }
 
   String _formatCurrency(dynamic value) {
