@@ -643,130 +643,386 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
   final initial = (profile.displayName?.trim().isNotEmpty ?? false)
       ? profile.displayName!.characters.first.toUpperCase()
       : 'A';
+  final email = Supabase.instance.client.auth.currentUser?.email;
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (_) => Container(
-      margin: const EdgeInsets.all(AppColors.space12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(AppColors.radiusXl),
-        boxShadow: AppColors.shadowLg,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: AppColors.space12),
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.dividerColor,
-                borderRadius: BorderRadius.circular(2),
+    isScrollControlled: true,
+    builder: (_) => SafeArea(
+      top: false,
+      child: Container(
+        margin: const EdgeInsets.all(AppColors.space12),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          boxShadow: AppColors.shadowLg,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Hero: tarjeta de identidad ──────────────────────
+              _AdminProfileHero(
+                profile: profile,
+                initial: initial,
+                email: email,
               ),
-            ),
-          ),
-          const SizedBox(height: AppColors.space20),
-          _AdminProfileSheetAvatar(profile: profile, initial: initial),
-          const SizedBox(height: AppColors.space12),
-          Text(
-            profile.displayName ?? 'Administrador',
-            style: const TextStyle(
-              color: AppColors.darkText,
-              fontSize: AppColors.fontSizeLg,
-              fontWeight: AppColors.fontWeightExtraBold,
-              letterSpacing: -0.3,
-            ),
-          ),
-          if (Supabase.instance.client.auth.currentUser?.email != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AppColors.space4),
-              child: Text(
-                Supabase.instance.client.auth.currentUser!.email!,
-                style: const TextStyle(
-                  color: AppColors.mediumText,
-                  fontSize: AppColors.fontSizeSm,
+
+              // ── Cuerpo: info de cuenta ──────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppColors.space20,
+                  AppColors.space20,
+                  AppColors.space20,
+                  AppColors.space16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const _ProfileSectionLabel(text: 'Detalles de cuenta'),
+                    const SizedBox(height: AppColors.space12),
+                    if ((profile.phone ?? '').trim().isNotEmpty)
+                      _ProfileInfoTile(
+                        icon: Icons.phone_rounded,
+                        label: 'Teléfono',
+                        value: profile.phone!.trim(),
+                      ),
+                    if ((profile.city ?? '').trim().isNotEmpty)
+                      _ProfileInfoTile(
+                        icon: Icons.place_rounded,
+                        label: 'Ciudad',
+                        value: profile.city!.trim(),
+                      ),
+                    if ((profile.phone ?? '').trim().isEmpty &&
+                        (profile.city ?? '').trim().isEmpty)
+                      _ProfileEmptyTile(),
+                    const SizedBox(height: AppColors.space16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppColors.space12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.lightBackground,
+                        borderRadius:
+                            BorderRadius.circular(AppColors.radiusSm),
+                        border: Border.all(
+                          color: AppColors.dividerColor,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            size: 16,
+                            color:
+                                AppColors.mediumText.withValues(alpha: 0.85),
+                          ),
+                          const SizedBox(width: AppColors.space8),
+                          const Expanded(
+                            child: Text(
+                              'Sesión segura. Solo administradores tienen acceso a este panel.',
+                              style: TextStyle(
+                                color: AppColors.mediumText,
+                                fontSize: AppColors.fontSizeXs,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppColors.space20,
-              vertical: AppColors.space8,
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppColors.space12,
-                vertical: 6,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.bluePrimary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(AppColors.radiusRound),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.admin_panel_settings_rounded,
-                      size: 14, color: AppColors.bluePrimary),
-                  SizedBox(width: 6),
-                  Text(
-                    'Administrador del sistema',
-                    style: TextStyle(
-                      color: AppColors.bluePrimary,
-                      fontSize: AppColors.fontSizeXs,
-                      fontWeight: AppColors.fontWeightExtraBold,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ],
           ),
-          const Divider(height: 1, color: AppColors.grayLight),
-          if (profile.phone != null && profile.phone!.isNotEmpty)
-            _ProfileInfoTile(icon: Icons.phone_rounded, label: profile.phone!),
-          if (profile.city != null && profile.city!.isNotEmpty)
-            _ProfileInfoTile(icon: Icons.place_rounded, label: profile.city!),
-          const SizedBox(height: AppColors.space16),
-        ],
+        ),
       ),
     ),
   );
 }
 
-class _ProfileInfoTile extends StatelessWidget {
-  const _ProfileInfoTile({required this.icon, required this.label});
+class _AdminProfileHero extends StatelessWidget {
+  const _AdminProfileHero({
+    required this.profile,
+    required this.initial,
+    required this.email,
+  });
 
-  final IconData icon;
-  final String label;
+  final UserProfile profile;
+  final String initial;
+  final String? email;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppColors.space20,
-        vertical: AppColors.space8,
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: AppColors.primaryGradient,
+          ),
+        ),
+        // Blobs decorativos
+        Positioned(
+          top: -36,
+          right: -28,
+          child: _HeroBlob(
+            size: 140,
+            color: Colors.white.withValues(alpha: 0.10),
+          ),
+        ),
+        Positioned(
+          bottom: -36,
+          left: -24,
+          child: _HeroBlob(
+            size: 120,
+            color: Colors.white.withValues(alpha: 0.06),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppColors.space20,
+            AppColors.space16,
+            AppColors.space20,
+            AppColors.space20,
+          ),
+          child: Column(
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppColors.space16),
+              _AdminProfileSheetAvatar(profile: profile, initial: initial),
+              const SizedBox(height: AppColors.space12),
+              Text(
+                profile.displayName ?? 'Administrador',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: AppColors.fontSizeXl,
+                  fontWeight: AppColors.fontWeightExtraBold,
+                  letterSpacing: -0.4,
+                  shadows: [
+                    Shadow(color: Colors.black26, blurRadius: 6),
+                  ],
+                ),
+              ),
+              if ((email ?? '').isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  email!,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: AppColors.fontSizeSm,
+                    fontWeight: AppColors.fontWeightMedium,
+                  ),
+                ),
+              ],
+              const SizedBox(height: AppColors.space12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppColors.space12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(AppColors.radiusRound),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    width: 1,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.verified_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Administrador del sistema',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: AppColors.fontSizeXs,
+                        fontWeight: AppColors.fontWeightExtraBold,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroBlob extends StatelessWidget {
+  const _HeroBlob({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
+      ),
+    );
+  }
+}
+
+class _ProfileSectionLabel extends StatelessWidget {
+  const _ProfileSectionLabel({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(AppColors.radiusXs),
+          ),
+        ),
+        const SizedBox(width: AppColors.space8),
+        Text(
+          text,
+          style: const TextStyle(
+            color: AppColors.darkText,
+            fontSize: AppColors.fontSizeSm,
+            fontWeight: AppColors.fontWeightExtraBold,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProfileInfoTile extends StatelessWidget {
+  const _ProfileInfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppColors.space8),
+      padding: const EdgeInsets.all(AppColors.space12),
+      decoration: BoxDecoration(
+        color: AppColors.lightBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.dividerColor, width: 1),
       ),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.10),
+              color: AppColors.bluePrimary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(AppColors.radiusSm),
             ),
-            child: Icon(icon, size: 17, color: AppColors.bluePrimary),
+            child: Icon(icon, size: 18, color: AppColors.bluePrimary),
           ),
           const SizedBox(width: AppColors.space12),
           Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.mediumText,
+                    fontSize: AppColors.fontSizeXs,
+                    fontWeight: AppColors.fontWeightSemiBold,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: AppColors.fontSizeBase,
+                    fontWeight: AppColors.fontWeightSemiBold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileEmptyTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppColors.space16),
+      decoration: BoxDecoration(
+        color: AppColors.bluePrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(
+          color: AppColors.bluePrimary.withValues(alpha: 0.18),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: AppColors.bluePrimary,
+          ),
+          const SizedBox(width: AppColors.space12),
+          const Expanded(
             child: Text(
-              label,
-              style: const TextStyle(
+              'Aún no agregaste teléfono ni ciudad a tu perfil.',
+              style: TextStyle(
                 color: AppColors.darkText,
                 fontSize: AppColors.fontSizeSm,
-                fontWeight: AppColors.fontWeightSemiBold,
+                height: 1.4,
               ),
             ),
           ),
