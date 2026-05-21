@@ -4,6 +4,8 @@ import '../../../controllers/admin_dashboard_controller.dart';
 import '../../../models/admin_dashboard.dart';
 import '../../../models/admin_donation_detail.dart';
 import '../../../theme/app_colors.dart';
+import '../../../ui/widgets/premium_empty_state.dart';
+import '../../../ui/widgets/premium_hero.dart';
 import 'admin_section_widgets.dart';
 
 enum DonationReviewResult {
@@ -26,13 +28,47 @@ class DonationsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AdminSectionHeading(
+        PremiumSectionHeader(
           title: 'Donaciones por validar',
-          description: 'Verifica los comprobantes y confirma las transferencias recibidas.',
+          accentGradient: AppColors.successGradient,
+          count: items.isEmpty ? null : items.length,
+          countColor: AppColors.greenSuccess,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Verifica los comprobantes y confirma las transferencias recibidas.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.darkText.withValues(alpha: 0.68),
+              ),
         ),
         const SizedBox(height: 18),
         if (items.isEmpty)
-          const AdminEmptyState(message: 'No hay donaciones pendientes de revisión.')
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: PremiumEmptyState(
+              icon: Icons.verified_rounded,
+              iconColor: AppColors.greenSuccess,
+              title: 'Todo validado',
+              description:
+                  'No hay donaciones pendientes de revisión. Las nuevas transferencias aparecerán acá apenas los donantes envíen el comprobante.',
+              blobColors: [
+                AppColors.greenHope.withValues(alpha: 0.10),
+                AppColors.bluePrimary.withValues(alpha: 0.08),
+              ],
+              hintChips: const [
+                PremiumHintChip(
+                  icon: Icons.check_circle_outline_rounded,
+                  label: 'Bandeja vacía',
+                  color: AppColors.greenSuccess,
+                ),
+                PremiumHintChip(
+                  icon: Icons.notifications_active_outlined,
+                  label: 'Alertas activas',
+                  color: AppColors.bluePrimary,
+                ),
+              ],
+            ),
+          )
         else
           ...items.indexed.map(
             (entry) => Padding(
