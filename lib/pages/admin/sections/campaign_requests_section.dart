@@ -10,6 +10,7 @@ import '../../../models/category.dart';
 import '../../../models/solicitud.dart';
 import '../../../services/admin_service.dart';
 import '../../../theme/app_colors.dart';
+import '../../../ui/widgets/app_buttons.dart';
 import '../../../ui/widgets/app_snackbar.dart';
 import '../../../ui/widgets/image_redaction_editor.dart';
 import '../../../ui/widgets/premium_empty_state.dart';
@@ -1531,15 +1532,11 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 											child: CircularProgressIndicator(color: typeColor),
 										)
 									else ...[
-										// Approve button
-										Container(
+										// Approve button — gradiente verde (semántico = éxito)
+										DecoratedBox(
 											decoration: BoxDecoration(
-												gradient: const LinearGradient(
-													colors: [AppColors.greenHope, AppColors.greenSuccess],
-													begin: Alignment.centerLeft,
-													end: Alignment.centerRight,
-												),
-												borderRadius: BorderRadius.circular(14),
+												gradient: AppColors.successGradient,
+												borderRadius: BorderRadius.circular(AppColors.radiusMd),
 												boxShadow: [
 													BoxShadow(
 														color: AppColors.greenSuccess.withValues(alpha: 0.38),
@@ -1558,24 +1555,31 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 													onConfirm: _handleApprove,
 												),
 												style: FilledButton.styleFrom(
-													minimumSize: const Size(double.infinity, 52),
+													minimumSize: const Size(double.infinity, 54),
 													backgroundColor: Colors.transparent,
 													shadowColor: Colors.transparent,
 													foregroundColor: Colors.white,
+													padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
 													shape: RoundedRectangleBorder(
-														borderRadius: BorderRadius.circular(14),
+														borderRadius: BorderRadius.circular(AppColors.radiusMd),
 													),
 												),
 												icon: const Icon(Icons.check_circle_rounded, size: 20),
 												label: const Text(
 													'Aprobar solicitud',
-													style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+													style: TextStyle(
+														fontSize: AppColors.fontSizeMd,
+														fontWeight: AppColors.fontWeightBold,
+														letterSpacing: AppColors.letterSpacingWide,
+													),
 												),
 											),
 										),
-										const SizedBox(height: 10),
+										const SizedBox(height: AppColors.space12),
 										// Request changes button
-										OutlinedButton.icon(
+										AppSecondaryButton(
+											label: 'Solicitar cambios',
+											icon: Icons.edit_note_rounded,
 											onPressed: () => _showConfirmDialog(
 												context,
 												title: '¿Solicitar cambios?',
@@ -1583,23 +1587,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 												confirmText: 'Solicitar',
 												isDestructive: false,
 												onConfirm: _handleRequestChanges,
-											),
-											style: OutlinedButton.styleFrom(
-												minimumSize: const Size(double.infinity, 50),
-												padding: const EdgeInsets.symmetric(vertical: 14),
-												side: BorderSide(
-													color: typeColor.withValues(alpha: 0.5),
-													width: 1.5,
-												),
-												foregroundColor: typeColor,
-												shape: RoundedRectangleBorder(
-													borderRadius: BorderRadius.circular(14),
-												),
-											),
-											icon: const Icon(Icons.edit_note_rounded, size: 20),
-											label: const Text(
-												'Solicitar cambios',
-												style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
 											),
 										),
 									],
