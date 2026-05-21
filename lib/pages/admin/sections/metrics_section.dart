@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../models/admin_dashboard.dart';
 import '../../../theme/app_colors.dart';
 import '../../../services/pdf_export_service.dart';
+import '../../../ui/widgets/premium_hero.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Main panel
@@ -35,130 +36,104 @@ class AdminMetricsPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Header ──────────────────────────────────────────────────────
+        // ── Hero premium con 3 stats clave ──────────────────────────────
+        PremiumHero(
+          icon: Icons.analytics_rounded,
+          iconGradient: AppColors.primaryGradient,
+          iconShadowColor: AppColors.bluePrimary,
+          title: 'Panel de análisis',
+          subtitle: 'Métricas y KPIs del sistema.',
+          backgroundColors: [
+            AppColors.bluePrimary.withValues(alpha: 0.10),
+            AppColors.greenHope.withValues(alpha: 0.07),
+          ],
+          blobColors: [
+            AppColors.bluePrimary.withValues(alpha: 0.12),
+            AppColors.greenHope.withValues(alpha: 0.10),
+          ],
+          stats: [
+            PremiumStatPill(
+              icon: Icons.approval_rounded,
+              label: 'Aprobación',
+              value: '${metrics.approvalRate.toStringAsFixed(1)}%',
+              color: AppColors.greenHope,
+            ),
+            PremiumStatPill(
+              icon: Icons.schedule_rounded,
+              label: 'T. respuesta',
+              value:
+                  '${metrics.avgResponseTimeHours.toStringAsFixed(1)}h',
+              color: AppColors.bluePrimary,
+            ),
+            PremiumStatPill(
+              icon: Icons.people_rounded,
+              label: 'Donantes',
+              value: '${metrics.totalDonors}',
+              color: AppColors.orangeAction,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppColors.space12),
+        // Botón exportar a PDF (alineado a la derecha, fuera del hero)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            onPressed: () => _exportPdf(context, metrics, activeCampaigns),
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 18),
+            label: const Text('Exportar PDF'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.bluePrimary,
+              backgroundColor: AppColors.bluePrimary.withValues(alpha: 0.08),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppColors.space16,
+                vertical: AppColors.space8,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppColors.radiusRound),
+              ),
+              textStyle: const TextStyle(
+                fontWeight: AppColors.fontWeightExtraBold,
+                fontSize: AppColors.fontSizeSm,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppColors.space16),
+
+        // ── Donantes recurrentes (info contextual al donantes del hero) ──
         Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppColors.space16,
+            vertical: AppColors.space12,
+          ),
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppColors.radiusLg),
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(AppColors.radiusMd),
+            boxShadow: AppColors.shadowSm,
+            border: Border.all(
+              color: AppColors.orangeAction.withValues(alpha: 0.20),
+            ),
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icon pill
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                ),
-                child: const Icon(Icons.analytics_rounded,
-                    color: Colors.white, size: 22),
-              ),
-              const SizedBox(width: 12),
-              // Title + subtitle
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Panel de Análisis',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontSize: 15,
-                        height: 1.2,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Métricas y KPIs',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 11,
-                        height: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Export button
-              OutlinedButton.icon(
-                onPressed: () =>
-                    _exportPdf(context, metrics, activeCampaigns),
-                icon: const Icon(Icons.picture_as_pdf_rounded, size: 15),
-                label: const Text('Exportar',
-                    style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w700)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(
-                      color: Colors.white54, width: 1.5),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 8),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppColors.radiusMd)),
+              const Icon(Icons.repeat_rounded,
+                  color: AppColors.orangeAction, size: 18),
+              const SizedBox(width: AppColors.space8),
+              Expanded(
+                child: Text(
+                  '${metrics.repeatDonorsPercentage.toStringAsFixed(0)}% de los donantes son recurrentes',
+                  style: const TextStyle(
+                    color: AppColors.darkText,
+                    fontSize: AppColors.fontSizeSm,
+                    fontWeight: AppColors.fontWeightSemiBold,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-
-        // ── KPIs principales ─────────────────────────────────────────────
-        _MetricsSectionLabel(label: 'Indicadores clave'),
-        const SizedBox(height: 10),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _KpiCard(
-                icon: Icons.approval_rounded,
-                iconColor: AppColors.greenSuccess,
-                value: '${metrics.approvalRate.toStringAsFixed(1)}%',
-                label: 'Tasa Aprobación',
-                sub: 'Solicitudes',
-                trend: metrics.approvalRate >= 70
-                    ? _Trend.positive
-                    : _Trend.neutral,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _KpiCard(
-                icon: Icons.schedule_rounded,
-                iconColor: AppColors.bluePrimary,
-                value:
-                    '${metrics.avgResponseTimeHours.toStringAsFixed(1)}h',
-                label: 'T. Respuesta',
-                sub: 'Promedio',
-                trend: metrics.avgResponseTimeHours < 48
-                    ? _Trend.positive
-                    : _Trend.warning,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _KpiCard(
-                icon: Icons.people_rounded,
-                iconColor: AppColors.orangeAction,
-                value: metrics.totalDonors.toString(),
-                label: 'Donantes',
-                sub:
-                    '${metrics.repeatDonorsPercentage.toStringAsFixed(0)}% recurrentes',
-                trend: _Trend.positive,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppColors.space20),
 
         // ── Crecimiento donaciones ────────────────────────────────────────
         _MetricsSectionLabel(label: 'Crecimiento'),
@@ -445,113 +420,12 @@ class _MetricsSectionLabel extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// KPI card  (trend indicator in top-right corner)
-// ─────────────────────────────────────────────────────────────────────────────
-
-enum _Trend { positive, negative, warning, neutral }
-
-class _KpiCard extends StatelessWidget {
-  const _KpiCard({
-    required this.icon,
-    required this.iconColor,
-    required this.value,
-    required this.label,
-    required this.sub,
-    required this.trend,
-  });
-
-  final IconData icon;
-  final Color iconColor;
-  final String value;
-  final String label;
-  final String sub;
-  final _Trend trend;
-
+// KPI card (eliminado — los KPIs ahora viven en el PremiumHero arriba)
+// ignore: unused_element
+class _KpiCardLegacyKept extends StatelessWidget {
+  const _KpiCardLegacyKept();
   @override
-  Widget build(BuildContext context) {
-    final (trendIcon, trendColor) = switch (trend) {
-      _Trend.positive => (Icons.arrow_upward_rounded, AppColors.greenSuccess),
-      _Trend.negative => (Icons.arrow_downward_rounded, AppColors.error),
-      _Trend.warning => (Icons.warning_amber_rounded, AppColors.orangeAction),
-      _Trend.neutral => (Icons.remove_rounded, AppColors.grayDark),
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        boxShadow: [
-          BoxShadow(
-            color: iconColor.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        border: Border.all(color: iconColor.withValues(alpha: 0.15)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
-                ),
-                child: Icon(icon, size: 14, color: iconColor),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: trendColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Icon(trendIcon, size: 11, color: trendColor),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: iconColor,
-              height: 1.1,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10,
-              color: AppColors.darkText,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            sub,
-            style: TextStyle(
-              fontSize: 9,
-              color: AppColors.mediumText.withValues(alpha: 0.7),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

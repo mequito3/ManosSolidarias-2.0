@@ -5,6 +5,7 @@ import '../../controllers/admin_dashboard_controller.dart';
 import '../../models/admin_dashboard.dart';
 import '../../models/user_profile.dart';
 import '../../theme/app_colors.dart';
+import '../../ui/widgets/premium_app_bar.dart';
 import 'sections/admin_section_widgets.dart';
 import 'sections/campaign_requests_section.dart';
 import 'sections/donations_section.dart';
@@ -150,16 +151,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 
 	@override
 	Widget build(BuildContext context) {
-		final theme = Theme.of(context);
 		final canPop = Navigator.of(context).canPop();
 
 		return Scaffold(
 			backgroundColor: AppColors.lightBackground,
-			appBar: _AdminAppBar(
-				profile: widget.profile,
-				canPop: canPop,
-				onViewAsUser: widget.onViewAsUser,
-				onPop: () => Navigator.of(context).maybePop(),
+			appBar: PremiumAppBar(
+				title: 'Panel admin',
+				showBack: canPop,
+				onBack: () => Navigator.of(context).maybePop(),
+				actions: [
+					_ViewAsUserButton(onTap: widget.onViewAsUser),
+					_AdminAvatarButton(
+						profile: widget.profile,
+						onTap: () => _showAdminProfileSheet(context, widget.profile),
+					),
+				],
 			),
 			body: SafeArea(
 				child: AnimatedBuilder(
@@ -444,287 +450,256 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 	}
 }
 
-// ──────────────── Admin AppBar ────────────────────────────────────────────────
-class _AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
-	const _AdminAppBar({
-		required this.profile,
-		required this.canPop,
-		required this.onViewAsUser,
-		required this.onPop,
-	});
+// ──────────────── Acciones del AppBar admin ──────────────────────────────────
 
-	final UserProfile profile;
-	final bool canPop;
-	final VoidCallback onViewAsUser;
-	final VoidCallback onPop;
+/// Botón pill "Vista usuario" — pasa al modo no-admin de la app.
+class _ViewAsUserButton extends StatelessWidget {
+  const _ViewAsUserButton({required this.onTap});
+  final VoidCallback onTap;
 
-	String get _initial {
-		final name = profile.displayName?.trim() ?? '';
-		return name.isNotEmpty ? name.characters.first.toUpperCase() : 'A';
-	}
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Tooltip(
+        message: 'Ver como usuario',
+        child: Material(
+          color: AppColors.bluePrimary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppColors.radiusRound),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppColors.radiusRound),
+            onTap: onTap,
+            child: const Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppColors.space12,
+                vertical: 6,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.remove_red_eye_rounded,
+                      color: AppColors.bluePrimary, size: 16),
+                  SizedBox(width: 6),
+                  Text(
+                    'Vista usuario',
+                    style: TextStyle(
+                      color: AppColors.bluePrimary,
+                      fontSize: AppColors.fontSizeXs,
+                      fontWeight: AppColors.fontWeightExtraBold,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-	@override
-	Size get preferredSize => const Size.fromHeight(62);
+/// Avatar circular del admin que abre el bottom sheet de perfil.
+class _AdminAvatarButton extends StatelessWidget {
+  const _AdminAvatarButton({required this.profile, required this.onTap});
+  final UserProfile profile;
+  final VoidCallback onTap;
 
-	@override
-	Widget build(BuildContext context) {
-		final theme = Theme.of(context);
-		return Container(
-			height: preferredSize.height + MediaQuery.of(context).padding.top,
-			decoration: const BoxDecoration(gradient: AppColors.primaryGradient),
-			padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
-			child: Row(
-				crossAxisAlignment: CrossAxisAlignment.center,
-				children: [
-					// Back button
-					if (canPop)
-						IconButton(
-							icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-							onPressed: onPop,
-						)
-					else
-						const SizedBox(width: 16),
-					// Logo badge + title
-					Container(
-						width: 36,
-						height: 36,
-						decoration: BoxDecoration(
-							color: Colors.white.withValues(alpha: 0.18),
-							borderRadius: BorderRadius.circular(11),
-						),
-						child: const Icon(
-							Icons.favorite_rounded,
-							color: Colors.white,
-							size: 20,
-						),
-					),
-					const SizedBox(width: 10),
-					Expanded(
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							mainAxisAlignment: MainAxisAlignment.center,
-							children: [
-								Text(
-									'Panel Admin',
-									style: theme.textTheme.titleSmall?.copyWith(
-										fontWeight: FontWeight.w800,
-										color: Colors.white,
-										fontSize: 16,
-									),
-								),
-								Text(
-									profile.displayName ?? 'Administrador',
-									style: theme.textTheme.labelSmall?.copyWith(
-										color: Colors.white.withValues(alpha: 0.65),
-										fontWeight: FontWeight.w500,
-									),
-									overflow: TextOverflow.ellipsis,
-								),
-							],
-						),
-					),
-					// Vista usuario button
-					Tooltip(
-						message: 'Ver como usuario',
-						child: InkWell(
-							onTap: onViewAsUser,
-							borderRadius: BorderRadius.circular(10),
-							child: Container(
-								padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-								decoration: BoxDecoration(
-									color: Colors.white.withValues(alpha: 0.15),
-									borderRadius: BorderRadius.circular(10),
-								),
-								child: Row(
-									mainAxisSize: MainAxisSize.min,
-									children: [
-										const Icon(Icons.remove_red_eye_rounded, color: Colors.white, size: 16),
-										const SizedBox(width: 5),
-										Text(
-											'Vista usuario',
-											style: theme.textTheme.labelSmall?.copyWith(
-												color: Colors.white,
-												fontWeight: FontWeight.w600,
-											),
-										),
-									],
-								),
-							),
-						),
-					),
-					const SizedBox(width: 10),
-					// Profile avatar button
-					Tooltip(
-						message: profile.displayName ?? 'Perfil',
-						child: InkWell(
-							onTap: () => _showProfileSheet(context),
-							borderRadius: BorderRadius.circular(999),
-							child: Container(
-								width: 38,
-								height: 38,
-								decoration: BoxDecoration(
-									color: Colors.white.withValues(alpha: 0.22),
-									shape: BoxShape.circle,
-									border: Border.all(color: Colors.white.withValues(alpha: 0.45), width: 2),
-								),
-								child: Center(
-									child: Text(
-										_initial,
-										style: theme.textTheme.titleSmall?.copyWith(
-											color: Colors.white,
-											fontWeight: FontWeight.w800,
-											fontSize: 15,
-										),
-									),
-								),
-							),
-						),
-					),
-					const SizedBox(width: 12),
-				],
-			),
-		);
-	}
+  String get _initial {
+    final name = profile.displayName?.trim() ?? '';
+    return name.isNotEmpty ? name.characters.first.toUpperCase() : 'A';
+  }
 
-	void _showProfileSheet(BuildContext context) {
-		final theme = Theme.of(context);
-		showModalBottomSheet(
-			context: context,
-			backgroundColor: Colors.transparent,
-			builder: (_) => Container(
-				margin: const EdgeInsets.all(12),
-				decoration: BoxDecoration(
-					color: Colors.white,
-					borderRadius: BorderRadius.circular(24),
-					boxShadow: AppColors.shadowLg,
-				),
-				child: Column(
-					mainAxisSize: MainAxisSize.min,
-					children: [
-						// Handle
-						Padding(
-							padding: const EdgeInsets.only(top: 12),
-							child: Container(
-								width: 36,
-								height: 4,
-								decoration: BoxDecoration(
-									color: AppColors.dividerColor,
-									borderRadius: BorderRadius.circular(2),
-								),
-							),
-						),
-						const SizedBox(height: 20),
-						// Avatar
-						Container(
-							width: 64,
-							height: 64,
-							decoration: BoxDecoration(
-								gradient: AppColors.primaryGradient,
-								shape: BoxShape.circle,
-							),
-							child: Center(
-								child: Text(
-									_initial,
-									style: theme.textTheme.headlineSmall?.copyWith(
-										color: Colors.white,
-										fontWeight: FontWeight.w800,
-									),
-								),
-							),
-						),
-						const SizedBox(height: 12),
-						Text(
-							profile.displayName ?? 'Administrador',
-							style: theme.textTheme.titleMedium?.copyWith(
-								fontWeight: FontWeight.w800,
-								color: AppColors.darkText,
-							),
-						),
-						if (Supabase.instance.client.auth.currentUser?.email != null)
-							Padding(
-								padding: const EdgeInsets.only(top: 4),
-								child: Text(
-									Supabase.instance.client.auth.currentUser!.email!,
-									style: theme.textTheme.bodySmall?.copyWith(
-										color: AppColors.darkText.withValues(alpha: 0.50),
-									),
-								),
-							),
-						const SizedBox(height: 4),
-						Container(
-							margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-							padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-							decoration: BoxDecoration(
-								color: AppColors.bluePrimary.withValues(alpha: 0.08),
-								borderRadius: BorderRadius.circular(999),
-							),
-							child: Row(
-								mainAxisSize: MainAxisSize.min,
-								children: [
-									const Icon(Icons.admin_panel_settings_rounded, size: 15, color: AppColors.bluePrimary),
-									const SizedBox(width: 6),
-									Text(
-										'Administrador del sistema',
-										style: theme.textTheme.labelSmall?.copyWith(
-											color: AppColors.bluePrimary,
-											fontWeight: FontWeight.w700,
-										),
-									),
-								],
-							),
-						),
-						const Divider(height: 24),
-						if (profile.phone != null && profile.phone!.isNotEmpty)
-							_ProfileInfoTile(
-								icon: Icons.phone_rounded,
-								label: profile.phone!,
-							),
-						if (profile.city != null && profile.city!.isNotEmpty)
-							_ProfileInfoTile(
-								icon: Icons.place_rounded,
-								label: profile.city!,
-							),
-						const SizedBox(height: 16),
-					],
-				),
-			),
-		);
-	}
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space8,
+        vertical: 10,
+      ),
+      child: Tooltip(
+        message: profile.displayName ?? 'Perfil',
+        child: Material(
+          shape: const CircleBorder(),
+          color: Colors.transparent,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.primaryGradient,
+              ),
+              child: Center(
+                child: Text(
+                  _initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: AppColors.fontWeightExtraBold,
+                    fontSize: AppColors.fontSizeBase,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
+  final initial = (profile.displayName?.trim().isNotEmpty ?? false)
+      ? profile.displayName!.characters.first.toUpperCase()
+      : 'A';
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => Container(
+      margin: const EdgeInsets.all(AppColors.space12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusXl),
+        boxShadow: AppColors.shadowLg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: AppColors.space12),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppColors.space20),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: AppColors.fontSize2xl,
+                  fontWeight: AppColors.fontWeightExtraBold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppColors.space12),
+          Text(
+            profile.displayName ?? 'Administrador',
+            style: const TextStyle(
+              color: AppColors.darkText,
+              fontSize: AppColors.fontSizeLg,
+              fontWeight: AppColors.fontWeightExtraBold,
+              letterSpacing: -0.3,
+            ),
+          ),
+          if (Supabase.instance.client.auth.currentUser?.email != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppColors.space4),
+              child: Text(
+                Supabase.instance.client.auth.currentUser!.email!,
+                style: const TextStyle(
+                  color: AppColors.mediumText,
+                  fontSize: AppColors.fontSizeSm,
+                ),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppColors.space20,
+              vertical: AppColors.space8,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppColors.space12,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppColors.radiusRound),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.admin_panel_settings_rounded,
+                      size: 14, color: AppColors.bluePrimary),
+                  SizedBox(width: 6),
+                  Text(
+                    'Administrador del sistema',
+                    style: TextStyle(
+                      color: AppColors.bluePrimary,
+                      fontSize: AppColors.fontSizeXs,
+                      fontWeight: AppColors.fontWeightExtraBold,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1, color: AppColors.grayLight),
+          if (profile.phone != null && profile.phone!.isNotEmpty)
+            _ProfileInfoTile(icon: Icons.phone_rounded, label: profile.phone!),
+          if (profile.city != null && profile.city!.isNotEmpty)
+            _ProfileInfoTile(icon: Icons.place_rounded, label: profile.city!),
+          const SizedBox(height: AppColors.space16),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ProfileInfoTile extends StatelessWidget {
-	const _ProfileInfoTile({required this.icon, required this.label});
+  const _ProfileInfoTile({required this.icon, required this.label});
 
-	final IconData icon;
-	final String label;
+  final IconData icon;
+  final String label;
 
-	@override
-	Widget build(BuildContext context) {
-		return Padding(
-			padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-			child: Row(
-				children: [
-					Container(
-						width: 34,
-						height: 34,
-						decoration: BoxDecoration(
-							color: AppColors.bluePrimary.withValues(alpha: 0.09),
-							borderRadius: BorderRadius.circular(10),
-						),
-						child: Icon(icon, size: 17, color: AppColors.bluePrimary),
-					),
-					const SizedBox(width: 12),
-					Expanded(
-						child: Text(
-							label,
-							style: Theme.of(context).textTheme.bodySmall?.copyWith(
-								fontWeight: FontWeight.w600,
-								color: AppColors.darkText,
-							),
-						),
-					),
-				],
-			),
-		);
-	}
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space20,
+        vertical: AppColors.space8,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.bluePrimary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(AppColors.radiusSm),
+            ),
+            child: Icon(icon, size: 17, color: AppColors.bluePrimary),
+          ),
+          const SizedBox(width: AppColors.space12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontSize: AppColors.fontSizeSm,
+                fontWeight: AppColors.fontWeightSemiBold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
