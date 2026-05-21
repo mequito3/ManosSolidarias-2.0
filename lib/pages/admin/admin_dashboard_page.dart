@@ -163,7 +163,13 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 					_ViewAsUserButton(onTap: widget.onViewAsUser),
 					_AdminAvatarButton(
 						profile: widget.profile,
-						onTap: () => _showAdminProfileSheet(context, widget.profile),
+						onTap: () => _showAdminProfileSheet(
+							context,
+							widget.profile,
+							pendingCampaigns: _controller.pendingCampaigns.length,
+							pendingDonations: _controller.pendingDonations.length,
+							pendingOrganizations: _controller.pendingOrganizations.length,
+						),
 					),
 				],
 			),
@@ -639,13 +645,21 @@ class _AdminProfileSheetAvatar extends StatelessWidget {
   }
 }
 
-void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
+void _showAdminProfileSheet(
+  BuildContext context,
+  UserProfile profile, {
+  int pendingCampaigns = 0,
+  int pendingDonations = 0,
+  int pendingOrganizations = 0,
+}) {
   final rawName = profile.displayName?.trim();
   final displayName = (rawName?.isNotEmpty ?? false)
       ? _capitalizeWords(rawName!)
       : 'Administrador';
   final initial = displayName.characters.first.toUpperCase();
   final email = Supabase.instance.client.auth.currentUser?.email;
+  final shortId =
+      profile.userId.length > 8 ? profile.userId.substring(0, 8) : profile.userId;
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -754,7 +768,7 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
                   ),
                 ),
 
-                // ── Body: detalles de cuenta ────────────────────────
+                // ── Body: secciones ─────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppColors.space20,
@@ -766,7 +780,18 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _ProfileSectionLabel(text: 'Detalles de cuenta'),
+                      // Resumen del admin
+                      const _ProfileSectionLabel(text: 'Resumen del admin'),
+                      const SizedBox(height: AppColors.space12),
+                      _AdminStatsGrid(
+                        pendingCampaigns: pendingCampaigns,
+                        pendingDonations: pendingDonations,
+                        pendingOrganizations: pendingOrganizations,
+                      ),
+                      const SizedBox(height: AppColors.space20),
+
+                      // Contacto
+                      const _ProfileSectionLabel(text: 'Contacto'),
                       const SizedBox(height: AppColors.space12),
                       if ((profile.phone ?? '').trim().isNotEmpty)
                         _ProfileInfoTile(
@@ -778,9 +803,41 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
                           label: 'Ciudad',
                           value: profile.city!.trim(),
                         ),
+                      if ((profile.address ?? '').trim().isNotEmpty)
+                        _ProfileInfoTile(
+                          label: 'Dirección',
+                          value: profile.address!.trim(),
+                        ),
                       if ((profile.phone ?? '').trim().isEmpty &&
-                          (profile.city ?? '').trim().isEmpty)
+                          (profile.city ?? '').trim().isEmpty &&
+                          (profile.address ?? '').trim().isEmpty)
                         const _ProfileEmptyTile(),
+                      const SizedBox(height: AppColors.space20),
+
+                      // Cuenta
+                      const _ProfileSectionLabel(text: 'Cuenta'),
+                      const SizedBox(height: AppColors.space12),
+                      if ((email ?? '').isNotEmpty)
+                        _ProfileInfoTile(
+                          label: 'Correo',
+                          value: email!,
+                        ),
+                      _ProfileInfoTile(
+                        label: 'ID del administrador',
+                        value: '$shortId…',
+                      ),
+                      _ProfileInfoTile(
+                        label: 'Estado',
+                        value: profile.isProfileComplete
+                            ? 'Verificado'
+                            : 'Pendiente de verificación',
+                      ),
+                      const SizedBox(height: AppColors.space20),
+
+                      // Acciones
+                      _SignOutButton(
+                        onPressed: () => _confirmSignOut(context),
+                      ),
                     ],
                   ),
                 ),
@@ -791,6 +848,34 @@ void _showAdminProfileSheet(BuildContext context, UserProfile profile) {
       ),
     ),
   );
+}
+
+Future<void> _confirmSignOut(BuildContext context) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppColors.radiusXl),
+      ),
+      title: const Text('¿Cerrar sesión?'),
+      content: const Text(
+        'Tendrás que volver a iniciar sesión para acceder al panel.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx, true),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+          child: const Text('Cerrar sesión'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  await Supabase.instance.client.auth.signOut();
 }
 
 String _capitalizeWords(String input) {
@@ -907,6 +992,139 @@ class _ProfileEmptyTile extends StatelessWidget {
           color: AppColors.mediumText,
           fontSize: AppColors.fontSizeSm,
           height: 1.45,
+        ),
+      ),
+    );
+  }
+}
+
+class _AdminStatsGrid extends StatelessWidget {
+  const _AdminStatsGrid({
+    required this.pendingCampaigns,
+    required this.pendingDonations,
+    required this.pendingOrganizations,
+  });
+
+  final int pendingCampaigns;
+  final int pendingDonations;
+  final int pendingOrganizations;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _AdminStatPill(
+            value: pendingCampaigns,
+            label: 'Solicitudes',
+            color: AppColors.orangeAction,
+          ),
+        ),
+        const SizedBox(width: AppColors.space8),
+        Expanded(
+          child: _AdminStatPill(
+            value: pendingDonations,
+            label: 'Donaciones',
+            color: AppColors.greenSuccess,
+          ),
+        ),
+        const SizedBox(width: AppColors.space8),
+        Expanded(
+          child: _AdminStatPill(
+            value: pendingOrganizations,
+            label: 'Orgs.',
+            color: AppColors.bluePrimary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AdminStatPill extends StatelessWidget {
+  const _AdminStatPill({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  final int value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space12,
+        vertical: AppColors.space12,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: color.withValues(alpha: 0.22), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value',
+            style: TextStyle(
+              color: color,
+              fontSize: AppColors.fontSize2xl,
+              fontWeight: AppColors.fontWeightExtraBold,
+              letterSpacing: -0.5,
+              height: 1.1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color.withValues(alpha: 0.85),
+              fontSize: AppColors.fontSizeXs,
+              fontWeight: AppColors.fontWeightExtraBold,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SignOutButton extends StatelessWidget {
+  const _SignOutButton({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
+          side: BorderSide(
+            color: AppColors.error.withValues(alpha: 0.55),
+            width: 2,
+          ),
+          backgroundColor: AppColors.error.withValues(alpha: 0.04),
+          foregroundColor: AppColors.error,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppColors.radiusMd),
+          ),
+        ),
+        child: const Text(
+          'Cerrar sesión',
+          style: TextStyle(
+            fontSize: AppColors.fontSizeMd,
+            fontWeight: AppColors.fontWeightBold,
+            letterSpacing: AppColors.letterSpacingWide,
+          ),
         ),
       ),
     );
