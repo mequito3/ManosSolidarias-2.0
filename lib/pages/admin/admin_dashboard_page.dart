@@ -590,61 +590,6 @@ class _AdminAvatarButton extends StatelessWidget {
   }
 }
 
-class _AdminProfileSheetAvatar extends StatelessWidget {
-  const _AdminProfileSheetAvatar({required this.profile, required this.initial});
-  final UserProfile profile;
-  final String initial;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasAvatar = (profile.avatarUrl ?? '').trim().isNotEmpty;
-    final fallback = Container(
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: AppColors.primaryGradient,
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        initial,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: AppColors.fontSize2xl,
-          fontWeight: AppColors.fontWeightExtraBold,
-        ),
-      ),
-    );
-    return Container(
-      width: 72,
-      height: 72,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        border: Border.all(color: Colors.white, width: 3),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.bluePrimary.withValues(alpha: 0.30),
-            blurRadius: 14,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipOval(
-        child: hasAvatar
-            ? Image.network(
-                profile.avatarUrl!.trim(),
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => fallback,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return fallback;
-                },
-              )
-            : fallback,
-      ),
-    );
-  }
-}
-
 void _showAdminProfileSheet(
   BuildContext context,
   UserProfile profile, {
@@ -660,6 +605,10 @@ void _showAdminProfileSheet(
   final email = Supabase.instance.client.auth.currentUser?.email;
   final shortId =
       profile.userId.length > 8 ? profile.userId.substring(0, 8) : profile.userId;
+  final ringColor = profile.isProfileComplete
+      ? AppColors.greenHope
+      : AppColors.orangeAction;
+
   showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -671,174 +620,194 @@ void _showAdminProfileSheet(
       child: Container(
         margin: const EdgeInsets.all(AppColors.space12),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          color: AppColors.lightBackground,
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
           boxShadow: AppColors.shadowLg,
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppColors.radiusXl),
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Hero header (gradient azul + identidad) ──────────
-                Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.primaryGradient,
+                // Drag handle
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: AppColors.space12),
+                    child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.grayLight,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
+                ),
+
+                // ── Hero compacto (fondo blanco, horizontal) ────────
+                Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppColors.space20,
-                    AppColors.space12,
-                    AppColors.space20,
-                    AppColors.space20,
+                    AppColors.space16,
+                    AppColors.space16,
+                    AppColors.space16,
+                    AppColors.space8,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.45),
-                          borderRadius: BorderRadius.circular(2),
+                  child: Container(
+                    padding: const EdgeInsets.all(AppColors.space16),
+                    decoration: BoxDecoration(
+                      color: AppColors.cardBackground,
+                      borderRadius:
+                          BorderRadius.circular(AppColors.radiusMd),
+                      boxShadow: AppColors.shadowSm,
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _AdminCompactAvatar(
+                          profile: profile,
+                          initial: initial,
+                          ringColor: ringColor,
                         ),
-                      ),
-                      const SizedBox(height: AppColors.space16),
-                      _AdminProfileSheetAvatar(
-                        profile: profile,
-                        initial: initial,
-                      ),
-                      const SizedBox(height: AppColors.space12),
-                      Text(
-                        displayName,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: AppColors.fontSizeXl,
-                          fontWeight: AppColors.fontWeightExtraBold,
-                          letterSpacing: -0.4,
-                          shadows: [
-                            Shadow(color: Colors.black26, blurRadius: 6),
-                          ],
-                        ),
-                      ),
-                      if ((email ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          email!,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
-                            fontSize: AppColors.fontSizeSm,
-                            fontWeight: AppColors.fontWeightMedium,
+                        const SizedBox(width: AppColors.space12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                displayName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: AppColors.darkText,
+                                  fontSize: AppColors.fontSizeLg,
+                                  fontWeight: AppColors.fontWeightExtraBold,
+                                  letterSpacing: -0.3,
+                                  height: 1.2,
+                                ),
+                              ),
+                              if ((email ?? '').isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  email!,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    color: AppColors.mediumText,
+                                    fontSize: AppColors.fontSizeSm,
+                                    fontWeight:
+                                        AppColors.fontWeightMedium,
+                                  ),
+                                ),
+                              ],
+                              const SizedBox(height: AppColors.space8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.bluePrimary
+                                      .withValues(alpha: 0.10),
+                                  borderRadius: BorderRadius.circular(
+                                      AppColors.radiusRound),
+                                ),
+                                child: const Text(
+                                  'Administrador',
+                                  style: TextStyle(
+                                    color: AppColors.bluePrimary,
+                                    fontSize: AppColors.fontSizeXs,
+                                    fontWeight:
+                                        AppColors.fontWeightExtraBold,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                      const SizedBox(height: AppColors.space12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppColors.space12,
-                          vertical: 6,
+                    ),
+                  ),
+                ),
+
+                // ── Stats ────────────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space16,
+                    AppColors.space8,
+                    AppColors.space16,
+                    AppColors.space8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _AdminStatPill(
+                          value: pendingCampaigns,
+                          label: 'Solicitudes',
+                          color: AppColors.orangeAction,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.22),
-                          borderRadius:
-                              BorderRadius.circular(AppColors.radiusRound),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.45),
-                            width: 1,
-                          ),
+                      ),
+                      const SizedBox(width: AppColors.space8),
+                      Expanded(
+                        child: _AdminStatPill(
+                          value: pendingDonations,
+                          label: 'Donaciones',
+                          color: AppColors.greenSuccess,
                         ),
-                        child: const Text(
-                          'Administrador del sistema',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: AppColors.fontSizeXs,
-                            fontWeight: AppColors.fontWeightExtraBold,
-                            letterSpacing: 0.6,
-                          ),
+                      ),
+                      const SizedBox(width: AppColors.space8),
+                      Expanded(
+                        child: _AdminStatPill(
+                          value: pendingOrganizations,
+                          label: 'Orgs.',
+                          color: AppColors.bluePrimary,
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // ── Body: secciones ─────────────────────────────────
+                // ── Datos personales ────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppColors.space20,
-                    AppColors.space20,
-                    AppColors.space20,
-                    AppColors.space20,
+                    AppColors.space16,
+                    AppColors.space12,
+                    AppColors.space16,
+                    AppColors.space8,
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Resumen del admin
-                      const _ProfileSectionLabel(text: 'Resumen del admin'),
-                      const SizedBox(height: AppColors.space12),
-                      _AdminStatsGrid(
-                        pendingCampaigns: pendingCampaigns,
-                        pendingDonations: pendingDonations,
-                        pendingOrganizations: pendingOrganizations,
-                      ),
-                      const SizedBox(height: AppColors.space20),
-
-                      // Contacto
-                      const _ProfileSectionLabel(text: 'Contacto'),
-                      const SizedBox(height: AppColors.space12),
+                  child: _AdminInfoCard(
+                    rows: [
                       if ((profile.phone ?? '').trim().isNotEmpty)
-                        _ProfileInfoTile(
-                          label: 'Teléfono',
-                          value: profile.phone!.trim(),
-                        ),
+                        ('Teléfono', profile.phone!.trim()),
                       if ((profile.city ?? '').trim().isNotEmpty)
-                        _ProfileInfoTile(
-                          label: 'Ciudad',
-                          value: profile.city!.trim(),
-                        ),
+                        ('Ciudad', profile.city!.trim()),
                       if ((profile.address ?? '').trim().isNotEmpty)
-                        _ProfileInfoTile(
-                          label: 'Dirección',
-                          value: profile.address!.trim(),
-                        ),
-                      if ((profile.phone ?? '').trim().isEmpty &&
-                          (profile.city ?? '').trim().isEmpty &&
-                          (profile.address ?? '').trim().isEmpty)
-                        const _ProfileEmptyTile(),
-                      const SizedBox(height: AppColors.space20),
-
-                      // Cuenta
-                      const _ProfileSectionLabel(text: 'Cuenta'),
-                      const SizedBox(height: AppColors.space12),
-                      if ((email ?? '').isNotEmpty)
-                        _ProfileInfoTile(
-                          label: 'Correo',
-                          value: email!,
-                        ),
-                      _ProfileInfoTile(
-                        label: 'ID del administrador',
-                        value: '$shortId…',
-                      ),
-                      _ProfileInfoTile(
-                        label: 'Estado',
-                        value: profile.isProfileComplete
+                        ('Dirección', profile.address!.trim()),
+                      if ((email ?? '').isNotEmpty) ('Correo', email!),
+                      ('ID', '$shortId…'),
+                      (
+                        'Estado',
+                        profile.isProfileComplete
                             ? 'Verificado'
-                            : 'Pendiente de verificación',
-                      ),
-                      const SizedBox(height: AppColors.space20),
-
-                      // Acciones
-                      _SignOutButton(
-                        onPressed: () => _confirmSignOut(context),
+                            : 'Pendiente',
                       ),
                     ],
+                  ),
+                ),
+
+                // ── Cerrar sesión ───────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppColors.space16,
+                    AppColors.space8,
+                    AppColors.space16,
+                    AppColors.space16,
+                  ),
+                  child: _SignOutButton(
+                    onPressed: () => _confirmSignOut(context),
                   ),
                 ),
               ],
@@ -890,153 +859,65 @@ String _capitalizeWords(String input) {
       .join(' ');
 }
 
-class _ProfileSectionLabel extends StatelessWidget {
-  const _ProfileSectionLabel({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppColors.radiusXs),
-          ),
-        ),
-        const SizedBox(width: AppColors.space8),
-        Text(
-          text,
-          style: const TextStyle(
-            color: AppColors.darkText,
-            fontSize: AppColors.fontSizeSm,
-            fontWeight: AppColors.fontWeightExtraBold,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProfileInfoTile extends StatelessWidget {
-  const _ProfileInfoTile({
-    required this.label,
-    required this.value,
+class _AdminCompactAvatar extends StatelessWidget {
+  const _AdminCompactAvatar({
+    required this.profile,
+    required this.initial,
+    required this.ringColor,
   });
 
-  final String label;
-  final String value;
+  final UserProfile profile;
+  final String initial;
+  final Color ringColor;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppColors.space8),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppColors.space16,
-        vertical: AppColors.space12,
-      ),
+    final hasAvatar = (profile.avatarUrl ?? '').trim().isNotEmpty;
+    final fallback = Container(
       decoration: BoxDecoration(
-        color: AppColors.lightBackground,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(color: AppColors.dividerColor, width: 1),
+        shape: BoxShape.circle,
+        color: AppColors.bluePrimary.withValues(alpha: 0.12),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.mediumText,
-              fontSize: AppColors.fontSizeXs,
-              fontWeight: AppColors.fontWeightSemiBold,
-              letterSpacing: 0.6,
-            ),
-          ),
-          const SizedBox(height: 4),
-          SelectableText(
-            value,
-            maxLines: 2,
-            style: const TextStyle(
-              color: AppColors.darkText,
-              fontSize: AppColors.fontSizeBase,
-              fontWeight: AppColors.fontWeightSemiBold,
-              letterSpacing: -0.1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ProfileEmptyTile extends StatelessWidget {
-  const _ProfileEmptyTile();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppColors.space16),
-      decoration: BoxDecoration(
-        color: AppColors.lightBackground,
-        borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(color: AppColors.dividerColor, width: 1),
-      ),
-      child: const Text(
-        'Aún no agregaste teléfono ni ciudad a tu perfil.',
-        style: TextStyle(
-          color: AppColors.mediumText,
-          fontSize: AppColors.fontSizeSm,
-          height: 1.45,
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          color: AppColors.bluePrimary,
+          fontSize: AppColors.fontSizeXl,
+          fontWeight: AppColors.fontWeightExtraBold,
         ),
       ),
     );
-  }
-}
-
-class _AdminStatsGrid extends StatelessWidget {
-  const _AdminStatsGrid({
-    required this.pendingCampaigns,
-    required this.pendingDonations,
-    required this.pendingOrganizations,
-  });
-
-  final int pendingCampaigns;
-  final int pendingDonations;
-  final int pendingOrganizations;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _AdminStatPill(
-            value: pendingCampaigns,
-            label: 'Solicitudes',
-            color: AppColors.orangeAction,
-          ),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: ringColor.withValues(alpha: 0.55),
+          width: 2,
         ),
-        const SizedBox(width: AppColors.space8),
-        Expanded(
-          child: _AdminStatPill(
-            value: pendingDonations,
-            label: 'Donaciones',
-            color: AppColors.greenSuccess,
-          ),
+      ),
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.grayLight,
         ),
-        const SizedBox(width: AppColors.space8),
-        Expanded(
-          child: _AdminStatPill(
-            value: pendingOrganizations,
-            label: 'Orgs.',
-            color: AppColors.bluePrimary,
-          ),
+        child: ClipOval(
+          child: hasAvatar
+              ? Image.network(
+                  profile.avatarUrl!.trim(),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => fallback,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return fallback;
+                  },
+                )
+              : fallback,
         ),
-      ],
+      ),
     );
   }
 }
@@ -1060,9 +941,9 @@ class _AdminStatPill extends StatelessWidget {
         vertical: AppColors.space12,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
+        color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(AppColors.radiusMd),
-        border: Border.all(color: color.withValues(alpha: 0.22), width: 1),
+        boxShadow: AppColors.shadowSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1072,22 +953,114 @@ class _AdminStatPill extends StatelessWidget {
             '$value',
             style: TextStyle(
               color: color,
-              fontSize: AppColors.fontSize2xl,
+              fontSize: AppColors.fontSizeXl,
               fontWeight: AppColors.fontWeightExtraBold,
-              letterSpacing: -0.5,
+              letterSpacing: -0.4,
               height: 1.1,
             ),
           ),
           const SizedBox(height: 2),
           Text(
-            label.toUpperCase(),
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: color.withValues(alpha: 0.85),
+            style: const TextStyle(
+              color: AppColors.mediumText,
               fontSize: AppColors.fontSizeXs,
-              fontWeight: AppColors.fontWeightExtraBold,
-              letterSpacing: 0.6,
+              fontWeight: AppColors.fontWeightSemiBold,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminInfoCard extends StatelessWidget {
+  const _AdminInfoCard({required this.rows});
+  final List<(String, String)> rows;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppColors.space16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(AppColors.radiusMd),
+          boxShadow: AppColors.shadowSm,
+        ),
+        child: const Text(
+          'Aún no agregaste datos a tu perfil.',
+          style: TextStyle(
+            color: AppColors.mediumText,
+            fontSize: AppColors.fontSizeSm,
+            height: 1.45,
+          ),
+        ),
+      );
+    }
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        boxShadow: AppColors.shadowSm,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppColors.space16,
+        vertical: AppColors.space4,
+      ),
+      child: Column(
+        children: [
+          for (int i = 0; i < rows.length; i++) ...[
+            if (i > 0)
+              const Divider(
+                height: 1,
+                color: AppColors.dividerColor,
+              ),
+            _AdminInfoRow(label: rows[i].$1, value: rows[i].$2),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AdminInfoRow extends StatelessWidget {
+  const _AdminInfoRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppColors.space12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.mediumText,
+                fontSize: AppColors.fontSizeSm,
+                fontWeight: AppColors.fontWeightMedium,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppColors.space12),
+          Expanded(
+            child: SelectableText(
+              value,
+              maxLines: 2,
+              style: const TextStyle(
+                color: AppColors.darkText,
+                fontSize: AppColors.fontSizeSm,
+                fontWeight: AppColors.fontWeightSemiBold,
+                letterSpacing: -0.1,
+              ),
             ),
           ),
         ],
@@ -1104,26 +1077,23 @@ class _SignOutButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: OutlinedButton(
+      child: TextButton.icon(
         onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: AppColors.space16),
-          side: BorderSide(
-            color: AppColors.error.withValues(alpha: 0.55),
-            width: 2,
-          ),
-          backgroundColor: AppColors.error.withValues(alpha: 0.04),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: AppColors.space12),
           foregroundColor: AppColors.error,
+          backgroundColor: AppColors.cardBackground,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppColors.radiusMd),
           ),
         ),
-        child: const Text(
+        icon: const Icon(Icons.logout_rounded, size: 18),
+        label: const Text(
           'Cerrar sesión',
           style: TextStyle(
-            fontSize: AppColors.fontSizeMd,
+            fontSize: AppColors.fontSizeSm,
             fontWeight: AppColors.fontWeightBold,
-            letterSpacing: AppColors.letterSpacingWide,
+            letterSpacing: 0.2,
           ),
         ),
       ),
