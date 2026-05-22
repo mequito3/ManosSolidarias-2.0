@@ -378,14 +378,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 						),
 					);
 					break;
-				case AdminDashboardSection.organizations:
-					children.add(
-						OrganizationsSection(
-							items: organizationItems,
-							onReview: _openOrganizationReview,
-						),
-					);
-					break;
 			}
 		}
 

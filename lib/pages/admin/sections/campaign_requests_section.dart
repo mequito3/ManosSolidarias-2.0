@@ -391,21 +391,12 @@ class CampaignRequestCard extends StatelessWidget {
 
 		return Container(
 			decoration: BoxDecoration(
-				color: Colors.white,
-				borderRadius: BorderRadius.circular(20),
-				border: Border(
-					left: BorderSide(color: typeColor, width: 4),
-				),
-				boxShadow: [
-					BoxShadow(
-						color: typeColor.withValues(alpha: 0.10),
-						blurRadius: 14,
-						offset: const Offset(0, 4),
-					),
-				],
+				color: AppColors.cardBackground,
+				borderRadius: BorderRadius.circular(AppColors.radiusMd),
+				boxShadow: AppColors.shadowSm,
 			),
 			child: Padding(
-				padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+				padding: const EdgeInsets.all(AppColors.space16),
 				child: Column(
 					crossAxisAlignment: CrossAxisAlignment.start,
 					children: [
@@ -413,15 +404,15 @@ class CampaignRequestCard extends StatelessWidget {
 							crossAxisAlignment: CrossAxisAlignment.start,
 							children: [
 								Container(
-									width: 42,
-									height: 42,
+									width: 40,
+									height: 40,
 									decoration: BoxDecoration(
-										color: typeColor.withValues(alpha: 0.12),
-										borderRadius: BorderRadius.circular(14),
+										color: typeColor.withValues(alpha: 0.10),
+										borderRadius: BorderRadius.circular(AppColors.radiusSm),
 									),
-									child: Icon(typeIcon, color: typeColor, size: 22),
+									child: Icon(typeIcon, color: typeColor, size: 20),
 								),
-								const SizedBox(width: 12),
+								const SizedBox(width: AppColors.space12),
 								Expanded(
 									child: Column(
 										crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,30 +421,34 @@ class CampaignRequestCard extends StatelessWidget {
 												item.title,
 												maxLines: 2,
 												overflow: TextOverflow.ellipsis,
-												style: theme.textTheme.titleMedium?.copyWith(
-														fontWeight: FontWeight.w700,
-														color: AppColors.darkText,
-													),
+												style: const TextStyle(
+													fontWeight: AppColors.fontWeightExtraBold,
+													color: AppColors.darkText,
+													fontSize: AppColors.fontSizeBase,
+													letterSpacing: -0.2,
+													height: 1.25,
+												),
 											),
 											const SizedBox(height: 4),
 											Row(
 												children: [
 													Icon(Icons.access_time_rounded,
 															size: 12,
-															color: AppColors.darkText.withValues(alpha: 0.40)),
+															color: AppColors.mediumText),
 													const SizedBox(width: 4),
 													Text(
 														'Recibida el $formattedDate',
-														style: theme.textTheme.bodySmall?.copyWith(
-																color: AppColors.darkText.withValues(alpha: 0.55),
-															),
+														style: const TextStyle(
+															color: AppColors.mediumText,
+															fontSize: AppColors.fontSizeXs,
+														),
 													),
 												],
 											),
 										],
 									),
 								),
-								const SizedBox(width: 8),
+								const SizedBox(width: AppColors.space8),
 								_WaitTimeBadge(createdAt: item.createdAt),
 							],
 						),
@@ -528,30 +523,34 @@ class CampaignRequestCard extends StatelessWidget {
 								subtitle,
 								maxLines: 2,
 								overflow: TextOverflow.ellipsis,
-								style: theme.textTheme.bodyMedium?.copyWith(
-										color: AppColors.darkText.withValues(alpha: 0.68),
-										height: 1.35,
-									),
+								style: const TextStyle(
+									color: AppColors.mediumText,
+									fontSize: AppColors.fontSizeSm,
+									height: 1.4,
+								),
 							),
 						],
-						const SizedBox(height: 14),
-						Divider(height: 1, color: AppColors.grayNeutral.withValues(alpha: 0.18)),
-						const SizedBox(height: 12),
+						const SizedBox(height: AppColors.space16),
 						SizedBox(
 							width: double.infinity,
-							child: FilledButton.icon(
+							child: TextButton.icon(
 								onPressed: onReview,
-								style: FilledButton.styleFrom(
-									backgroundColor: typeColor,
-									padding: const EdgeInsets.symmetric(vertical: 11),
+								style: TextButton.styleFrom(
+									foregroundColor: typeColor,
+									backgroundColor: typeColor.withValues(alpha: 0.10),
+									padding: const EdgeInsets.symmetric(vertical: AppColors.space12),
 									shape: RoundedRectangleBorder(
-										borderRadius: BorderRadius.circular(12),
+										borderRadius: BorderRadius.circular(AppColors.radiusSm),
 									),
 								),
 								icon: const Icon(Icons.rate_review_outlined, size: 18),
-								label: const Text(
-									'Revisar solicitud',
-									style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+								label: Text(
+									isOrganization ? 'Revisar organización' : 'Revisar solicitud',
+									style: const TextStyle(
+										fontWeight: AppColors.fontWeightBold,
+										fontSize: AppColors.fontSizeSm,
+										letterSpacing: 0.2,
+									),
 								),
 							),
 						),
@@ -941,27 +940,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 			return Color(int.parse('FF$hex', radix: 16));
 		} catch (_) {
 			return Colors.grey;
-		}
-	}
-
-	/// Returns the gradient for the header based on the solicitud type.
-	LinearGradient _getTypeGradient(SolicitudTipo? tipo) {
-		switch (tipo) {
-			case SolicitudTipo.kermesse:
-				return LinearGradient(
-					begin: Alignment.topLeft,
-					end: Alignment.bottomRight,
-					colors: [AppColors.greenHope, AppColors.greenHope.withValues(alpha: 0.7)],
-				);
-			case SolicitudTipo.rifa:
-				return const LinearGradient(
-					begin: Alignment.topLeft,
-					end: Alignment.bottomRight,
-					colors: [Color(0xFF6750A4), Color(0xFF9C84D4)],
-				);
-			case SolicitudTipo.campania:
-			case null:
-				return AppColors.actionGradient as LinearGradient;
 		}
 	}
 

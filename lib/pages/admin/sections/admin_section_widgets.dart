@@ -3,7 +3,7 @@
 import '../../../models/user_profile.dart';
 import '../../../theme/app_colors.dart';
 
-enum AdminDashboardSection { metrics, campaignRequests, donations, organizations }
+enum AdminDashboardSection { metrics, campaignRequests, donations }
 
 class AdminNavItem {
 	const AdminNavItem({
