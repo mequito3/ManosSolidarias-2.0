@@ -384,6 +384,12 @@ class CampaignRequestCard extends StatelessWidget {
 		final typeLabel = isOrganization
 				? 'Organización'
 				: _typeLabel(item.solicitudTipo);
+		// El anonimato solo aplica a campañas (una causa personal puede pedir
+		// privacidad). Kermesses, rifas y organizaciones son públicas.
+		final esCampania = !isOrganization &&
+				(item.solicitudTipo == SolicitudTipo.campania ||
+						item.solicitudTipo == null);
+		final showAnon = item.esAnonimo && esCampania;
 
 		return Container(
 			decoration: BoxDecoration(
@@ -433,7 +439,7 @@ class CampaignRequestCard extends StatelessWidget {
 									],
 								),
 							),
-							if (item.esAnonimo) _AnonBadge(),
+							if (showAnon) _AnonBadge(),
 						],
 					),
 					const SizedBox(height: AppColors.space12),
