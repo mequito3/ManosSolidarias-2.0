@@ -860,72 +860,58 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 										),
 									),
 
-									// ── Hero header with gradient ─────────────────────────
+									// ── Hero header (cover + overlay oscuro neutro) ───────
 									Container(
 										margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+										height: 172,
 										decoration: BoxDecoration(
-											gradient: LinearGradient(
-												begin: Alignment.topLeft,
-												end: Alignment.bottomRight,
-												colors: [
-													typeColor,
-													typeColor.withValues(alpha: 0.75),
-												],
-											),
+											color: AppColors.darkText,
 											borderRadius: BorderRadius.circular(20),
-											boxShadow: [
-												BoxShadow(
-													color: typeColor.withValues(alpha: 0.35),
-													blurRadius: 16,
-													offset: const Offset(0, 6),
-												),
-											],
+											boxShadow: AppColors.shadowSm,
 										),
 										child: ClipRRect(
 											borderRadius: BorderRadius.circular(20),
 											child: Stack(
+												fit: StackFit.expand,
 												children: [
-													// Cover image behind header (if present)
 													if (hasCover)
-														Positioned.fill(
-															child: Image.network(
-																widget.item.coverUrl!,
-																fit: BoxFit.cover,
-																errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-															),
+														Image.network(
+															widget.item.coverUrl!,
+															fit: BoxFit.cover,
+															errorBuilder: (_, __, ___) => const SizedBox.shrink(),
 														),
-													if (hasCover)
-														Positioned.fill(
-															child: Container(
-																decoration: BoxDecoration(
-																	gradient: LinearGradient(
-																		begin: Alignment.topCenter,
-																		end: Alignment.bottomCenter,
-																		colors: [
-																			typeColor.withValues(alpha: 0.55),
-																			typeColor.withValues(alpha: 0.95),
-																		],
-																	),
+													// Overlay oscuro neutro (legibilidad del texto)
+													Positioned.fill(
+														child: DecoratedBox(
+															decoration: BoxDecoration(
+																gradient: LinearGradient(
+																	begin: Alignment.topCenter,
+																	end: Alignment.bottomCenter,
+																	colors: [
+																		Colors.black.withValues(alpha: 0.30),
+																		Colors.black.withValues(alpha: 0.80),
+																	],
 																),
 															),
 														),
-													// Header content
+													),
+													// Contenido
 													Padding(
-														padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+														padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
 														child: Column(
 															crossAxisAlignment: CrossAxisAlignment.start,
 															children: [
-																// Type badge + wait badge row
 																Row(
 																	children: [
 																		if (widget.item.solicitudTipo != null)
 																			Container(
-																				padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+																				padding: const EdgeInsets.symmetric(
+																						horizontal: 10, vertical: 5),
 																				decoration: BoxDecoration(
-																					color: Colors.white.withValues(alpha: 0.22),
+																					color: Colors.white.withValues(alpha: 0.20),
 																					borderRadius: BorderRadius.circular(20),
 																					border: Border.all(
-																						color: Colors.white.withValues(alpha: 0.4),
+																						color: Colors.white.withValues(alpha: 0.35),
 																						width: 1,
 																					),
 																				),
@@ -971,31 +957,29 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																		_buildWaitingTimeBadge(context, widget.item.createdAt),
 																	],
 																),
-																const SizedBox(height: 14),
-																// Title
+																const Spacer(),
 																Text(
 																	widget.item.title,
+																	maxLines: 2,
+																	overflow: TextOverflow.ellipsis,
 																	style: const TextStyle(
-																		fontWeight: FontWeight.w900,
+																		fontWeight: FontWeight.w800,
 																		color: Colors.white,
-																		fontSize: 22,
-																		height: 1.25,
+																		fontSize: 21,
+																		height: 1.2,
 																		letterSpacing: -0.4,
-																		shadows: [
-																			Shadow(color: Colors.black38, blurRadius: 6),
-																		],
 																	),
 																),
-																const SizedBox(height: 8),
-																// Date row
+																const SizedBox(height: 6),
 																Row(
 																	children: [
-																		const Icon(Icons.calendar_today_rounded, size: 13, color: Colors.white70),
+																		const Icon(Icons.calendar_today_rounded,
+																				size: 13, color: Colors.white70),
 																		const SizedBox(width: 5),
 																		Text(
 																			'Enviado el $formattedDate',
 																			style: const TextStyle(
-																				fontSize: 13,
+																				fontSize: 12,
 																				color: Colors.white70,
 																				fontWeight: FontWeight.w500,
 																			),
