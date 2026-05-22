@@ -276,60 +276,35 @@ class _ReviewInfoRow extends StatelessWidget {
 	const _ReviewInfoRow({
 		required this.label,
 		required this.value,
-		this.icon,
-		this.iconColor,
 	});
 
 	final String label;
 	final String value;
-	final IconData? icon;
-	final Color? iconColor;
 
 	@override
 	Widget build(BuildContext context) {
 		return Padding(
 			padding: const EdgeInsets.only(bottom: 10),
-			child: Row(
+			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
 				children: [
-					if (icon != null) ...[
-						Container(
-							margin: const EdgeInsets.only(top: 2),
-							padding: const EdgeInsets.all(6),
-							decoration: BoxDecoration(
-								color: (iconColor ?? AppColors.bluePrimary).withValues(alpha: 0.10),
-								borderRadius: BorderRadius.circular(8),
-							),
-							child: Icon(
-								icon,
-								size: 14,
-								color: iconColor ?? AppColors.bluePrimary,
-							),
+					Text(
+						label.toUpperCase(),
+						style: const TextStyle(
+							fontWeight: AppColors.fontWeightSemiBold,
+							color: AppColors.mediumText,
+							fontSize: AppColors.fontSizeXs,
+							letterSpacing: 0.4,
 						),
-						const SizedBox(width: 10),
-					],
-					Expanded(
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							children: [
-								Text(
-									label,
-									style: const TextStyle(
-										fontWeight: FontWeight.w600,
-										color: AppColors.darkText,
-										fontSize: 12,
-									),
-								),
-								const SizedBox(height: 2),
-								Text(
-									value,
-									style: const TextStyle(
-										color: Colors.black87,
-										fontSize: 13,
-										height: 1.4,
-									),
-								),
-							],
+					),
+					const SizedBox(height: 3),
+					Text(
+						value,
+						style: const TextStyle(
+							color: AppColors.darkText,
+							fontSize: AppColors.fontSizeSm,
+							fontWeight: AppColors.fontWeightSemiBold,
+							height: 1.4,
 						),
 					),
 				],
@@ -1122,22 +1097,16 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 												children: [
 													if (widget.item.kermesseDate != null)
 														_ReviewInfoRow(
-															icon: Icons.access_time_rounded,
-															iconColor: AppColors.bluePrimary,
 															label: 'Fecha y horario',
 															value: widget.item.kermesseDate!,
 														),
 													if (widget.item.kermesseBeneficiaries != null)
 														_ReviewInfoRow(
-															icon: Icons.people_rounded,
-															iconColor: AppColors.greenSuccess,
 															label: 'Beneficiarios',
 															value: widget.item.kermesseBeneficiaries!,
 														),
 													if (widget.item.kermessePurpose != null)
 														_ReviewInfoRow(
-															icon: Icons.attach_money_rounded,
-															iconColor: AppColors.orangeAction,
 															label: 'Uso de fondos',
 															value: widget.item.kermessePurpose!,
 														),
