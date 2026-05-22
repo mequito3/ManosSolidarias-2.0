@@ -53,13 +53,13 @@ class PdfExportService {
 		pdf.addPage(
 			pw.MultiPage(
 				pageFormat: PdfPageFormat.a4,
-				margin: const pw.EdgeInsets.symmetric(horizontal: 36, vertical: 28),
-				header: (context) => context.pageNumber == 1
-						? _letterhead()
-						: _runningHeader(),
+				margin: const pw.EdgeInsets.fromLTRB(36, 36, 36, 44),
 				footer: (context) => _footer(context),
 				build: (context) => [
-					pw.SizedBox(height: 20),
+					// El membrete va dentro del contenido (no como header de
+					// MultiPage, que vive en el margen y no admite tanta altura).
+					_letterhead(),
+					pw.SizedBox(height: 24),
 
 					// ── KPIs principales (tarjetas) ─────────────────────────────
 					_sectionTitle('Indicadores principales', _blue),
@@ -239,34 +239,6 @@ class PdfExportService {
 								),
 							),
 						],
-					),
-				],
-			),
-		);
-	}
-
-	// ── Header compacto (páginas 2+) ────────────────────────────────────────────
-	static pw.Widget _runningHeader() {
-		return pw.Container(
-			padding: const pw.EdgeInsets.only(bottom: 8),
-			margin: const pw.EdgeInsets.only(bottom: 4),
-			decoration: pw.BoxDecoration(
-				border: pw.Border(bottom: pw.BorderSide(color: _line, width: 1)),
-			),
-			child: pw.Row(
-				mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-				children: [
-					pw.Text(
-						'Manos Solidarias',
-						style: pw.TextStyle(
-							fontSize: 11,
-							fontWeight: pw.FontWeight.bold,
-							color: _blue,
-						),
-					),
-					pw.Text(
-						'Reporte de métricas',
-						style: pw.TextStyle(fontSize: 9, color: _muted),
 					),
 				],
 			),
