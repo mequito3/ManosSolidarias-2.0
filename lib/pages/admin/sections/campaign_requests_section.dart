@@ -109,7 +109,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								label: 'Todas',
 								count: totalCount,
 								isActive: _activeFilter == _RequestFilter.todas,
-								color: AppColors.bluePrimary,
 								icon: Icons.all_inclusive_rounded,
 								onTap: () => setState(() => _activeFilter = _RequestFilter.todas),
 							),
@@ -118,7 +117,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								label: 'Campañas',
 								count: countCampania,
 								isActive: _activeFilter == _RequestFilter.campania,
-								color: AppColors.orangeAction,
 								icon: Icons.campaign_outlined,
 								onTap: () => setState(() => _activeFilter = _RequestFilter.campania),
 							),
@@ -127,7 +125,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								label: 'Kermesse',
 								count: countKermesse,
 								isActive: _activeFilter == _RequestFilter.kermesse,
-								color: AppColors.greenHope,
 								icon: Icons.festival_outlined,
 								onTap: () => setState(() => _activeFilter = _RequestFilter.kermesse),
 							),
@@ -136,7 +133,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								label: 'Rifas',
 								count: countRifa,
 								isActive: _activeFilter == _RequestFilter.rifa,
-								color: const Color(0xFF6750A4),
 								icon: Icons.confirmation_number_outlined,
 								onTap: () => setState(() => _activeFilter = _RequestFilter.rifa),
 							),
@@ -145,7 +141,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								label: 'Organizaciones',
 								count: countOrg,
 								isActive: _activeFilter == _RequestFilter.organizacion,
-								color: AppColors.bluePrimary,
 								icon: Icons.business_rounded,
 								onTap: () =>
 										setState(() => _activeFilter = _RequestFilter.organizacion),
@@ -387,146 +382,114 @@ class CampaignRequestCard extends StatelessWidget {
 		final typeIcon =
 				isOrganization ? Icons.business_rounded : _typeIcon(item.solicitudTipo);
 		final typeLabel = isOrganization
-				? 'ORGANIZACIÓN'
+				? 'Organización'
 				: _typeLabel(item.solicitudTipo);
 
 		return Container(
-			clipBehavior: Clip.antiAlias,
 			decoration: BoxDecoration(
 				color: AppColors.cardBackground,
 				borderRadius: BorderRadius.circular(AppColors.radiusMd),
 				boxShadow: AppColors.shadowSm,
 			),
+			padding: const EdgeInsets.all(AppColors.space16),
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
 				children: [
-					// ── Franja de tipo ──────────────────────────────────────
-					Container(
-						width: double.infinity,
-						color: typeColor.withValues(alpha: 0.16),
-						padding: const EdgeInsets.symmetric(
-							horizontal: AppColors.space16,
-							vertical: 10,
-						),
-						child: Row(
-							children: [
-								Container(
-									width: 28,
-									height: 28,
-									decoration: BoxDecoration(
-										color: typeColor,
-										borderRadius: BorderRadius.circular(AppColors.radiusSm),
-									),
-									child: Icon(typeIcon, color: Colors.white, size: 16),
+					// ── Encabezado: tipo (ícono + palabra) + tiempo ─────────
+					Row(
+						children: [
+							Container(
+								width: 38,
+								height: 38,
+								decoration: BoxDecoration(
+									color: typeColor,
+									borderRadius: BorderRadius.circular(AppColors.radiusSm),
 								),
-								const SizedBox(width: AppColors.space8),
-								Text(
-									typeLabel,
-									style: TextStyle(
-										color: typeColor,
-										fontSize: AppColors.fontSizeSm,
-										fontWeight: AppColors.fontWeightExtraBold,
-										letterSpacing: 0.8,
-									),
+								child: Icon(typeIcon, color: Colors.white, size: 20),
+							),
+							const SizedBox(width: AppColors.space12),
+							Expanded(
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.start,
+									mainAxisSize: MainAxisSize.min,
+									children: [
+										Text(
+											typeLabel,
+											style: const TextStyle(
+												color: AppColors.darkText,
+												fontSize: AppColors.fontSizeBase,
+												fontWeight: AppColors.fontWeightExtraBold,
+												letterSpacing: -0.1,
+											),
+										),
+										const SizedBox(height: 1),
+										Text(
+											_waitLabel(item.createdAt),
+											style: const TextStyle(
+												color: AppColors.mediumText,
+												fontSize: AppColors.fontSizeXs,
+											),
+										),
+									],
 								),
-								const Spacer(),
-								Text(
-									_waitLabel(item.createdAt),
-									style: TextStyle(
-										color: typeColor,
-										fontSize: AppColors.fontSizeXs,
-										fontWeight: AppColors.fontWeightBold,
-									),
-								),
-							],
+							),
+							if (item.esAnonimo) _AnonBadge(),
+						],
+					),
+					const SizedBox(height: AppColors.space12),
+
+					// ── Título ──────────────────────────────────────────────
+					Text(
+						item.title,
+						maxLines: 2,
+						overflow: TextOverflow.ellipsis,
+						style: const TextStyle(
+							fontWeight: AppColors.fontWeightBold,
+							color: AppColors.darkText,
+							fontSize: AppColors.fontSizeMd,
+							letterSpacing: -0.3,
+							height: 1.25,
 						),
 					),
+					if (subtitle != null && subtitle.isNotEmpty) ...[
+						const SizedBox(height: 6),
+						Text(
+							subtitle,
+							maxLines: 2,
+							overflow: TextOverflow.ellipsis,
+							style: const TextStyle(
+								color: AppColors.mediumText,
+								fontSize: AppColors.fontSizeSm,
+								height: 1.4,
+							),
+						),
+					],
+					const SizedBox(height: AppColors.space16),
 
-					// ── Cuerpo ──────────────────────────────────────────────
-					Padding(
-						padding: const EdgeInsets.all(AppColors.space16),
-						child: Column(
-							crossAxisAlignment: CrossAxisAlignment.start,
-							children: [
-								Text(
-									item.title,
-									maxLines: 2,
-									overflow: TextOverflow.ellipsis,
-									style: const TextStyle(
-										fontWeight: AppColors.fontWeightExtraBold,
-										color: AppColors.darkText,
-										fontSize: AppColors.fontSizeMd,
-										letterSpacing: -0.3,
-										height: 1.25,
-									),
+					// ── Acción (azul de marca, uniforme) ────────────────────
+					SizedBox(
+						width: double.infinity,
+						child: FilledButton.icon(
+							onPressed: onReview,
+							style: FilledButton.styleFrom(
+								backgroundColor: AppColors.bluePrimary,
+								foregroundColor: Colors.white,
+								padding:
+										const EdgeInsets.symmetric(vertical: AppColors.space12),
+								shape: RoundedRectangleBorder(
+									borderRadius: BorderRadius.circular(AppColors.radiusSm),
 								),
-								if (item.esAnonimo) ...[
-									const SizedBox(height: AppColors.space8),
-									Container(
-										padding: const EdgeInsets.symmetric(
-												horizontal: 10, vertical: 4),
-										decoration: BoxDecoration(
-											color: AppColors.orangeAction.withValues(alpha: 0.10),
-											borderRadius: BorderRadius.circular(AppColors.radiusRound),
-										),
-										child: const Row(
-											mainAxisSize: MainAxisSize.min,
-											children: [
-												Icon(Icons.lock_rounded,
-														size: 12, color: AppColors.orangeAction),
-												SizedBox(width: 4),
-												Text(
-													'Anónimo',
-													style: TextStyle(
-														color: AppColors.orangeAction,
-														fontWeight: AppColors.fontWeightExtraBold,
-														fontSize: AppColors.fontSizeXs,
-														letterSpacing: 0.2,
-													),
-												),
-											],
-										),
-									),
-								],
-								if (subtitle != null && subtitle.isNotEmpty) ...[
-									const SizedBox(height: AppColors.space8),
-									Text(
-										subtitle,
-										maxLines: 2,
-										overflow: TextOverflow.ellipsis,
-										style: const TextStyle(
-											color: AppColors.mediumText,
-											fontSize: AppColors.fontSizeSm,
-											height: 1.4,
-										),
-									),
-								],
-								const SizedBox(height: AppColors.space16),
-								SizedBox(
-									width: double.infinity,
-									child: TextButton.icon(
-										onPressed: onReview,
-										style: TextButton.styleFrom(
-											foregroundColor: typeColor,
-											backgroundColor: typeColor.withValues(alpha: 0.10),
-											padding: const EdgeInsets.symmetric(
-													vertical: AppColors.space12),
-											shape: RoundedRectangleBorder(
-												borderRadius: BorderRadius.circular(AppColors.radiusSm),
-											),
-										),
-										icon: const Icon(Icons.rate_review_outlined, size: 18),
-										label: Text(
-											isOrganization ? 'Revisar organización' : 'Revisar solicitud',
-											style: const TextStyle(
-												fontWeight: AppColors.fontWeightBold,
-												fontSize: AppColors.fontSizeSm,
-												letterSpacing: 0.2,
-											),
-										),
-									),
+								elevation: 0,
+							),
+							icon: const Icon(Icons.rate_review_outlined, size: 18),
+							label: Text(
+								isOrganization ? 'Revisar organización' : 'Revisar solicitud',
+								style: const TextStyle(
+									fontWeight: AppColors.fontWeightBold,
+									fontSize: AppColors.fontSizeSm,
+									letterSpacing: 0.2,
 								),
-							],
+							),
 						),
 					),
 				],
@@ -537,12 +500,12 @@ class CampaignRequestCard extends StatelessWidget {
 	String _typeLabel(SolicitudTipo? tipo) {
 		switch (tipo) {
 			case SolicitudTipo.kermesse:
-				return 'KERMESSE';
+				return 'Kermesse';
 			case SolicitudTipo.rifa:
-				return 'RIFA';
+				return 'Rifa';
 			case SolicitudTipo.campania:
 			case null:
-				return 'CAMPAÑA';
+				return 'Campaña';
 		}
 	}
 
@@ -582,12 +545,40 @@ class CampaignRequestCard extends StatelessWidget {
 	}
 }
 
+class _AnonBadge extends StatelessWidget {
+	@override
+	Widget build(BuildContext context) {
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+			decoration: BoxDecoration(
+				color: AppColors.grayNeutral.withValues(alpha: 0.14),
+				borderRadius: BorderRadius.circular(AppColors.radiusRound),
+			),
+			child: const Row(
+				mainAxisSize: MainAxisSize.min,
+				children: [
+					Icon(Icons.lock_outline_rounded, size: 12, color: AppColors.mediumText),
+					SizedBox(width: 4),
+					Text(
+						'Anónimo',
+						style: TextStyle(
+							color: AppColors.mediumText,
+							fontWeight: AppColors.fontWeightBold,
+							fontSize: AppColors.fontSizeXs,
+							letterSpacing: 0.2,
+						),
+					),
+				],
+			),
+		);
+	}
+}
+
 class _FilterChip extends StatelessWidget {
 	const _FilterChip({
 		required this.label,
 		required this.count,
 		required this.isActive,
-		required this.color,
 		required this.icon,
 		required this.onTap,
 	});
@@ -595,53 +586,57 @@ class _FilterChip extends StatelessWidget {
 	final String label;
 	final int count;
 	final bool isActive;
-	final Color color;
 	final IconData icon;
 	final VoidCallback onTap;
 
 	@override
 	Widget build(BuildContext context) {
+		// Filtros neutros: solo el activo se pinta de azul de marca; los demás
+		// quedan grises. Así la fila no es un arcoíris que marea.
+		final fg = isActive ? Colors.white : AppColors.mediumText;
 		return GestureDetector(
 			onTap: onTap,
 			child: AnimatedContainer(
 				duration: const Duration(milliseconds: 180),
-				padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+				padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
 				decoration: BoxDecoration(
-					color: isActive ? color : color.withValues(alpha: 0.07),
+					color: isActive ? AppColors.bluePrimary : AppColors.cardBackground,
 					borderRadius: BorderRadius.circular(999),
 					border: Border.all(
-						color: isActive ? color : color.withValues(alpha: 0.25),
+						color: isActive
+								? AppColors.bluePrimary
+								: AppColors.grayNeutral.withValues(alpha: 0.35),
 					),
 				),
 				child: Row(
 					mainAxisSize: MainAxisSize.min,
 					children: [
-						Icon(icon, size: 14, color: isActive ? Colors.white : color),
+						Icon(icon, size: 15, color: fg),
 						const SizedBox(width: 6),
 						Text(
 							label,
 							style: TextStyle(
 								fontSize: 13,
-								fontWeight: FontWeight.w600,
-								color: isActive ? Colors.white : color,
+								fontWeight: FontWeight.w700,
+								color: isActive ? Colors.white : AppColors.darkText,
 							),
 						),
 						if (count > 0) ...[
 							const SizedBox(width: 6),
 							Container(
-								padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+								padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
 								decoration: BoxDecoration(
 									color: isActive
 											? Colors.white.withValues(alpha: 0.25)
-											: color.withValues(alpha: 0.15),
+											: AppColors.grayNeutral.withValues(alpha: 0.18),
 									borderRadius: BorderRadius.circular(999),
 								),
 								child: Text(
 									'$count',
 									style: TextStyle(
 										fontSize: 11,
-										fontWeight: FontWeight.w700,
-										color: isActive ? Colors.white : color,
+										fontWeight: FontWeight.w800,
+										color: isActive ? Colors.white : AppColors.mediumText,
 									),
 								),
 							),
