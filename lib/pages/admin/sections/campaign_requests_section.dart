@@ -53,8 +53,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 				.length;
 		final countKermesse =
 				campaigns.where((e) => e.solicitudTipo == SolicitudTipo.kermesse).length;
-		final countRifa =
-				campaigns.where((e) => e.solicitudTipo == SolicitudTipo.rifa).length;
 		final countOrg = orgs.length;
 		final totalCount = campaigns.length + countOrg;
 
@@ -127,14 +125,6 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 								isActive: _activeFilter == _RequestFilter.kermesse,
 								icon: Icons.festival_outlined,
 								onTap: () => setState(() => _activeFilter = _RequestFilter.kermesse),
-							),
-							const SizedBox(width: 8),
-							_FilterChip(
-								label: 'Rifas',
-								count: countRifa,
-								isActive: _activeFilter == _RequestFilter.rifa,
-								icon: Icons.confirmation_number_outlined,
-								onTap: () => setState(() => _activeFilter = _RequestFilter.rifa),
 							),
 							const SizedBox(width: 8),
 							_FilterChip(
