@@ -104,7 +104,7 @@ class AdminMetricsPanel extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton.icon(
-            onPressed: () => _exportPdf(context, metrics, activeCampaigns),
+            onPressed: () => _exportPdf(context, metrics),
             icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
             label: const Text('Exportar PDF'),
             style: TextButton.styleFrom(
@@ -346,8 +346,8 @@ class AdminMetricsPanel extends StatelessWidget {
   static String _formatCurrency(double value) => _compactBs(value);
 
   // ── PDF export ──────────────────────────────────────────────────────────
-  static void _exportPdf(BuildContext context,
-      AdminDashboardMetrics metrics, List<AdminActiveCampaign> campaigns) async {
+  static void _exportPdf(
+      BuildContext context, AdminDashboardMetrics metrics) async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -368,8 +368,7 @@ class AdminMetricsPanel extends StatelessWidget {
       ),
     );
     try {
-      final bytes = await PdfExportService.buildMetricsPdf(
-          metrics: metrics, activeCampaigns: campaigns);
+      final bytes = await PdfExportService.buildMetricsPdf(metrics: metrics);
       if (!context.mounted) return;
       Navigator.pop(context); // cierra el loading
       Navigator.of(context).push(

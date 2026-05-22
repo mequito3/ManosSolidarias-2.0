@@ -5,10 +5,15 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../models/admin_dashboard.dart';
 
+/// Genera el reporte de métricas en PDF.
+///
+/// Importante (escala): todas las cifras provienen de agregados que el RPC
+/// `get_admin_dashboard_metrics` calcula en el servidor. NO se suman listas
+/// en el cliente — la lista de campañas que llega al dashboard está limitada
+/// a 6 registros (solo muestra visual), así que sumarla daría totales falsos
+/// cuando haya miles de campañas.
 class PdfExportService {
-	// ── Paleta de marca (misma que la app) ─────────────────────────────────────
 	static final PdfColor _blue = PdfColor.fromHex('#2E86AB');
-	static final PdfColor _blueDark = PdfColor.fromHex('#1B5E7A');
 	static final PdfColor _orange = PdfColor.fromHex('#F28E2C');
 	static final PdfColor _green = PdfColor.fromHex('#4CAF50');
 	static final PdfColor _greenDark = PdfColor.fromHex('#28A745');
@@ -17,26 +22,10 @@ class PdfExportService {
 	static final PdfColor _line = PdfColor.fromHex('#E3E8EE');
 	static final PdfColor _surface = PdfColor.fromHex('#F8F9FA');
 
-	/// Construye el PDF y devuelve sus bytes para mostrarlo en un visor
-	/// dentro de la app (no comparte ni imprime).
 	static Future<Uint8List> buildMetricsPdf({
 		required AdminDashboardMetrics metrics,
-		required List<AdminActiveCampaign> activeCampaigns,
 	}) async {
-		// Fuente estándar del paquete (soporta acentos vía WinAnsi). Evitamos
-		// embeber fuentes de red porque generaba PDFs que algunos visores de
-		// Android rechazaban ("Lo sentimos, esto no ha funcionado").
 		final pdf = pw.Document();
-
-		// Totales / derivados
-		final goalTotal =
-				activeCampaigns.fold<double>(0, (s, c) => s + c.goalAmount);
-		final raisedTotal =
-				activeCampaigns.fold<double>(0, (s, c) => s + c.raisedAmount);
-		final avgProgress = activeCampaigns.isEmpty
-				? 0.0
-				: activeCampaigns.fold<double>(0, (s, c) => s + c.completionRatio) /
-						activeCampaigns.length;
 		final pendingSolicitudes =
 				metrics.pendingRequests + metrics.pendingOrganizations;
 
@@ -49,82 +38,64 @@ class PdfExportService {
 					_letterhead(),
 					pw.SizedBox(height: 22),
 
-					// ── Resumen ejecutivo (narrativo) ───────────────────────────
 					_sectionTitle('Resumen ejecutivo', _blue),
 					pw.SizedBox(height: 10),
-					_execSummary(metrics, activeCampaigns, raisedTotal,
-							pendingSolicitudes),
+					_execSummary(metrics, pendingSolicitudes),
 					pw.SizedBox(height: 20),
 
-					// ── KPIs principales ────────────────────────────────────────
+					// KPIs (todos agregados del servidor)
 					pw.Row(
 						children: [
 							_kpiCard('Donantes', '${metrics.totalDonors}', _blue),
 							pw.SizedBox(width: 10),
+							_kpiCard('Recaudado',
+									_compactBs(metrics.totalApprovedAmount), _greenDark),
+							pw.SizedBox(width: 10),
 							_kpiCard('Aprobación',
 									'${metrics.approvalRate.toStringAsFixed(0)}%', _green),
 							pw.SizedBox(width: 10),
-							_kpiCard('Campañas', '${metrics.activeCampaigns}', _orange),
-							pw.SizedBox(width: 10),
-							_kpiCard('Tiempo resp.',
-									'${metrics.avgResponseTimeHours.toStringAsFixed(0)} h',
-									_blueDark),
+							_kpiCard('Campañas activas', '${metrics.activeCampaigns}',
+									_orange),
 						],
 					),
 					pw.SizedBox(height: 24),
 
-					// ── Indicadores de desempeño (barras) ───────────────────────
+					// Desempeño (porcentajes -> barras). Solo métricas que el
+					// servidor entrega como % real, no promedios sobre la muestra.
 					_sectionTitle('Indicadores de desempeño', _green),
 					pw.SizedBox(height: 12),
 					_panel([
 						_bar('Tasa de aprobación de solicitudes',
 								metrics.approvalRate, _green),
-						_bar('Progreso promedio de campañas',
-								avgProgress * 100, _blue),
 						_bar('Donantes recurrentes',
 								metrics.repeatDonorsPercentage, _orange),
 					], gap: 14),
 					pw.SizedBox(height: 24),
 
-					// ── Crecimiento de donaciones (gráfico) ─────────────────────
-					_sectionTitle('Crecimiento de donaciones', _orange),
+					// Donaciones del mes
+					_sectionTitle('Donaciones del mes', _orange),
 					pw.SizedBox(height: 12),
 					_growthChart(metrics),
 					pw.SizedBox(height: 24),
 
-					// ── Resumen financiero ──────────────────────────────────────
-					_sectionTitle('Resumen financiero', _greenDark),
+					// Resumen general (agregados acumulados)
+					_sectionTitle('Resumen general', _blue),
 					pw.SizedBox(height: 12),
 					_panel([
-						_metricRow('Total recaudado', _formatCurrency(raisedTotal),
-								_greenDark),
-						_metricRow('Meta total', _formatCurrency(goalTotal), _blue),
+						_metricRow('Total recaudado (acumulado)',
+								_formatCurrency(metrics.totalApprovedAmount), _greenDark),
 						_metricRow('Donación promedio',
 								_formatCurrency(metrics.avgDonationAmount), _ink),
+						_metricRow('Tiempo promedio de respuesta',
+								'${metrics.avgResponseTimeHours.toStringAsFixed(0)} h', _blue),
+						_metricRow('Campañas completadas este mes',
+								'${metrics.campaignsCompletedThisMonth}', _green),
+						_metricRow('Categoría más popular',
+								_orEmpty(metrics.topCampaignCategory), _orange),
 					]),
 					pw.SizedBox(height: 24),
 
-					// ── Campañas activas (con barras de progreso) ───────────────
-					if (activeCampaigns.isNotEmpty) ...[
-						_sectionTitle('Campañas activas', _green),
-						pw.SizedBox(height: 12),
-						_campaignsList(activeCampaigns),
-						if (activeCampaigns.length > 8)
-							pw.Padding(
-								padding: const pw.EdgeInsets.only(top: 8),
-								child: pw.Text(
-									'+ ${activeCampaigns.length - 8} campañas más',
-									style: pw.TextStyle(
-										fontSize: 9,
-										fontStyle: pw.FontStyle.italic,
-										color: _muted,
-									),
-								),
-							),
-						pw.SizedBox(height: 24),
-					],
-
-					// ── Tareas pendientes ───────────────────────────────────────
+					// Pendientes (operación)
 					_sectionTitle('Tareas pendientes', _orange),
 					pw.SizedBox(height: 12),
 					pw.Row(
@@ -166,60 +137,50 @@ class PdfExportService {
 							borderRadius: pw.BorderRadius.circular(12),
 						),
 						alignment: pw.Alignment.center,
-						child: pw.Text(
-							'MS',
-							style: pw.TextStyle(
-								fontSize: 20,
-								fontWeight: pw.FontWeight.bold,
-								color: _blue,
-							),
-						),
+						child: pw.Text('MS',
+								style: pw.TextStyle(
+									fontSize: 20,
+									fontWeight: pw.FontWeight.bold,
+									color: _blue,
+								)),
 					),
 					pw.SizedBox(width: 14),
 					pw.Expanded(
 						child: pw.Column(
 							crossAxisAlignment: pw.CrossAxisAlignment.start,
 							children: [
-								pw.Text(
-									'Manos Solidarias',
-									style: pw.TextStyle(
-										fontSize: 19,
-										fontWeight: pw.FontWeight.bold,
-										color: PdfColors.white,
-										letterSpacing: 0.2,
-									),
-								),
+								pw.Text('Manos Solidarias',
+										style: pw.TextStyle(
+											fontSize: 19,
+											fontWeight: pw.FontWeight.bold,
+											color: PdfColors.white,
+											letterSpacing: 0.2,
+										)),
 								pw.SizedBox(height: 2),
-								pw.Text(
-									'Reporte de métricas del panel administrativo',
-									style: pw.TextStyle(
-										fontSize: 11,
-										color: PdfColor.fromHex('#D6E6EF'),
-									),
-								),
+								pw.Text('Reporte de métricas · Datos acumulados a la fecha',
+										style: pw.TextStyle(
+											fontSize: 10.5,
+											color: PdfColor.fromHex('#D6E6EF'),
+										)),
 							],
 						),
 					),
 					pw.Column(
 						crossAxisAlignment: pw.CrossAxisAlignment.end,
 						children: [
-							pw.Text(
-								'GENERADO',
-								style: pw.TextStyle(
-									fontSize: 8,
-									color: PdfColor.fromHex('#BCD6E5'),
-									letterSpacing: 1.2,
-								),
-							),
+							pw.Text('GENERADO',
+									style: pw.TextStyle(
+										fontSize: 8,
+										color: PdfColor.fromHex('#BCD6E5'),
+										letterSpacing: 1.2,
+									)),
 							pw.SizedBox(height: 3),
-							pw.Text(
-								_formatDate(DateTime.now()),
-								style: pw.TextStyle(
-									fontSize: 11,
-									fontWeight: pw.FontWeight.bold,
-									color: PdfColors.white,
-								),
-							),
+							pw.Text(_formatDate(DateTime.now()),
+									style: pw.TextStyle(
+										fontSize: 11,
+										fontWeight: pw.FontWeight.bold,
+										color: PdfColors.white,
+									)),
 						],
 					),
 				],
@@ -227,25 +188,24 @@ class PdfExportService {
 		);
 	}
 
-	// ── Resumen ejecutivo narrativo ──────────────────────────────────────────────
-	static pw.Widget _execSummary(
-		AdminDashboardMetrics m,
-		List<AdminActiveCampaign> campaigns,
-		double raisedTotal,
-		int pendingSolicitudes,
-	) {
-		final growthWord = m.donationGrowthRate >= 0 ? 'crecieron' : 'disminuyeron';
+	// ── Resumen ejecutivo ──────────────────────────────────────────────────────────
+	static pw.Widget _execSummary(AdminDashboardMetrics m, int pendingSolicitudes) {
+		final growthWord =
+				m.donationGrowthRate >= 0 ? 'crecieron' : 'disminuyeron';
+		final category = (m.topCampaignCategory.trim().isEmpty)
+				? 'sin datos suficientes'
+				: m.topCampaignCategory.trim();
 		final text =
-				'En el período analizado se contabilizaron ${m.totalDonors} donantes '
-				'únicos y ${m.activeCampaigns} campañas activas, con un total recaudado '
-				'de ${_formatCurrency(raisedTotal)}. La tasa de aprobación de solicitudes '
-				'fue del ${m.approvalRate.toStringAsFixed(0)}%, con un tiempo promedio de '
-				'respuesta de ${m.avgResponseTimeHours.toStringAsFixed(0)} horas. Las '
-				'donaciones $growthWord un ${m.donationGrowthRate.abs().toStringAsFixed(0)}% '
-				'respecto al mes anterior. Actualmente hay $pendingSolicitudes solicitudes '
-				'y ${m.pendingDonations} donaciones pendientes de revisión.';
-		// Barra de acento azul como widget (no como Border lateral: el paquete
-		// pdf no admite borderRadius con un Border no uniforme).
+				'A la fecha se registran ${m.totalDonors} donantes únicos y '
+				'${m.activeCampaigns} campañas activas, con un total recaudado de '
+				'${_formatCurrency(m.totalApprovedAmount)}. La tasa de aprobación de '
+				'solicitudes es del ${m.approvalRate.toStringAsFixed(0)}%, con un tiempo '
+				'promedio de respuesta de ${m.avgResponseTimeHours.toStringAsFixed(0)} '
+				'horas. En el último mes las donaciones $growthWord un '
+				'${m.donationGrowthRate.abs().toStringAsFixed(0)}% respecto al mes '
+				'anterior. La categoría con más campañas es $category. Quedan '
+				'$pendingSolicitudes solicitudes y ${m.pendingDonations} donaciones '
+				'pendientes de revisión.';
 		return pw.Container(
 			decoration: pw.BoxDecoration(
 				color: _surface,
@@ -257,7 +217,7 @@ class PdfExportService {
 				children: [
 					pw.Container(
 						width: 4,
-						height: 64,
+						height: 70,
 						decoration: pw.BoxDecoration(
 							color: _blue,
 							borderRadius: const pw.BorderRadius.only(
@@ -269,11 +229,12 @@ class PdfExportService {
 					pw.Expanded(
 						child: pw.Padding(
 							padding: const pw.EdgeInsets.all(14),
-							child: pw.Text(
-								text,
-								style:
-										pw.TextStyle(fontSize: 11, color: _ink, lineSpacing: 3.5),
-							),
+							child: pw.Text(text,
+									style: pw.TextStyle(
+										fontSize: 11,
+										color: _ink,
+										lineSpacing: 3.5,
+									)),
 						),
 					),
 				],
@@ -281,7 +242,7 @@ class PdfExportService {
 		);
 	}
 
-	// ── Footer con paginación ────────────────────────────────────────────────────
+	// ── Footer ────────────────────────────────────────────────────────────────────
 	static pw.Widget _footer(pw.Context context) {
 		return pw.Container(
 			margin: const pw.EdgeInsets.only(top: 10),
@@ -314,15 +275,13 @@ class PdfExportService {
 					),
 				),
 				pw.SizedBox(width: 8),
-				pw.Text(
-					title,
-					style: pw.TextStyle(
-						fontSize: 14,
-						fontWeight: pw.FontWeight.bold,
-						color: _ink,
-						letterSpacing: 0.2,
-					),
-				),
+				pw.Text(title,
+						style: pw.TextStyle(
+							fontSize: 14,
+							fontWeight: pw.FontWeight.bold,
+							color: _ink,
+							letterSpacing: 0.2,
+						)),
 			],
 		);
 	}
@@ -351,7 +310,7 @@ class PdfExportService {
 						pw.SizedBox(height: 10),
 						pw.Text(value,
 								style: pw.TextStyle(
-									fontSize: 20,
+									fontSize: 18,
 									fontWeight: pw.FontWeight.bold,
 									color: _ink,
 								)),
@@ -406,21 +365,20 @@ class PdfExportService {
 		);
 	}
 
-	// ── Panel de filas / contenido ──────────────────────────────────────────────────
+	// ── Panel de filas ────────────────────────────────────────────────────────────
 	static pw.Widget _panel(List<pw.Widget> rows, {double? gap}) {
 		final children = <pw.Widget>[];
 		for (var i = 0; i < rows.length; i++) {
 			if (i > 0) {
-				if (gap != null) {
-					children.add(pw.SizedBox(height: gap));
-				} else {
-					children.add(pw.Divider(height: 1, thickness: 0.6, color: _line));
-				}
+				children.add(gap != null
+						? pw.SizedBox(height: gap)
+						: pw.Divider(height: 1, thickness: 0.6, color: _line));
 			}
 			children.add(rows[i]);
 		}
 		return pw.Container(
-			padding: pw.EdgeInsets.symmetric(horizontal: 16, vertical: gap != null ? 16 : 4),
+			padding:
+					pw.EdgeInsets.symmetric(horizontal: 16, vertical: gap != null ? 16 : 4),
 			decoration: pw.BoxDecoration(
 				color: _surface,
 				borderRadius: pw.BorderRadius.circular(10),
@@ -435,8 +393,13 @@ class PdfExportService {
 			padding: const pw.EdgeInsets.symmetric(vertical: 9),
 			child: pw.Row(
 				mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+				crossAxisAlignment: pw.CrossAxisAlignment.start,
 				children: [
-					pw.Text(label, style: pw.TextStyle(fontSize: 11, color: _ink)),
+					pw.Expanded(
+						child: pw.Text(label,
+								style: pw.TextStyle(fontSize: 11, color: _ink)),
+					),
+					pw.SizedBox(width: 12),
 					pw.Text(value,
 							style: pw.TextStyle(
 								fontSize: 11.5,
@@ -458,8 +421,11 @@ class PdfExportService {
 				pw.Row(
 					mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
 					children: [
-						pw.Text(label,
-								style: pw.TextStyle(fontSize: 10, color: _ink)),
+						pw.Expanded(
+							child: pw.Text(label,
+									style: pw.TextStyle(fontSize: 10, color: _ink)),
+						),
+						pw.SizedBox(width: 10),
 						pw.Text('${pct.toStringAsFixed(0)}%',
 								style: pw.TextStyle(
 									fontSize: 10,
@@ -495,7 +461,7 @@ class PdfExportService {
 		);
 	}
 
-	// ── Gráfico de crecimiento (2 barras comparativas) ──────────────────────────────
+	// ── Gráfico de crecimiento de donaciones ─────────────────────────────────────
 	static pw.Widget _growthChart(AdminDashboardMetrics m) {
 		final maxV = [m.donationsThisMonth, m.donationsLastMonth, 1]
 				.reduce((a, b) => a > b ? a : b);
@@ -573,7 +539,7 @@ class PdfExportService {
 				),
 				pw.SizedBox(width: 10),
 				pw.SizedBox(
-					width: 32,
+					width: 36,
 					child: pw.Text('$value',
 							textAlign: pw.TextAlign.right,
 							style: pw.TextStyle(
@@ -586,107 +552,7 @@ class PdfExportService {
 		);
 	}
 
-	// ── Lista de campañas con barra de progreso ─────────────────────────────────────
-	static pw.Widget _campaignsList(List<AdminActiveCampaign> campaigns) {
-		final shown = campaigns.take(8).toList();
-		final rows = <pw.Widget>[];
-		for (var i = 0; i < shown.length; i++) {
-			final c = shown[i];
-			final pct = (c.completionRatio * 100);
-			final filled = pct.round().clamp(0, 100);
-			final empty = 100 - filled;
-			if (i > 0) {
-				rows.add(pw.Divider(height: 1, thickness: 0.6, color: _line));
-			}
-			rows.add(
-				pw.Padding(
-					padding: const pw.EdgeInsets.symmetric(vertical: 10),
-					child: pw.Column(
-						crossAxisAlignment: pw.CrossAxisAlignment.start,
-						children: [
-							pw.Row(
-								mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-								children: [
-									pw.Expanded(
-										child: pw.Text(
-											c.title,
-											maxLines: 1,
-											overflow: pw.TextOverflow.clip,
-											style: pw.TextStyle(
-												fontSize: 11,
-												fontWeight: pw.FontWeight.bold,
-												color: _ink,
-											),
-										),
-									),
-									pw.SizedBox(width: 10),
-									pw.Text(
-										'${_formatCurrency(c.raisedAmount)} / ${_formatCurrency(c.goalAmount)}',
-										style: pw.TextStyle(fontSize: 9.5, color: _muted),
-									),
-								],
-							),
-							pw.SizedBox(height: 6),
-							pw.Row(
-								children: [
-									pw.Expanded(
-										child: pw.Container(
-											height: 8,
-											decoration: pw.BoxDecoration(
-												color: _line,
-												borderRadius: pw.BorderRadius.circular(4),
-											),
-											child: pw.Row(
-												children: [
-													if (filled > 0)
-														pw.Expanded(
-															flex: filled,
-															child: pw.Container(
-																decoration: pw.BoxDecoration(
-																	color: _green,
-																	borderRadius:
-																			pw.BorderRadius.circular(4),
-																),
-															),
-														),
-													if (empty > 0)
-														pw.Expanded(
-																flex: empty, child: pw.SizedBox()),
-												],
-											),
-										),
-									),
-									pw.SizedBox(width: 10),
-									pw.SizedBox(
-										width: 34,
-										child: pw.Text(
-											'${pct.toStringAsFixed(0)}%',
-											textAlign: pw.TextAlign.right,
-											style: pw.TextStyle(
-												fontSize: 10,
-												fontWeight: pw.FontWeight.bold,
-												color: _greenDark,
-											),
-										),
-									),
-								],
-							),
-						],
-					),
-				),
-			);
-		}
-		return pw.Container(
-			padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-			decoration: pw.BoxDecoration(
-				color: PdfColors.white,
-				borderRadius: pw.BorderRadius.circular(10),
-				border: pw.Border.all(color: _line, width: 1),
-			),
-			child: pw.Column(children: rows),
-		);
-	}
-
+	// ── Formateadores ────────────────────────────────────────────────────────────
 	static String _formatCurrency(double value) {
 		final formatted = value.toStringAsFixed(0).replaceAllMapped(
 					RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -694,6 +560,23 @@ class PdfExportService {
 				);
 		return 'Bs $formatted';
 	}
+
+	// Compacto para tarjetas angostas: Bs 900 · Bs 75K · Bs 2.4M
+	static String _compactBs(double value) {
+		final v = value.abs();
+		if (v >= 1000000) {
+			final m = value / 1000000;
+			return 'Bs ${m.toStringAsFixed(m >= 10 ? 0 : 1)}M';
+		}
+		if (v >= 1000) {
+			final k = value / 1000;
+			return 'Bs ${k.toStringAsFixed(k >= 10 ? 0 : 1)}K';
+		}
+		return 'Bs ${value.round()}';
+	}
+
+	static String _orEmpty(String value) =>
+			value.trim().isEmpty ? 'Sin datos' : value.trim();
 
 	static String _formatDate(DateTime date) {
 		const months = [
