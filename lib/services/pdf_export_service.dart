@@ -1,6 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 
 import '../models/admin_dashboard.dart';
 
@@ -16,7 +17,9 @@ class PdfExportService {
 	static final PdfColor _line = PdfColor.fromHex('#E3E8EE');
 	static final PdfColor _surface = PdfColor.fromHex('#F8F9FA');
 
-	static Future<void> exportMetricsToPdf({
+	/// Construye el PDF y devuelve sus bytes para mostrarlo en un visor
+	/// dentro de la app (no comparte ni imprime).
+	static Future<Uint8List> buildMetricsPdf({
 		required AdminDashboardMetrics metrics,
 		required List<AdminActiveCampaign> activeCampaigns,
 	}) async {
@@ -138,16 +141,11 @@ class PdfExportService {
 			),
 		);
 
-		// Compartir/guardar el archivo (no imprimir): abre el menú del sistema
-		// para guardar en Archivos, enviar por WhatsApp, abrir en Drive, etc.
-		// Evita el spooler de impresión de Android, que falla al previsualizar
-		// ("Lo sentimos, eso no ha funcionado").
-		final bytes = await pdf.save();
-		await Printing.sharePdf(
-			bytes: bytes,
-			filename: 'Manos_Solidarias_Reporte_${_fileStamp(DateTime.now())}.pdf',
-		);
+		return pdf.save();
 	}
+
+	static String fileName() =>
+			'Manos_Solidarias_Reporte_${_fileStamp(DateTime.now())}.pdf';
 
 	// ── Membrete ─────────────────────────────────────────────────────────────────
 	static pw.Widget _letterhead() {

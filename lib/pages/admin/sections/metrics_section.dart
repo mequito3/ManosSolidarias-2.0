@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:printing/printing.dart';
 
 import '../../../models/admin_dashboard.dart';
 import '../../../theme/app_colors.dart';
@@ -83,9 +86,9 @@ class AdminMetricsPanel extends StatelessWidget {
             ),
             PremiumStatPill(
               icon: Icons.schedule_rounded,
-              label: 'T. resp.',
+              label: 'Respuesta',
               value:
-                  '${metrics.avgResponseTimeHours.toStringAsFixed(0)}h',
+                  '${metrics.avgResponseTimeHours.toStringAsFixed(0)} h',
               color: AppColors.bluePrimary,
             ),
             PremiumStatPill(
@@ -365,9 +368,13 @@ class AdminMetricsPanel extends StatelessWidget {
       ),
     );
     try {
-      await PdfExportService.exportMetricsToPdf(
+      final bytes = await PdfExportService.buildMetricsPdf(
           metrics: metrics, activeCampaigns: campaigns);
-      if (context.mounted) Navigator.pop(context);
+      if (!context.mounted) return;
+      Navigator.pop(context); // cierra el loading
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => _PdfViewerScreen(bytes: bytes)),
+      );
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context);
@@ -384,6 +391,45 @@ class AdminMetricsPanel extends StatelessWidget {
         );
       }
     }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visor del PDF dentro de la app (muestra el reporte; el botón de descargar/
+// compartir vive en la barra del propio visor).
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _PdfViewerScreen extends StatelessWidget {
+  const _PdfViewerScreen({required this.bytes});
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+      appBar: AppBar(
+        backgroundColor: AppColors.cardBackground,
+        foregroundColor: AppColors.darkText,
+        elevation: 0,
+        title: const Text(
+          'Reporte de métricas',
+          style: TextStyle(
+            fontWeight: AppColors.fontWeightExtraBold,
+            fontSize: AppColors.fontSizeMd,
+          ),
+        ),
+      ),
+      body: PdfPreview(
+        build: (format) => bytes,
+        canChangePageFormat: false,
+        canChangeOrientation: false,
+        canDebug: false,
+        pdfFileName: PdfExportService.fileName(),
+        pdfPreviewPageDecoration: const BoxDecoration(
+          color: Colors.white,
+        ),
+      ),
+    );
   }
 }
 
