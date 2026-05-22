@@ -85,20 +85,42 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 		return Column(
 			crossAxisAlignment: CrossAxisAlignment.start,
 			children: [
-				PremiumSectionHeader(
+				PremiumHero(
+					icon: Icons.inbox_rounded,
+					iconGradient: AppColors.primaryGradient,
+					iconShadowColor: AppColors.bluePrimary,
 					title: 'Solicitudes solidarias',
-					accentGradient: AppColors.actionGradient,
-					count: totalCount == 0 ? null : totalCount,
-					countColor: AppColors.orangeAction,
+					subtitle: 'Revisá y aprobá lo que envían los organizadores.',
+					backgroundColors: [
+						AppColors.bluePrimary.withValues(alpha: 0.10),
+						AppColors.greenHope.withValues(alpha: 0.07),
+					],
+					blobColors: [
+						AppColors.bluePrimary.withValues(alpha: 0.12),
+						AppColors.greenHope.withValues(alpha: 0.10),
+					],
+					stats: [
+						PremiumStatPill(
+							icon: Icons.campaign_rounded,
+							label: 'Campañas',
+							value: '$countCampania',
+							color: AppColors.orangeAction,
+						),
+						PremiumStatPill(
+							icon: Icons.festival_rounded,
+							label: 'Kermesse',
+							value: '$countKermesse',
+							color: AppColors.greenHope,
+						),
+						PremiumStatPill(
+							icon: Icons.business_rounded,
+							label: 'Orgs',
+							value: '$countOrg',
+							color: AppColors.bluePrimary,
+						),
+					],
 				),
-				const SizedBox(height: 6),
-				Text(
-					'Revisa campañas, kermesses y organizaciones enviadas para aprobación.',
-					style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-								color: AppColors.darkText.withValues(alpha: 0.68),
-							),
-				),
-				const SizedBox(height: 14),
+				const SizedBox(height: 18),
 				SingleChildScrollView(
 					scrollDirection: Axis.horizontal,
 					child: Row(
@@ -420,7 +442,9 @@ class CampaignRequestCard extends StatelessWidget {
 							),
 						),
 					],
-					const SizedBox(height: AppColors.space16),
+					const SizedBox(height: AppColors.space12),
+					Divider(height: 1, color: AppColors.grayNeutral.withValues(alpha: 0.18)),
+					const SizedBox(height: AppColors.space12),
 
 					// ── Acción (azul de marca, uniforme) ────────────────────
 					SizedBox(
@@ -431,7 +455,7 @@ class CampaignRequestCard extends StatelessWidget {
 								backgroundColor: AppColors.bluePrimary,
 								foregroundColor: Colors.white,
 								padding:
-										const EdgeInsets.symmetric(vertical: AppColors.space12),
+										const EdgeInsets.symmetric(vertical: AppColors.space12 + 1),
 								shape: RoundedRectangleBorder(
 									borderRadius: BorderRadius.circular(AppColors.radiusSm),
 								),
