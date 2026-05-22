@@ -200,15 +200,11 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 
 class _ReviewSectionCard extends StatelessWidget {
 	const _ReviewSectionCard({
-		required this.icon,
-		required this.iconColor,
 		required this.title,
 		required this.child,
 		this.subtitle,
 	});
 
-	final IconData icon;
-	final Color iconColor;
 	final String title;
 	final Widget child;
 	final String? subtitle;
@@ -217,70 +213,59 @@ class _ReviewSectionCard extends StatelessWidget {
 	Widget build(BuildContext context) {
 		return Container(
 			decoration: BoxDecoration(
-				color: Colors.white,
-				borderRadius: BorderRadius.circular(16),
-				boxShadow: [
-					BoxShadow(
-						color: Colors.black.withValues(alpha: 0.04),
-						blurRadius: 10,
-						offset: const Offset(0, 3),
-					),
-				],
+				color: AppColors.cardBackground,
+				borderRadius: BorderRadius.circular(AppColors.radiusMd),
+				boxShadow: AppColors.shadowSm,
 			),
+			padding: const EdgeInsets.all(AppColors.space16),
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
 				children: [
-					Padding(
-						padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-						child: Row(
-							children: [
-								Container(
-									padding: const EdgeInsets.all(8),
-									decoration: BoxDecoration(
-										color: iconColor.withValues(alpha: 0.12),
-										borderRadius: BorderRadius.circular(10),
-									),
-									child: Icon(icon, size: 16, color: iconColor),
+					// Encabezado estilo premium: barra de acento + título (sin icono)
+					Row(
+						crossAxisAlignment: CrossAxisAlignment.start,
+						children: [
+							Container(
+								width: 4,
+								height: subtitle != null ? 32 : 18,
+								margin: const EdgeInsets.only(top: 1),
+								decoration: BoxDecoration(
+									gradient: AppColors.primaryGradient,
+									borderRadius: BorderRadius.circular(AppColors.radiusXs),
 								),
-								const SizedBox(width: 10),
-								Expanded(
-									child: Column(
-										crossAxisAlignment: CrossAxisAlignment.start,
-										children: [
+							),
+							const SizedBox(width: AppColors.space12),
+							Expanded(
+								child: Column(
+									crossAxisAlignment: CrossAxisAlignment.start,
+									children: [
+										Text(
+											title,
+											style: const TextStyle(
+												fontWeight: AppColors.fontWeightExtraBold,
+												color: AppColors.darkText,
+												fontSize: AppColors.fontSizeBase,
+												letterSpacing: -0.2,
+											),
+										),
+										if (subtitle != null) ...[
+											const SizedBox(height: 2),
 											Text(
-												title,
-												style: TextStyle(
-													fontWeight: FontWeight.w800,
-													color: AppColors.darkText,
-													fontSize: 14,
+												subtitle!,
+												style: const TextStyle(
+													color: AppColors.mediumText,
+													fontSize: AppColors.fontSizeXs,
+													height: 1.3,
 												),
 											),
-											if (subtitle != null) ...[
-												const SizedBox(height: 2),
-												Text(
-													subtitle!,
-													style: TextStyle(
-														color: Colors.grey.shade500,
-														fontSize: 12,
-													),
-												),
-											],
 										],
-									),
+									],
 								),
-							],
-						),
+							),
+						],
 					),
-					Divider(
-						height: 16,
-						indent: 14,
-						endIndent: 14,
-						color: Colors.grey.shade100,
-					),
-					Padding(
-						padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-						child: child,
-					),
+					const SizedBox(height: AppColors.space12),
+					child,
 				],
 			),
 		);
@@ -1003,8 +988,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 												// Descripción
 												if ((widget.item.subtitle ?? '').trim().isNotEmpty) ...[
 													_ReviewSectionCard(
-														icon: Icons.description_rounded,
-														iconColor: typeColor,
 														title: 'Descripción',
 														child: Text(
 															widget.item.subtitle!,
@@ -1021,8 +1004,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// Datos del beneficiario
 									if (widget.item.beneficiaryName != null) ...[
 										_ReviewSectionCard(
-											icon: Icons.person_rounded,
-											iconColor: typeColor,
 											title: 'Datos del beneficiario',
 											child: Column(
 												children: [
@@ -1044,8 +1025,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// Evidencias fotográficas
 									if (widget.item.evidenceUrls != null && widget.item.evidenceUrls!.isNotEmpty) ...[
 										_ReviewSectionCard(
-											icon: Icons.photo_library_rounded,
-											iconColor: typeColor,
 											title: 'Evidencias fotográficas',
 											child: GridView.builder(
 												shrinkWrap: true,
@@ -1138,8 +1117,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// Información de Kermesse
 									if (widget.item.solicitudTipo == SolicitudTipo.kermesse) ...[
 										_ReviewSectionCard(
-											icon: Icons.event_rounded,
-											iconColor: AppColors.greenHope,
 											title: 'Detalles del evento',
 											child: Column(
 												children: [
@@ -1170,8 +1147,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 										const SizedBox(height: 12),
 										if (widget.item.kermesseMenu != null) ...[
 											_ReviewSectionCard(
-												icon: Icons.restaurant_menu_rounded,
-												iconColor: AppColors.orangeAction,
 												title: 'Menú y precios',
 												child: Text(
 													widget.item.kermesseMenu!,
@@ -1186,8 +1161,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 										],
 										if (widget.item.kermesseShows != null) ...[
 											_ReviewSectionCard(
-												icon: Icons.celebration_rounded,
-												iconColor: AppColors.greenSuccess,
 												title: 'Entretenimiento y actividades',
 												child: Text(
 													widget.item.kermesseShows!,
@@ -1207,8 +1180,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 											widget.item.kermesseLatitude != null &&
 											widget.item.kermesseLongitude != null) ...[
 										_ReviewSectionCard(
-											icon: Icons.location_on_rounded,
-											iconColor: Colors.red,
 											title: 'Ubicación del evento',
 											child: Column(
 												crossAxisAlignment: CrossAxisAlignment.start,
@@ -1287,8 +1258,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// ── Comments + Actions ──────────────────────────────
 									// Sección de comentarios
 									_ReviewSectionCard(
-										icon: Icons.rate_review_rounded,
-										iconColor: typeColor,
 										title: 'Comentarios para el organizador',
 										subtitle: 'Si necesitas cambios, describe qué ajustes requieres (opcional)',
 										child: TextField(
@@ -1350,8 +1319,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									if (widget.item.solicitudTipo == SolicitudTipo.campania) ...[
 										const SizedBox(height: 12),
 										_ReviewSectionCard(
-											icon: Icons.category_rounded,
-											iconColor: AppColors.bluePrimary,
 											title: 'Categoría de la campaña',
 											subtitle: 'Selecciona la que mejor describe esta campaña',
 											child: _loadingCategories
