@@ -65,17 +65,15 @@ class PdfExportService {
 					_sectionTitle('Indicadores principales', _blue),
 					pw.SizedBox(height: 12),
 					pw.Row(
-						crossAxisAlignment: pw.CrossAxisAlignment.stretch,
 						children: [
-							_kpiCard('Donantes únicos', '${metrics.totalDonors}', _blue),
+							_kpiCard('Donantes', '${metrics.totalDonors}', _blue),
 							pw.SizedBox(width: 10),
-							_kpiCard('Tasa de aprobación',
+							_kpiCard('Aprobación',
 									'${metrics.approvalRate.toStringAsFixed(0)}%', _green),
 							pw.SizedBox(width: 10),
-							_kpiCard('Campañas activas', '${metrics.activeCampaigns}',
-									_orange),
+							_kpiCard('Campañas', '${metrics.activeCampaigns}', _orange),
 							pw.SizedBox(width: 10),
-							_kpiCard('Resp. promedio',
+							_kpiCard('Tiempo resp.',
 									'${metrics.avgResponseTimeHours.toStringAsFixed(0)} h', _blueDark),
 						],
 					),
@@ -100,7 +98,7 @@ class PdfExportService {
 					_sectionTitle('Tareas pendientes', _orange),
 					pw.SizedBox(height: 12),
 					pw.Row(
-						crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+						crossAxisAlignment: pw.CrossAxisAlignment.start,
 						children: [
 							_pendingCard('Solicitudes', '$pendingSolicitudes',
 									'Campañas y organizaciones', _orange),
