@@ -22,31 +22,67 @@ class CampaignRequestsSection extends StatefulWidget {
 		super.key,
 		required this.items,
 		required this.onReview,
+		this.organizationItems = const [],
+		this.onReviewOrganization,
 	});
 
 	final List<AdminPendingItem> items;
 	final ValueChanged<AdminPendingItem> onReview;
+	final List<AdminPendingItem> organizationItems;
+	final ValueChanged<AdminPendingItem>? onReviewOrganization;
 
 	@override
 	State<CampaignRequestsSection> createState() => _CampaignRequestsSectionState();
 }
 
+enum _RequestFilter { todas, campania, kermesse, rifa, organizacion }
+
 class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
-	SolicitudTipo? _activeFilter;
+	_RequestFilter _activeFilter = _RequestFilter.todas;
+
+	bool _isOrganization(AdminPendingItem item) =>
+			item.type == AdminItemType.organizationReview;
 
 	@override
 	Widget build(BuildContext context) {
-		final filtered = _activeFilter == null
-				? widget.items
-				: widget.items.where((e) => e.solicitudTipo == _activeFilter).toList();
+		final campaigns = widget.items;
+		final orgs = widget.organizationItems;
 
-		final countCampania = widget.items
+		final countCampania = campaigns
 				.where((e) => e.solicitudTipo == SolicitudTipo.campania || e.solicitudTipo == null)
 				.length;
 		final countKermesse =
-				widget.items.where((e) => e.solicitudTipo == SolicitudTipo.kermesse).length;
+				campaigns.where((e) => e.solicitudTipo == SolicitudTipo.kermesse).length;
 		final countRifa =
-				widget.items.where((e) => e.solicitudTipo == SolicitudTipo.rifa).length;
+				campaigns.where((e) => e.solicitudTipo == SolicitudTipo.rifa).length;
+		final countOrg = orgs.length;
+		final totalCount = campaigns.length + countOrg;
+
+		final List<AdminPendingItem> filtered;
+		switch (_activeFilter) {
+			case _RequestFilter.todas:
+				filtered = [...campaigns, ...orgs]
+						..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+				break;
+			case _RequestFilter.campania:
+				filtered = campaigns
+						.where((e) =>
+								e.solicitudTipo == SolicitudTipo.campania || e.solicitudTipo == null)
+						.toList();
+				break;
+			case _RequestFilter.kermesse:
+				filtered = campaigns
+						.where((e) => e.solicitudTipo == SolicitudTipo.kermesse)
+						.toList();
+				break;
+			case _RequestFilter.rifa:
+				filtered =
+						campaigns.where((e) => e.solicitudTipo == SolicitudTipo.rifa).toList();
+				break;
+			case _RequestFilter.organizacion:
+				filtered = orgs;
+				break;
+		}
 
 		return Column(
 			crossAxisAlignment: CrossAxisAlignment.start,
@@ -54,12 +90,12 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 				PremiumSectionHeader(
 					title: 'Solicitudes solidarias',
 					accentGradient: AppColors.actionGradient,
-					count: widget.items.isEmpty ? null : widget.items.length,
+					count: totalCount == 0 ? null : totalCount,
 					countColor: AppColors.orangeAction,
 				),
 				const SizedBox(height: 6),
 				Text(
-					'Revisa campañas y kermesses enviadas por los organizadores.',
+					'Revisa campañas, kermesses y organizaciones enviadas para aprobación.',
 					style: Theme.of(context).textTheme.bodyMedium?.copyWith(
 								color: AppColors.darkText.withValues(alpha: 0.68),
 							),
@@ -71,38 +107,48 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 						children: [
 							_FilterChip(
 								label: 'Todas',
-								count: widget.items.length,
-								isActive: _activeFilter == null,
+								count: totalCount,
+								isActive: _activeFilter == _RequestFilter.todas,
 								color: AppColors.bluePrimary,
 								icon: Icons.all_inclusive_rounded,
-								onTap: () => setState(() => _activeFilter = null),
+								onTap: () => setState(() => _activeFilter = _RequestFilter.todas),
 							),
 							const SizedBox(width: 8),
 							_FilterChip(
 								label: 'Campañas',
 								count: countCampania,
-								isActive: _activeFilter == SolicitudTipo.campania,
+								isActive: _activeFilter == _RequestFilter.campania,
 								color: AppColors.orangeAction,
 								icon: Icons.campaign_outlined,
-								onTap: () => setState(() => _activeFilter = SolicitudTipo.campania),
+								onTap: () => setState(() => _activeFilter = _RequestFilter.campania),
 							),
 							const SizedBox(width: 8),
 							_FilterChip(
 								label: 'Kermesse',
 								count: countKermesse,
-								isActive: _activeFilter == SolicitudTipo.kermesse,
+								isActive: _activeFilter == _RequestFilter.kermesse,
 								color: AppColors.greenHope,
 								icon: Icons.festival_outlined,
-								onTap: () => setState(() => _activeFilter = SolicitudTipo.kermesse),
+								onTap: () => setState(() => _activeFilter = _RequestFilter.kermesse),
 							),
 							const SizedBox(width: 8),
 							_FilterChip(
 								label: 'Rifas',
 								count: countRifa,
-								isActive: _activeFilter == SolicitudTipo.rifa,
+								isActive: _activeFilter == _RequestFilter.rifa,
 								color: const Color(0xFF6750A4),
 								icon: Icons.confirmation_number_outlined,
-								onTap: () => setState(() => _activeFilter = SolicitudTipo.rifa),
+								onTap: () => setState(() => _activeFilter = _RequestFilter.rifa),
+							),
+							const SizedBox(width: 8),
+							_FilterChip(
+								label: 'Organizaciones',
+								count: countOrg,
+								isActive: _activeFilter == _RequestFilter.organizacion,
+								color: AppColors.bluePrimary,
+								icon: Icons.business_rounded,
+								onTap: () =>
+										setState(() => _activeFilter = _RequestFilter.organizacion),
 							),
 						],
 					),
@@ -114,10 +160,10 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 						child: PremiumEmptyState(
 							icon: Icons.inbox_rounded,
 							iconColor: AppColors.orangeAction,
-							title: _activeFilter == null
+							title: _activeFilter == _RequestFilter.todas
 									? 'Todo al día'
 									: 'Sin solicitudes en este filtro',
-							description: _activeFilter == null
+							description: _activeFilter == _RequestFilter.todas
 									? 'No hay solicitudes pendientes por revisar. Las nuevas aparecerán acá apenas los organizadores las envíen.'
 									: 'Probá con otro filtro para ver las solicitudes pendientes.',
 							blobColors: [
@@ -140,13 +186,25 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 					)
 				else
 					...filtered.indexed.map(
-						(entry) => Padding(
-							padding: EdgeInsets.only(bottom: entry.$1 == filtered.length - 1 ? 0 : 14),
-							child: CampaignRequestCard(
-								item: entry.$2,
-								onReview: () => widget.onReview(entry.$2),
-							),
-						),
+						(entry) {
+							final item = entry.$2;
+							final isOrg = _isOrganization(item);
+							return Padding(
+								padding: EdgeInsets.only(
+										bottom: entry.$1 == filtered.length - 1 ? 0 : 14),
+								child: CampaignRequestCard(
+									item: item,
+									isOrganization: isOrg,
+									onReview: () {
+										if (isOrg) {
+											widget.onReviewOrganization?.call(item);
+										} else {
+											widget.onReview(item);
+										}
+									},
+								),
+							);
+						},
 					),
 			],
 		);
@@ -314,18 +372,22 @@ class CampaignRequestCard extends StatelessWidget {
 		super.key,
 		required this.item,
 		required this.onReview,
+		this.isOrganization = false,
 	});
 
 	final AdminPendingItem item;
 	final VoidCallback onReview;
+	final bool isOrganization;
 
 	@override
 	Widget build(BuildContext context) {
 		final theme = Theme.of(context);
 		final subtitle = item.subtitle?.trim();
 		final formattedDate = formatAdminDateTime(item.createdAt);
-		final typeColor = _typeColor(item.solicitudTipo);
-		final typeIcon = _typeIcon(item.solicitudTipo);
+		final typeColor =
+				isOrganization ? AppColors.bluePrimary : _typeColor(item.solicitudTipo);
+		final typeIcon =
+				isOrganization ? Icons.business_rounded : _typeIcon(item.solicitudTipo);
 
 		return Container(
 			decoration: BoxDecoration(
@@ -395,14 +457,38 @@ class CampaignRequestCard extends StatelessWidget {
 								_WaitTimeBadge(createdAt: item.createdAt),
 							],
 						),
-						if (item.solicitudTipo != null || item.esAnonimo)
+						if (isOrganization || item.solicitudTipo != null || item.esAnonimo)
 							Padding(
 								padding: const EdgeInsets.only(top: 10),
 								child: Wrap(
 									spacing: 8,
 									runSpacing: 8,
 									children: [
-										if (item.solicitudTipo != null)
+										if (isOrganization)
+											Container(
+												margin: const EdgeInsets.only(left: 8),
+												padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+												decoration: BoxDecoration(
+													color: AppColors.bluePrimary.withValues(alpha: 0.12),
+													borderRadius: BorderRadius.circular(999),
+												),
+												child: Row(
+													mainAxisSize: MainAxisSize.min,
+													children: [
+														const Icon(Icons.business_rounded,
+																size: 14, color: AppColors.bluePrimary),
+														const SizedBox(width: 4),
+														Text(
+															'Organización',
+															style: theme.textTheme.labelSmall?.copyWith(
+																color: AppColors.bluePrimary,
+																fontWeight: FontWeight.w600,
+															),
+														),
+													],
+												),
+											),
+										if (!isOrganization && item.solicitudTipo != null)
 											SolicitudTypeBadge(tipo: item.solicitudTipo!),
 										if (item.esAnonimo)
 											Container(

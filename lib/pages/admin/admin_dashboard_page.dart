@@ -248,12 +248,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 				icon: Icons.receipt_long_outlined,
 				count: _controller.pendingDonations.length,
 			),
-			AdminNavItem(
-				section: AdminDashboardSection.organizations,
-				label: 'Organizaciones',
-				icon: Icons.approval_outlined,
-				count: _controller.pendingOrganizations.length,
-			),
 		];
 
 		final selectedIndex = _selectedSection.index;
@@ -371,6 +365,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 						CampaignRequestsSection(
 							items: campaignItems,
 							onReview: _openCampaignReview,
+							organizationItems: organizationItems,
+							onReviewOrganization: _openOrganizationReview,
 						),
 					);
 					break;
