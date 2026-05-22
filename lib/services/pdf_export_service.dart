@@ -246,16 +246,39 @@ class PdfExportService {
 				'donaciones $growthWord un ${m.donationGrowthRate.abs().toStringAsFixed(0)}% '
 				'respecto al mes anterior. Actualmente hay $pendingSolicitudes solicitudes '
 				'y ${m.pendingDonations} donaciones pendientes de revisión.';
+		// Barra de acento azul como widget (no como Border lateral: el paquete
+		// pdf no admite borderRadius con un Border no uniforme).
 		return pw.Container(
-			padding: const pw.EdgeInsets.all(16),
 			decoration: pw.BoxDecoration(
 				color: _surface,
 				borderRadius: pw.BorderRadius.circular(10),
-				border: pw.Border(left: pw.BorderSide(color: _blue, width: 3)),
+				border: pw.Border.all(color: _line, width: 1),
 			),
-			child: pw.Text(
-				text,
-				style: pw.TextStyle(fontSize: 11, color: _ink, lineSpacing: 3.5),
+			child: pw.Row(
+				crossAxisAlignment: pw.CrossAxisAlignment.start,
+				children: [
+					pw.Container(
+						width: 4,
+						height: 64,
+						decoration: pw.BoxDecoration(
+							color: _blue,
+							borderRadius: const pw.BorderRadius.only(
+								topLeft: pw.Radius.circular(10),
+								bottomLeft: pw.Radius.circular(10),
+							),
+						),
+					),
+					pw.Expanded(
+						child: pw.Padding(
+							padding: const pw.EdgeInsets.all(14),
+							child: pw.Text(
+								text,
+								style:
+										pw.TextStyle(fontSize: 11, color: _ink, lineSpacing: 3.5),
+							),
+						),
+					),
+				],
 			),
 		);
 	}
