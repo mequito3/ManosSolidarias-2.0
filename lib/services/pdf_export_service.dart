@@ -138,9 +138,14 @@ class PdfExportService {
 			),
 		);
 
-		await Printing.layoutPdf(
-			onLayout: (format) async => pdf.save(),
-			name: 'Manos_Solidarias_Reporte_${_fileStamp(DateTime.now())}.pdf',
+		// Compartir/guardar el archivo (no imprimir): abre el menú del sistema
+		// para guardar en Archivos, enviar por WhatsApp, abrir en Drive, etc.
+		// Evita el spooler de impresión de Android, que falla al previsualizar
+		// ("Lo sentimos, eso no ha funcionado").
+		final bytes = await pdf.save();
+		await Printing.sharePdf(
+			bytes: bytes,
+			filename: 'Manos_Solidarias_Reporte_${_fileStamp(DateTime.now())}.pdf',
 		);
 	}
 
