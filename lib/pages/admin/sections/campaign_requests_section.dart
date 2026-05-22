@@ -381,183 +381,180 @@ class CampaignRequestCard extends StatelessWidget {
 
 	@override
 	Widget build(BuildContext context) {
-		final theme = Theme.of(context);
 		final subtitle = item.subtitle?.trim();
-		final formattedDate = formatAdminDateTime(item.createdAt);
 		final typeColor =
 				isOrganization ? AppColors.bluePrimary : _typeColor(item.solicitudTipo);
 		final typeIcon =
 				isOrganization ? Icons.business_rounded : _typeIcon(item.solicitudTipo);
+		final typeLabel = isOrganization
+				? 'ORGANIZACIÓN'
+				: _typeLabel(item.solicitudTipo);
 
 		return Container(
+			clipBehavior: Clip.antiAlias,
 			decoration: BoxDecoration(
 				color: AppColors.cardBackground,
 				borderRadius: BorderRadius.circular(AppColors.radiusMd),
 				boxShadow: AppColors.shadowSm,
 			),
-			child: Padding(
-				padding: const EdgeInsets.all(AppColors.space16),
-				child: Column(
-					crossAxisAlignment: CrossAxisAlignment.start,
-					children: [
-						Row(
-							crossAxisAlignment: CrossAxisAlignment.start,
+			child: Column(
+				crossAxisAlignment: CrossAxisAlignment.start,
+				children: [
+					// ── Franja de tipo ──────────────────────────────────────
+					Container(
+						width: double.infinity,
+						color: typeColor.withValues(alpha: 0.10),
+						padding: const EdgeInsets.symmetric(
+							horizontal: AppColors.space16,
+							vertical: 10,
+						),
+						child: Row(
 							children: [
 								Container(
-									width: 40,
-									height: 40,
+									width: 26,
+									height: 26,
 									decoration: BoxDecoration(
-										color: typeColor.withValues(alpha: 0.10),
+										color: typeColor.withValues(alpha: 0.18),
 										borderRadius: BorderRadius.circular(AppColors.radiusSm),
 									),
-									child: Icon(typeIcon, color: typeColor, size: 20),
-								),
-								const SizedBox(width: AppColors.space12),
-								Expanded(
-									child: Column(
-										crossAxisAlignment: CrossAxisAlignment.start,
-										children: [
-											Text(
-												item.title,
-												maxLines: 2,
-												overflow: TextOverflow.ellipsis,
-												style: const TextStyle(
-													fontWeight: AppColors.fontWeightExtraBold,
-													color: AppColors.darkText,
-													fontSize: AppColors.fontSizeBase,
-													letterSpacing: -0.2,
-													height: 1.25,
-												),
-											),
-											const SizedBox(height: 4),
-											Row(
-												children: [
-													Icon(Icons.access_time_rounded,
-															size: 12,
-															color: AppColors.mediumText),
-													const SizedBox(width: 4),
-													Text(
-														'Recibida el $formattedDate',
-														style: const TextStyle(
-															color: AppColors.mediumText,
-															fontSize: AppColors.fontSizeXs,
-														),
-													),
-												],
-											),
-										],
-									),
+									child: Icon(typeIcon, color: typeColor, size: 15),
 								),
 								const SizedBox(width: AppColors.space8),
-								_WaitTimeBadge(createdAt: item.createdAt),
+								Text(
+									typeLabel,
+									style: TextStyle(
+										color: typeColor,
+										fontSize: AppColors.fontSizeXs,
+										fontWeight: AppColors.fontWeightExtraBold,
+										letterSpacing: 0.8,
+									),
+								),
+								const Spacer(),
+								Text(
+									_waitLabel(item.createdAt),
+									style: TextStyle(
+										color: typeColor.withValues(alpha: 0.85),
+										fontSize: AppColors.fontSizeXs,
+										fontWeight: AppColors.fontWeightSemiBold,
+									),
+								),
 							],
 						),
-						if (isOrganization || item.solicitudTipo != null || item.esAnonimo)
-							Padding(
-								padding: const EdgeInsets.only(top: 10),
-								child: Wrap(
-									spacing: 8,
-									runSpacing: 8,
-									children: [
-										if (isOrganization)
-											Container(
-												margin: const EdgeInsets.only(left: 8),
-												padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-												decoration: BoxDecoration(
-													color: AppColors.bluePrimary.withValues(alpha: 0.12),
-													borderRadius: BorderRadius.circular(999),
-												),
-												child: Row(
-													mainAxisSize: MainAxisSize.min,
-													children: [
-														const Icon(Icons.business_rounded,
-																size: 14, color: AppColors.bluePrimary),
-														const SizedBox(width: 4),
-														Text(
-															'Organización',
-															style: theme.textTheme.labelSmall?.copyWith(
-																color: AppColors.bluePrimary,
-																fontWeight: FontWeight.w600,
-															),
-														),
-													],
-												),
-											),
-										if (!isOrganization && item.solicitudTipo != null)
-											SolicitudTypeBadge(tipo: item.solicitudTipo!),
-										if (item.esAnonimo)
-											Container(
-												padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-												decoration: BoxDecoration(
-													color: AppColors.orangeAction.withValues(alpha: 0.12),
-													borderRadius: BorderRadius.circular(20),
-													border: Border.all(
-														color: AppColors.orangeAction.withValues(alpha: 0.4),
-														width: 1,
+					),
+
+					// ── Cuerpo ──────────────────────────────────────────────
+					Padding(
+						padding: const EdgeInsets.all(AppColors.space16),
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							children: [
+								Text(
+									item.title,
+									maxLines: 2,
+									overflow: TextOverflow.ellipsis,
+									style: const TextStyle(
+										fontWeight: AppColors.fontWeightExtraBold,
+										color: AppColors.darkText,
+										fontSize: AppColors.fontSizeMd,
+										letterSpacing: -0.3,
+										height: 1.25,
+									),
+								),
+								if (item.esAnonimo) ...[
+									const SizedBox(height: AppColors.space8),
+									Container(
+										padding: const EdgeInsets.symmetric(
+												horizontal: 10, vertical: 4),
+										decoration: BoxDecoration(
+											color: AppColors.orangeAction.withValues(alpha: 0.10),
+											borderRadius: BorderRadius.circular(AppColors.radiusRound),
+										),
+										child: const Row(
+											mainAxisSize: MainAxisSize.min,
+											children: [
+												Icon(Icons.lock_rounded,
+														size: 12, color: AppColors.orangeAction),
+												SizedBox(width: 4),
+												Text(
+													'Anónimo',
+													style: TextStyle(
+														color: AppColors.orangeAction,
+														fontWeight: AppColors.fontWeightExtraBold,
+														fontSize: AppColors.fontSizeXs,
+														letterSpacing: 0.2,
 													),
 												),
-												child: const Row(
-													mainAxisSize: MainAxisSize.min,
-													children: [
-														Icon(Icons.lock_rounded,
-																size: 12, color: AppColors.orangeAction),
-														SizedBox(width: 4),
-														Text(
-															'Anónimo',
-															style: TextStyle(
-																color: AppColors.orangeAction,
-																fontWeight: FontWeight.w700,
-																fontSize: 11,
-																letterSpacing: 0.2,
-															),
-														),
-													],
-												),
+											],
+										),
+									),
+								],
+								if (subtitle != null && subtitle.isNotEmpty) ...[
+									const SizedBox(height: AppColors.space8),
+									Text(
+										subtitle,
+										maxLines: 2,
+										overflow: TextOverflow.ellipsis,
+										style: const TextStyle(
+											color: AppColors.mediumText,
+											fontSize: AppColors.fontSizeSm,
+											height: 1.4,
+										),
+									),
+								],
+								const SizedBox(height: AppColors.space16),
+								SizedBox(
+									width: double.infinity,
+									child: TextButton.icon(
+										onPressed: onReview,
+										style: TextButton.styleFrom(
+											foregroundColor: typeColor,
+											backgroundColor: typeColor.withValues(alpha: 0.10),
+											padding: const EdgeInsets.symmetric(
+													vertical: AppColors.space12),
+											shape: RoundedRectangleBorder(
+												borderRadius: BorderRadius.circular(AppColors.radiusSm),
 											),
-									],
-								),
-							),
-						if (subtitle != null && subtitle.isNotEmpty) ...[
-							const SizedBox(height: 10),
-							Text(
-								subtitle,
-								maxLines: 2,
-								overflow: TextOverflow.ellipsis,
-								style: const TextStyle(
-									color: AppColors.mediumText,
-									fontSize: AppColors.fontSizeSm,
-									height: 1.4,
-								),
-							),
-						],
-						const SizedBox(height: AppColors.space16),
-						SizedBox(
-							width: double.infinity,
-							child: TextButton.icon(
-								onPressed: onReview,
-								style: TextButton.styleFrom(
-									foregroundColor: typeColor,
-									backgroundColor: typeColor.withValues(alpha: 0.10),
-									padding: const EdgeInsets.symmetric(vertical: AppColors.space12),
-									shape: RoundedRectangleBorder(
-										borderRadius: BorderRadius.circular(AppColors.radiusSm),
+										),
+										icon: const Icon(Icons.rate_review_outlined, size: 18),
+										label: Text(
+											isOrganization ? 'Revisar organización' : 'Revisar solicitud',
+											style: const TextStyle(
+												fontWeight: AppColors.fontWeightBold,
+												fontSize: AppColors.fontSizeSm,
+												letterSpacing: 0.2,
+											),
+										),
 									),
 								),
-								icon: const Icon(Icons.rate_review_outlined, size: 18),
-								label: Text(
-									isOrganization ? 'Revisar organización' : 'Revisar solicitud',
-									style: const TextStyle(
-										fontWeight: AppColors.fontWeightBold,
-										fontSize: AppColors.fontSizeSm,
-										letterSpacing: 0.2,
-									),
-								),
-							),
+							],
 						),
-					],
-				),
+					),
+				],
 			),
 		);
+	}
+
+	String _typeLabel(SolicitudTipo? tipo) {
+		switch (tipo) {
+			case SolicitudTipo.kermesse:
+				return 'KERMESSE';
+			case SolicitudTipo.rifa:
+				return 'RIFA';
+			case SolicitudTipo.campania:
+			case null:
+				return 'CAMPAÑA';
+		}
+	}
+
+	String _waitLabel(DateTime createdAt) {
+		final diff = DateTime.now().difference(createdAt);
+		final days = diff.inDays;
+		final hours = diff.inHours;
+		if (days > 7) return 'hace +7 días';
+		if (days > 1) return 'hace $days días';
+		if (days == 1) return 'hace 1 día';
+		if (hours > 0) return 'hace ${hours}h';
+		return 'Nueva';
 	}
 
 	Color _typeColor(SolicitudTipo? tipo) {
@@ -582,117 +579,6 @@ class CampaignRequestCard extends StatelessWidget {
 			case null:
 				return Icons.campaign_outlined;
 		}
-	}
-}
-
-class SolicitudTypeBadge extends StatelessWidget {
-	const SolicitudTypeBadge({super.key, required this.tipo});
-
-	final SolicitudTipo tipo;
-
-	@override
-	Widget build(BuildContext context) {
-		late final String label;
-		late final Color color;
-		late final IconData icon;
-
-		switch (tipo) {
-			case SolicitudTipo.kermesse:
-				label = 'Kermesse';
-				color = AppColors.greenHope;
-				icon = Icons.festival_outlined;
-				break;
-			case SolicitudTipo.rifa:
-				label = 'Rifa';
-				color = AppColors.bluePrimary;
-				icon = Icons.confirmation_number_outlined;
-				break;
-			case SolicitudTipo.campania:
-				label = 'Campaña';
-				color = AppColors.orangeAction;
-				icon = Icons.flag_outlined;
-				break;
-		}
-
-		final theme = Theme.of(context);
-		return Container(
-			margin: const EdgeInsets.only(left: 8),
-			padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-			decoration: BoxDecoration(
-				color: color.withValues(alpha: 0.12),
-				borderRadius: BorderRadius.circular(999),
-			),
-			child: Row(
-				mainAxisSize: MainAxisSize.min,
-				children: [
-					Icon(icon, size: 14, color: color),
-					const SizedBox(width: 4),
-					Text(
-						label,
-						style: theme.textTheme.labelSmall?.copyWith(
-									color: color,
-									fontWeight: FontWeight.w600,
-								),
-					),
-				],
-			),
-		);
-	}
-}
-
-class _WaitTimeBadge extends StatelessWidget {
-	const _WaitTimeBadge({required this.createdAt});
-
-	final DateTime createdAt;
-
-	@override
-	Widget build(BuildContext context) {
-		final diff = DateTime.now().difference(createdAt);
-		final days = diff.inDays;
-		final hours = diff.inHours;
-
-		late final String label;
-		late final Color color;
-		if (days > 7) {
-			label = '+7d';
-			color = AppColors.orangeAction;
-		} else if (days > 3) {
-			label = '${days}d';
-			color = AppColors.orangeAction;
-		} else if (days > 0) {
-			label = '${days}d';
-			color = AppColors.bluePrimary;
-		} else if (hours > 0) {
-			label = '${hours}h';
-			color = AppColors.greenSuccess;
-		} else {
-			label = 'Nueva';
-			color = AppColors.greenSuccess;
-		}
-
-		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-			decoration: BoxDecoration(
-				color: color.withValues(alpha: 0.10),
-				borderRadius: BorderRadius.circular(999),
-				border: Border.all(color: color.withValues(alpha: 0.30)),
-			),
-			child: Row(
-				mainAxisSize: MainAxisSize.min,
-				children: [
-					Icon(Icons.schedule_rounded, size: 12, color: color),
-					const SizedBox(width: 3),
-					Text(
-						label,
-						style: TextStyle(
-							fontSize: 11,
-							fontWeight: FontWeight.w700,
-							color: color,
-						),
-					),
-				],
-			),
-		);
 	}
 }
 
