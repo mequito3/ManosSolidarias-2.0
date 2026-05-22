@@ -575,7 +575,9 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
       montoObjetivo: goal,
       portadaUrl: _uploadedCoverUrl,
       portadaOriginalUrl: _uploadedCoverOriginalUrl,
-      esAnonimo: _esAnonimo,
+      // El anonimato solo es válido en campañas, sin importar el estado del
+      // switch (defensa ante valores arrastrados al cambiar de tipo).
+      esAnonimo: _esAnonimo && _selectedTipo == SolicitudTipo.campania,
       evidences: evidences,
     );
 
@@ -1440,6 +1442,11 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     FocusScope.of(context).unfocus();
     setState(() {
       _selectedTipo = tipo;
+      // El anonimato solo aplica a campañas; al cambiar a otro tipo se limpia
+      // para no arrastrar el valor (kermesses/rifas son públicas).
+      if (tipo != SolicitudTipo.campania) {
+        _esAnonimo = false;
+      }
       if (tipo == SolicitudTipo.kermesse) {
         _goalCtrl.clear();
         if (_kermesseLocation == null) {
