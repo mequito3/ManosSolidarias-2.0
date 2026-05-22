@@ -194,31 +194,40 @@ class PremiumStatPill extends StatelessWidget {
             child: Icon(icon, color: color, size: 16),
           ),
           const SizedBox(height: AppColors.space8),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: AppColors.fontSizeLg,
-              fontWeight: AppColors.fontWeightExtraBold,
-              letterSpacing: -0.3,
-              height: 1.1,
+          // FittedBox: el valor se reduce para entrar completo en vez de
+          // cortarse cuando la pill es angosta (3 pills en una fila).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: AppColors.fontSizeLg,
+                fontWeight: AppColors.fontWeightExtraBold,
+                letterSpacing: -0.3,
+                height: 1.1,
+              ),
+              maxLines: 1,
+              softWrap: false,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.fade,
-            softWrap: false,
           ),
           const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.darkText.withValues(alpha: 0.65),
-              fontSize: AppColors.fontSizeXs,
-              fontWeight: AppColors.fontWeightSemiBold,
-              letterSpacing: 0.2,
-              height: 1.2,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.darkText.withValues(alpha: 0.65),
+                fontSize: AppColors.fontSizeXs,
+                fontWeight: AppColors.fontWeightSemiBold,
+                letterSpacing: 0.2,
+                height: 1.2,
+              ),
+              maxLines: 1,
+              softWrap: false,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
