@@ -20,18 +20,10 @@ class PdfExportService {
 		required AdminDashboardMetrics metrics,
 		required List<AdminActiveCampaign> activeCampaigns,
 	}) async {
-		// Tipografía profesional embebida (con fallback a la default si no hay red).
-		pw.ThemeData theme;
-		try {
-			final regular = await PdfGoogleFonts.latoRegular();
-			final bold = await PdfGoogleFonts.latoBold();
-			final italic = await PdfGoogleFonts.latoItalic();
-			theme = pw.ThemeData.withFont(base: regular, bold: bold, italic: italic);
-		} catch (_) {
-			theme = pw.ThemeData.base();
-		}
-
-		final pdf = pw.Document(theme: theme);
+		// Fuente estándar del paquete (soporta acentos vía WinAnsi). Evitamos
+		// embeber fuentes de red porque generaba PDFs que algunos visores de
+		// Android rechazaban ("Lo sentimos, esto no ha funcionado").
+		final pdf = pw.Document();
 
 		// Totales / derivados
 		final goalTotal =
@@ -157,11 +149,7 @@ class PdfExportService {
 		return pw.Container(
 			padding: const pw.EdgeInsets.symmetric(horizontal: 22, vertical: 20),
 			decoration: pw.BoxDecoration(
-				gradient: pw.LinearGradient(
-					begin: pw.Alignment.centerLeft,
-					end: pw.Alignment.centerRight,
-					colors: [_blueDark, _blue],
-				),
+				color: _blue,
 				borderRadius: pw.BorderRadius.circular(14),
 			),
 			child: pw.Row(
@@ -262,7 +250,6 @@ class PdfExportService {
 			),
 			child: pw.Text(
 				text,
-				textAlign: pw.TextAlign.justify,
 				style: pw.TextStyle(fontSize: 11, color: _ink, lineSpacing: 3.5),
 			),
 		);
