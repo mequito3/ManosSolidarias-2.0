@@ -85,42 +85,20 @@ class _CampaignRequestsSectionState extends State<CampaignRequestsSection> {
 		return Column(
 			crossAxisAlignment: CrossAxisAlignment.start,
 			children: [
-				PremiumHero(
-					icon: Icons.inbox_rounded,
-					iconGradient: AppColors.primaryGradient,
-					iconShadowColor: AppColors.bluePrimary,
+				PremiumSectionHeader(
 					title: 'Solicitudes solidarias',
-					subtitle: 'Revisá y aprobá lo que envían los organizadores.',
-					backgroundColors: [
-						AppColors.bluePrimary.withValues(alpha: 0.10),
-						AppColors.greenHope.withValues(alpha: 0.07),
-					],
-					blobColors: [
-						AppColors.bluePrimary.withValues(alpha: 0.12),
-						AppColors.greenHope.withValues(alpha: 0.10),
-					],
-					stats: [
-						PremiumStatPill(
-							icon: Icons.campaign_rounded,
-							label: 'Campañas',
-							value: '$countCampania',
-							color: AppColors.orangeAction,
-						),
-						PremiumStatPill(
-							icon: Icons.festival_rounded,
-							label: 'Kermesse',
-							value: '$countKermesse',
-							color: AppColors.greenHope,
-						),
-						PremiumStatPill(
-							icon: Icons.business_rounded,
-							label: 'Orgs',
-							value: '$countOrg',
-							color: AppColors.bluePrimary,
-						),
-					],
+					accentGradient: AppColors.actionGradient,
+					count: totalCount == 0 ? null : totalCount,
+					countColor: AppColors.orangeAction,
 				),
-				const SizedBox(height: 18),
+				const SizedBox(height: 6),
+				Text(
+					'Revisa campañas, kermesses y organizaciones enviadas para aprobación.',
+					style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+								color: AppColors.darkText.withValues(alpha: 0.68),
+							),
+				),
+				const SizedBox(height: 14),
 				SingleChildScrollView(
 					scrollDirection: Axis.horizontal,
 					child: Row(
@@ -373,17 +351,18 @@ class CampaignRequestCard extends StatelessWidget {
 			child: Column(
 				crossAxisAlignment: CrossAxisAlignment.start,
 				children: [
-					// ── Encabezado: tipo (ícono + palabra) + tiempo ─────────
+					// ── Encabezado: ícono + tipo/estado + chip de tiempo ────
 					Row(
+						crossAxisAlignment: CrossAxisAlignment.center,
 						children: [
 							Container(
-								width: 38,
-								height: 38,
+								width: 44,
+								height: 44,
 								decoration: BoxDecoration(
-									color: typeColor,
-									borderRadius: BorderRadius.circular(AppColors.radiusSm),
+									color: typeColor.withValues(alpha: 0.12),
+									borderRadius: BorderRadius.circular(AppColors.radiusMd),
 								),
-								child: Icon(typeIcon, color: Colors.white, size: 20),
+								child: Icon(typeIcon, color: typeColor, size: 22),
 							),
 							const SizedBox(width: AppColors.space12),
 							Expanded(
@@ -400,9 +379,11 @@ class CampaignRequestCard extends StatelessWidget {
 												letterSpacing: -0.1,
 											),
 										),
-										const SizedBox(height: 1),
+										const SizedBox(height: 2),
 										Text(
-											_waitLabel(item.createdAt),
+											isOrganization
+													? 'Verificación pendiente'
+													: 'Pendiente de revisión',
 											style: const TextStyle(
 												color: AppColors.mediumText,
 												fontSize: AppColors.fontSizeXs,
@@ -411,7 +392,7 @@ class CampaignRequestCard extends StatelessWidget {
 									],
 								),
 							),
-							if (showAnon) _AnonBadge(),
+							_TimeChip(createdAt: item.createdAt),
 						],
 					),
 					const SizedBox(height: AppColors.space12),
@@ -422,11 +403,11 @@ class CampaignRequestCard extends StatelessWidget {
 						maxLines: 2,
 						overflow: TextOverflow.ellipsis,
 						style: const TextStyle(
-							fontWeight: AppColors.fontWeightBold,
+							fontWeight: AppColors.fontWeightExtraBold,
 							color: AppColors.darkText,
-							fontSize: AppColors.fontSizeMd,
+							fontSize: AppColors.fontSizeLg,
 							letterSpacing: -0.3,
-							height: 1.25,
+							height: 1.2,
 						),
 					),
 					if (subtitle != null && subtitle.isNotEmpty) ...[
@@ -438,9 +419,13 @@ class CampaignRequestCard extends StatelessWidget {
 							style: const TextStyle(
 								color: AppColors.mediumText,
 								fontSize: AppColors.fontSizeSm,
-								height: 1.4,
+								height: 1.45,
 							),
 						),
+					],
+					if (showAnon) ...[
+						const SizedBox(height: AppColors.space12),
+						_AnonBadge(),
 					],
 					const SizedBox(height: AppColors.space12),
 					Divider(height: 1, color: AppColors.grayNeutral.withValues(alpha: 0.18)),
@@ -489,17 +474,6 @@ class CampaignRequestCard extends StatelessWidget {
 		}
 	}
 
-	String _waitLabel(DateTime createdAt) {
-		final diff = DateTime.now().difference(createdAt);
-		final days = diff.inDays;
-		final hours = diff.inHours;
-		if (days > 7) return 'hace +7 días';
-		if (days > 1) return 'hace $days días';
-		if (days == 1) return 'hace 1 día';
-		if (hours > 0) return 'hace ${hours}h';
-		return 'Nueva';
-	}
-
 	Color _typeColor(SolicitudTipo? tipo) {
 		switch (tipo) {
 			case SolicitudTipo.kermesse:
@@ -522,6 +496,45 @@ class CampaignRequestCard extends StatelessWidget {
 			case null:
 				return Icons.campaign_outlined;
 		}
+	}
+}
+
+class _TimeChip extends StatelessWidget {
+	const _TimeChip({required this.createdAt});
+	final DateTime createdAt;
+
+	@override
+	Widget build(BuildContext context) {
+		final diff = DateTime.now().difference(createdAt);
+		final days = diff.inDays;
+		late final String label;
+		late final Color color;
+		if (diff.inHours < 24) {
+			label = 'Nueva';
+			color = AppColors.greenSuccess;
+		} else if (days > 7) {
+			label = '+7 días';
+			color = AppColors.orangeAction;
+		} else {
+			label = 'hace ${days}d';
+			color = AppColors.mediumText;
+		}
+		return Container(
+			padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+			decoration: BoxDecoration(
+				color: color.withValues(alpha: 0.10),
+				borderRadius: BorderRadius.circular(AppColors.radiusRound),
+			),
+			child: Text(
+				label,
+				style: TextStyle(
+					color: color,
+					fontSize: AppColors.fontSizeXs,
+					fontWeight: AppColors.fontWeightExtraBold,
+					letterSpacing: 0.2,
+				),
+			),
+		);
 	}
 }
 
