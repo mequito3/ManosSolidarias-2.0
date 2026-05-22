@@ -152,7 +152,10 @@ class AdminWelcomeHeader extends StatelessWidget {
 		final displayName = profile.displayName?.trim().isNotEmpty == true
 				? profile.displayName!
 				: 'Administrador';
-		final total = pendingCampaigns + pendingDonations + pendingOrganizations;
+		// Las organizaciones viven dentro de Solicitudes, así que su conteo
+		// se suma a las solicitudes en lugar de mostrarse por separado.
+		final pendingSolicitudes = pendingCampaigns + pendingOrganizations;
+		final total = pendingSolicitudes + pendingDonations;
 
 		return Container(
 			decoration: BoxDecoration(
@@ -253,25 +256,19 @@ class AdminWelcomeHeader extends StatelessWidget {
 									],
 								),
 								const SizedBox(height: 16),
-								// Mini chips de pendientes
+								// Mini chips de pendientes (2: Solicitudes incluye orgs)
 								Row(
 									children: [
 										Expanded(child: _PendingChip(
 											icon: Icons.assignment_outlined,
 											label: 'Solicitudes',
-											count: pendingCampaigns,
+											count: pendingSolicitudes,
 										)),
-										const SizedBox(width: 6),
+										const SizedBox(width: 8),
 										Expanded(child: _PendingChip(
 											icon: Icons.receipt_long_outlined,
 											label: 'Donaciones',
 											count: pendingDonations,
-										)),
-										const SizedBox(width: 6),
-										Expanded(child: _PendingChip(
-											icon: Icons.approval_outlined,
-											label: 'Orgs',
-											count: pendingOrganizations,
 										)),
 									],
 								),
@@ -306,26 +303,43 @@ class _PendingChip extends StatelessWidget {
 	@override
 	Widget build(BuildContext context) {
 		return Container(
-			padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+			padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
 			decoration: BoxDecoration(
 				color: Colors.white.withValues(alpha: 0.15),
-				borderRadius: BorderRadius.circular(999),
+				borderRadius: BorderRadius.circular(14),
 			),
 			child: Row(
-				mainAxisSize: MainAxisSize.max,
-				mainAxisAlignment: MainAxisAlignment.center,
 				children: [
-					Icon(icon, color: Colors.white, size: 12),
-					const SizedBox(width: 4),
-					Flexible(
-						child: Text(
-							'$label: $count',
-							overflow: TextOverflow.ellipsis,
-							style: const TextStyle(
-								color: Colors.white,
-								fontSize: 10,
-								fontWeight: FontWeight.w600,
-							),
+					Icon(icon, color: Colors.white.withValues(alpha: 0.9), size: 18),
+					const SizedBox(width: 10),
+					Expanded(
+						child: Column(
+							crossAxisAlignment: CrossAxisAlignment.start,
+							mainAxisSize: MainAxisSize.min,
+							children: [
+								Text(
+									'$count',
+									style: const TextStyle(
+										color: Colors.white,
+										fontSize: 18,
+										fontWeight: FontWeight.w800,
+										height: 1.0,
+										letterSpacing: -0.4,
+									),
+								),
+								const SizedBox(height: 2),
+								Text(
+									label,
+									maxLines: 1,
+									softWrap: false,
+									overflow: TextOverflow.fade,
+									style: TextStyle(
+										color: Colors.white.withValues(alpha: 0.85),
+										fontSize: 11,
+										fontWeight: FontWeight.w600,
+									),
+								),
+							],
 						),
 					),
 				],

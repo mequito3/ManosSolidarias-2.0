@@ -403,7 +403,7 @@ class CampaignRequestCard extends StatelessWidget {
 					// ── Franja de tipo ──────────────────────────────────────
 					Container(
 						width: double.infinity,
-						color: typeColor.withValues(alpha: 0.10),
+						color: typeColor.withValues(alpha: 0.16),
 						padding: const EdgeInsets.symmetric(
 							horizontal: AppColors.space16,
 							vertical: 10,
@@ -411,20 +411,20 @@ class CampaignRequestCard extends StatelessWidget {
 						child: Row(
 							children: [
 								Container(
-									width: 26,
-									height: 26,
+									width: 28,
+									height: 28,
 									decoration: BoxDecoration(
-										color: typeColor.withValues(alpha: 0.18),
+										color: typeColor,
 										borderRadius: BorderRadius.circular(AppColors.radiusSm),
 									),
-									child: Icon(typeIcon, color: typeColor, size: 15),
+									child: Icon(typeIcon, color: Colors.white, size: 16),
 								),
 								const SizedBox(width: AppColors.space8),
 								Text(
 									typeLabel,
 									style: TextStyle(
 										color: typeColor,
-										fontSize: AppColors.fontSizeXs,
+										fontSize: AppColors.fontSizeSm,
 										fontWeight: AppColors.fontWeightExtraBold,
 										letterSpacing: 0.8,
 									),
@@ -433,9 +433,9 @@ class CampaignRequestCard extends StatelessWidget {
 								Text(
 									_waitLabel(item.createdAt),
 									style: TextStyle(
-										color: typeColor.withValues(alpha: 0.85),
+										color: typeColor,
 										fontSize: AppColors.fontSizeXs,
-										fontWeight: AppColors.fontWeightSemiBold,
+										fontWeight: AppColors.fontWeightBold,
 									),
 								),
 							],

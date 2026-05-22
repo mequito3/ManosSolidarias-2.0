@@ -13,6 +13,21 @@ BoxDecoration get _kCardDecoration => BoxDecoration(
       boxShadow: AppColors.shadowSm,
     );
 
+// Moneda compacta para que los montos grandes no se corten en cards angostas:
+// Bs 900 · Bs 75K · Bs 202K · Bs 1.2M
+String _compactBs(double value) {
+  final v = value.abs();
+  if (v >= 1000000) {
+    final m = value / 1000000;
+    return 'Bs ${m.toStringAsFixed(m >= 10 ? 0 : 1)}M';
+  }
+  if (v >= 1000) {
+    final k = value / 1000;
+    return 'Bs ${k.toStringAsFixed(k >= 10 ? 0 : 1)}K';
+  }
+  return 'Bs ${value.round()}';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Main panel
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,15 +77,15 @@ class AdminMetricsPanel extends StatelessWidget {
           stats: [
             PremiumStatPill(
               icon: Icons.approval_rounded,
-              label: 'Aprobación',
-              value: '${metrics.approvalRate.toStringAsFixed(1)}%',
+              label: 'Aprob.',
+              value: '${metrics.approvalRate.toStringAsFixed(0)}%',
               color: AppColors.greenHope,
             ),
             PremiumStatPill(
               icon: Icons.schedule_rounded,
-              label: 'T. respuesta',
+              label: 'T. resp.',
               value:
-                  '${metrics.avgResponseTimeHours.toStringAsFixed(1)}h',
+                  '${metrics.avgResponseTimeHours.toStringAsFixed(0)}h',
               color: AppColors.bluePrimary,
             ),
             PremiumStatPill(
@@ -247,12 +262,12 @@ class AdminMetricsPanel extends StatelessWidget {
               child: _PendingCard(
                 icon: Icons.campaign_rounded,
                 iconColor: AppColors.orangeAction,
-                count: metrics.pendingRequests,
+                count: metrics.pendingRequests + metrics.pendingOrganizations,
                 label: 'Solicitudes',
-                sub: 'Campañas nuevas',
+                sub: 'Campañas y orgs',
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppColors.space12),
             Expanded(
               child: _PendingCard(
                 icon: Icons.volunteer_activism_rounded,
@@ -260,16 +275,6 @@ class AdminMetricsPanel extends StatelessWidget {
                 count: metrics.pendingDonations,
                 label: 'Donaciones',
                 sub: 'Por verificar',
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _PendingCard(
-                icon: Icons.domain_verification_rounded,
-                iconColor: AppColors.bluePrimary,
-                count: metrics.pendingOrganizations,
-                label: 'Organizaciones',
-                sub: 'Por aprobar',
               ),
             ),
           ],
@@ -335,11 +340,7 @@ class AdminMetricsPanel extends StatelessWidget {
   static double _clamp(double v, double lo, double hi) =>
       v < lo ? lo : (v > hi ? hi : v);
 
-  static String _formatCurrency(double value) {
-    final s = value.round().toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-    return 'Bs $s';
-  }
+  static String _formatCurrency(double value) => _compactBs(value);
 
   // ── PDF export ──────────────────────────────────────────────────────────
   static void _exportPdf(BuildContext context,
@@ -459,16 +460,19 @@ class _GrowthCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: AppColors.fontSizeXs,
-                  color: AppColors.mediumText,
-                  fontWeight: AppColors.fontWeightSemiBold,
-                  letterSpacing: 0.3,
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 2,
+                  style: const TextStyle(
+                    fontSize: AppColors.fontSizeXs,
+                    color: AppColors.mediumText,
+                    fontWeight: AppColors.fontWeightSemiBold,
+                    letterSpacing: 0.3,
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: AppColors.space8),
               Container(
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppColors.space8, vertical: 3),
@@ -487,7 +491,7 @@ class _GrowthCard extends StatelessWidget {
                         color: color),
                     const SizedBox(width: 2),
                     Text(
-                      '${growthRate.abs().toStringAsFixed(1)}%',
+                      '${growthRate.abs().toStringAsFixed(0)}%',
                       style: TextStyle(
                         fontSize: AppColors.fontSizeXs,
                         fontWeight: AppColors.fontWeightExtraBold,
@@ -514,13 +518,18 @@ class _GrowthCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  'vs $previousValue',
-                  style: const TextStyle(
-                    fontSize: AppColors.fontSizeXs,
-                    color: AppColors.mediumText,
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'vs $previousValue',
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.fade,
+                    style: const TextStyle(
+                      fontSize: AppColors.fontSizeXs,
+                      color: AppColors.mediumText,
+                    ),
                   ),
                 ),
               ),
@@ -596,8 +605,9 @@ class _SimpleStatCard extends StatelessWidget {
               fontWeight: AppColors.fontWeightSemiBold,
               letterSpacing: 0.2,
             ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            softWrap: false,
+            overflow: TextOverflow.fade,
           ),
           if (sub != null) ...[
             const SizedBox(height: 2),
@@ -608,7 +618,8 @@ class _SimpleStatCard extends StatelessWidget {
                 color: AppColors.mediumText.withValues(alpha: 0.85),
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              overflow: TextOverflow.fade,
             ),
           ],
         ],
@@ -681,11 +692,7 @@ class _FinancialCard extends StatelessWidget {
     );
   }
 
-  String _fmt(double v) {
-    final s = v.round().toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-    return 'Bs $s';
-  }
+  String _fmt(double v) => _compactBs(v);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -843,13 +850,14 @@ class _PendingCard extends StatelessWidget {
           Text(
             label,
             style: const TextStyle(
-              fontSize: AppColors.fontSizeXs,
+              fontSize: AppColors.fontSizeSm,
               color: AppColors.darkText,
-              fontWeight: AppColors.fontWeightSemiBold,
+              fontWeight: AppColors.fontWeightBold,
               letterSpacing: 0.2,
             ),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            overflow: TextOverflow.fade,
           ),
           if (sub != null) ...[
             const SizedBox(height: 2),
@@ -860,7 +868,8 @@ class _PendingCard extends StatelessWidget {
                 color: AppColors.mediumText,
               ),
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              overflow: TextOverflow.fade,
             ),
           ],
         ],
