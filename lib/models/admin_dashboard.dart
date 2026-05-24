@@ -81,6 +81,7 @@ class AdminPendingItem {
     this.kermessePurpose,
     this.kermesseMenu,
     this.kermesseShows,
+    this.montoObjetivo,
     this.esAnonimo = false,
   });
 
@@ -111,6 +112,7 @@ class AdminPendingItem {
   final String? kermessePurpose;
   final String? kermesseMenu;
   final String? kermesseShows;
+  final double? montoObjetivo;
   final bool esAnonimo;
 }
 

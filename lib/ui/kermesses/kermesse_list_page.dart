@@ -12,6 +12,8 @@ import '../../theme/app_colors.dart';
 import '../home/menu_inferior/shared_states.dart';
 import '../home/widgets/home_section.dart';
 import '../widgets/app_network_image.dart';
+import '../widgets/detail_section.dart';
+import '../widgets/kermesse_lists.dart';
 import '../widgets/glass_circle_button.dart';
 
 class KermesseListPage extends StatefulWidget {
@@ -658,6 +660,7 @@ class KermesseDetailPage extends StatelessWidget {
         _DetailSection(
           eyebrow: 'Info esencial',
           title: 'Lo importante en un vistazo',
+          icon: Icons.info_rounded,
           accentColor: AppColors.orangeAction,
           child: _EssentialInfoBlock(
             locationName: kermesse.locationName,
@@ -670,12 +673,14 @@ class KermesseDetailPage extends StatelessWidget {
         _DetailSection(
           eyebrow: 'Sobre el evento',
           title: 'Qué vas a encontrar',
+          icon: Icons.info_rounded,
           child: _OrganizerQuote(narrative: cleanOverview),
         ),
       if (kermesse.galleryImages.isNotEmpty)
         _DetailSection(
           eyebrow: 'Galería',
           title: 'Fotos del evento',
+          icon: Icons.photo_library_rounded,
           counter:
               '${kermesse.galleryImages.length} ${kermesse.galleryImages.length == 1 ? 'foto' : 'fotos'}',
           child: _KermesseGallery(images: kermesse.galleryImages),
@@ -684,6 +689,7 @@ class KermesseDetailPage extends StatelessWidget {
         _DetailSection(
           eyebrow: 'Ubicación',
           title: 'Punto de encuentro',
+          icon: Icons.location_on_rounded,
           child: _LocationBlock(
             initialMapPoint: mapPoint,
             locationName: kermesse.locationName,
@@ -701,17 +707,21 @@ class KermesseDetailPage extends StatelessWidget {
         _DetailSection(
           eyebrow: 'Impacto',
           title: 'A quién ayuda esta kermesse',
+          icon: Icons.favorite_rounded,
           accentColor: AppColors.greenHope,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (kermesse.beneficiaries != null)
                 _DetailRow(
-                    label: 'Beneficiarios', value: kermesse.beneficiaries!),
+                    label: 'Beneficiarios',
+                    value: kermesse.beneficiaries!,
+                    icon: Icons.favorite_rounded),
               if (kermesse.partners != null)
                 _DetailRow(
                     label: 'Aliados confirmados',
-                    value: kermesse.partners!),
+                    value: kermesse.partners!,
+                    icon: Icons.handshake_rounded),
             ],
           ),
         ),
@@ -719,27 +729,30 @@ class KermesseDetailPage extends StatelessWidget {
         _DetailSection(
           eyebrow: 'Menú',
           title: 'Lo que vas a encontrar',
+          icon: Icons.restaurant_rounded,
           counter:
               '${kermesse.menuItems.length} ${kermesse.menuItems.length == 1 ? 'plato' : 'platos'}',
           accentColor: AppColors.orangeAction,
-          child: _PricedList(items: kermesse.menuItems),
+          child: PricedList(items: kermesse.menuItems),
         ),
       if (kermesse.musicItems.isNotEmpty)
         _DetailSection(
           eyebrow: 'Música',
           title: 'Programa musical',
+          icon: Icons.music_note_rounded,
           counter:
               '${kermesse.musicItems.length} ${kermesse.musicItems.length == 1 ? 'show' : 'shows'}',
           accentColor: AppColors.bluePrimary,
-          child: _MusicList(items: kermesse.musicItems),
+          child: MusicList(items: kermesse.musicItems),
         ),
       if (kermesse.activities.isNotEmpty)
         _DetailSection(
           eyebrow: 'Actividades',
           title: 'Programa del evento',
+          icon: Icons.event_available_rounded,
           counter: '${kermesse.activities.length} en agenda',
           accentColor: AppColors.orangeAction,
-          child: _CheckList(items: kermesse.activities),
+          child: CheckList(items: kermesse.activities),
         ),
       if (kermesse.closingMessage != null &&
           kermesse.closingMessage!.isNotEmpty)
@@ -1194,124 +1207,36 @@ class _KermesseHeroStats extends StatelessWidget {
   }
 }
 
+/// Sección de detalle de la kermesse. Delega en el widget compartido
+/// [DetailSection] para mantener coherencia visual con las pantallas de
+/// campaña y organización. El [eyebrow] se mapea al título compartido, el
+/// [title] local pasa a ser el subtítulo y el [counter] al badge.
 class _DetailSection extends StatelessWidget {
   const _DetailSection({
     required this.eyebrow,
     required this.title,
     required this.child,
+    this.icon,
     this.counter,
     this.accentColor,
   });
 
   final String eyebrow;
   final String title;
+  final IconData? icon;
   final String? counter;
   final Widget child;
   final Color? accentColor;
 
   @override
   Widget build(BuildContext context) {
-    final accent = accentColor ?? AppColors.bluePrimary;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 24,
-            offset: const Offset(0, 6),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 6,
-            offset: const Offset(0, 1),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Container(
-                  width: 4,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              eyebrow.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.0,
-                                color: accent,
-                              ),
-                            ),
-                          ),
-                          if (counter != null) ...[
-                            const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: accent.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(99),
-                              ),
-                              child: Text(
-                                counter!,
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: accent,
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.darkText,
-                          letterSpacing: -0.4,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            height: 1,
-            color: AppColors.darkText.withValues(alpha: 0.06),
-          ),
-          const SizedBox(height: 20),
-          child,
-        ],
-      ),
+    return DetailSection(
+      title: eyebrow,
+      subtitle: title,
+      icon: icon ?? Icons.info_rounded,
+      accent: accentColor ?? AppColors.bluePrimary,
+      trailingBadge: counter,
+      child: child,
     );
   }
 }
@@ -1408,186 +1333,22 @@ class _KermesseMap extends StatelessWidget {
   }
 }
 
+/// Fila de dato de la kermesse. Delega en el widget compartido
+/// [DetailInfoRow] para coherencia visual con las demás pantallas de detalle.
 class _DetailRow extends StatelessWidget {
-  const _DetailRow({required this.label, required this.value});
+  const _DetailRow({required this.label, required this.value, this.icon});
 
   final String label;
   final String value;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 3),
-            width: 3,
-            height: 14,
-            decoration: BoxDecoration(
-              color: AppColors.orangeAction,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.orangeAction,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    height: 1.45,
-                    color: AppColors.darkText.withValues(alpha: 0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CheckList extends StatelessWidget {
-  const _CheckList({required this.items});
-
-  final List<String> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items
-          .map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 2),
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      color: AppColors.orangeAction.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 13,
-                      color: AppColors.orangeAction,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        height: 1.45,
-                        color: AppColors.darkText.withValues(alpha: 0.78),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
-    );
-  }
-}
-
-class _PricedList extends StatelessWidget {
-  const _PricedList({required this.items});
-
-  final List<String> items;
-
-  ({String name, String? price}) _parse(String raw) {
-    final lastColon = raw.lastIndexOf(':');
-    if (lastColon == -1 || lastColon == raw.length - 1) {
-      return (name: raw.trim(), price: null);
-    }
-    final afterColon = raw.substring(lastColon + 1).trim();
-    final match = RegExp(r'^Bs\.?\s*([0-9][0-9.,]*)\s*$',
-            caseSensitive: false)
-        .firstMatch(afterColon);
-    if (match == null) {
-      return (name: raw.trim(), price: null);
-    }
-    final amount = match.group(1)!;
-    final name = raw.substring(0, lastColon).trim();
-    return (name: name, price: 'Bs $amount');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items.map((raw) {
-        final parsed = _parse(raw);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 2),
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: AppColors.orangeAction.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_rounded,
-                  size: 13,
-                  color: AppColors.orangeAction,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  parsed.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: AppColors.darkText.withValues(alpha: 0.85),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              if (parsed.price != null) ...[
-                const SizedBox(width: 12),
-                Text(
-                  parsed.price!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: AppColors.orangeAction,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      }).toList(),
+    return DetailInfoRow(
+      label: label,
+      value: value,
+      icon: icon,
+      accent: AppColors.greenHope,
     );
   }
 }
@@ -1656,6 +1417,9 @@ class _EssentialInfoBlock extends StatelessWidget {
   }
 }
 
+/// Fila de info esencial de la kermesse. Delega en el widget compartido
+/// [DetailInfoRow] y conserva el comportamiento de toque (abrir mapa) cuando
+/// se provee [onTap].
 class _EssentialInfoRow extends StatelessWidget {
   const _EssentialInfoRow({
     required this.icon,
@@ -1671,59 +1435,11 @@ class _EssentialInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppColors.orangeAction.withValues(alpha: 0.10),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, size: 19, color: AppColors.orangeAction),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    label.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.orangeAction,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  if (onTap != null) ...[
-                    const SizedBox(width: 6),
-                    Icon(
-                      Icons.open_in_new_rounded,
-                      size: 12,
-                      color: AppColors.orangeAction.withValues(alpha: 0.7),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                softWrap: true,
-                style: TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.darkText.withValues(alpha: 0.85),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    final content = DetailInfoRow(
+      label: label,
+      value: value,
+      icon: icon,
+      accent: AppColors.orangeAction,
     );
 
     if (onTap == null) return content;
@@ -1734,62 +1450,8 @@ class _EssentialInfoRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: content,
-        ),
+        child: content,
       ),
-    );
-  }
-}
-
-class _MusicList extends StatelessWidget {
-  const _MusicList({required this.items});
-
-  final List<String> items;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: items
-          .map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 1),
-                    width: 22,
-                    height: 22,
-                    decoration: BoxDecoration(
-                      color: AppColors.bluePrimary.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.music_note_rounded,
-                      size: 13,
-                      color: AppColors.bluePrimary,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        height: 1.45,
-                        color: AppColors.darkText.withValues(alpha: 0.82),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-          .toList(),
     );
   }
 }

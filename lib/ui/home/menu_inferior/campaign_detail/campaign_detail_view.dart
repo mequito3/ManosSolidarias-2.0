@@ -515,6 +515,10 @@ class _DaysChip extends StatelessWidget {
   }
 }
 
+/// Envoltura delgada que delega en el widget compartido [DetailSection] para
+/// que las secciones de detalle de campaña tengan exactamente el mismo
+/// lenguaje visual que las de organización y kermesse. Solo conserva el
+/// espaciado externo (horizontal + vertical) que ya tenían las llamadas.
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
     required this.title,
@@ -525,72 +529,21 @@ class _SectionCard extends StatelessWidget {
 
   final String title;
   final Widget child;
-  // `icon` se mantiene por compatibilidad con las invocaciones existentes
-  // pero ya no se renderiza — la jerarquía es solo tipográfica + barra de acento.
   final IconData? icon;
   final Color? iconColor;
 
   @override
   Widget build(BuildContext context) {
-    final accent = iconColor ?? AppColors.bluePrimary;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppColors.space24,
         vertical: AppColors.space8,
       ),
-      child: Container(
-        padding: const EdgeInsets.all(AppColors.space24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 24,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header: barra vertical de acento + título grande sin ícono
-            IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 4,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.darkText,
-                        letterSpacing: -0.4,
-                        height: 1.25,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppColors.space20),
-            child,
-          ],
-        ),
+      child: DetailSection(
+        title: title,
+        icon: icon,
+        accent: iconColor ?? AppColors.bluePrimary,
+        child: child,
       ),
     );
   }

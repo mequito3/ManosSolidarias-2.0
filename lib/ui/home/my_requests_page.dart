@@ -60,6 +60,49 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
   Future<void> _handleRefresh() => _loadRequests();
 
+  /// Muestra el estado de una solicitud que todavía no es campaña publicada
+  /// (en revisión / rechazada), en lugar de intentar abrir un detalle que no
+  /// existe.
+  void _showRequestStatusInfo(BuildContext context, CampaignSummary request) {
+    final String title;
+    final String message;
+    switch (request.status) {
+      case 'rechazada':
+        title = 'Necesita cambios';
+        final reason = request.rejectionReason?.trim();
+        message = (reason != null && reason.isNotEmpty)
+            ? 'El administrador pidió cambios:\n\n$reason'
+            : 'El administrador pidió cambios en esta solicitud. Editala y volvé a enviarla.';
+        break;
+      case 'pendiente':
+      case 'revision':
+        title = 'En revisión';
+        message =
+            'Tu solicitud está siendo revisada por el administrador. Te avisaremos cuando sea aprobada y publicada.';
+        break;
+      default:
+        title = 'Aún no publicada';
+        message =
+            'Esta campaña todavía no está publicada, por eso no se puede abrir.';
+    }
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
+        ),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,7 +245,15 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 final request = requests[index];
                 return _RequestCard(
                   request: request,
-                  onTap: () => widget.onOpenCampaign(request),
+                  onTap: () {
+                    // Solo las aprobadas existen como campaña publicada y se
+                    // pueden abrir. Las demás muestran su estado.
+                    if (request.status == 'aprobada') {
+                      widget.onOpenCampaign(request);
+                    } else {
+                      _showRequestStatusInfo(context, request);
+                    }
+                  },
                 );
               },
             ),

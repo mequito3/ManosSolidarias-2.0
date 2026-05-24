@@ -185,18 +185,18 @@ class _DonationSheetState extends State<_DonationSheet> {
               subtitle: summary.title,
               backgroundColors: [
                 AppColors.bluePrimary.withValues(alpha: 0.10),
-                AppColors.greenHope.withValues(alpha: 0.07),
+                AppColors.greenSuccess.withValues(alpha: 0.07),
               ],
               blobColors: [
                 AppColors.bluePrimary.withValues(alpha: 0.12),
-                AppColors.greenHope.withValues(alpha: 0.10),
+                AppColors.greenSuccess.withValues(alpha: 0.10),
               ],
               stats: [
                 PremiumStatPill(
                   icon: Icons.savings_rounded,
                   label: 'Recaudado',
                   value: _formatCompactBs(summary.raisedAmount),
-                  color: AppColors.greenHope,
+                  color: AppColors.greenSuccess,
                 ),
                 PremiumStatPill(
                   icon: Icons.flag_rounded,
@@ -941,7 +941,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                 height: 40,
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppColors.greenSuccess, Color(0xFF4CAF50)],
+                    colors: [AppColors.greenSuccess, AppColors.greenSuccess],
                   ),
                   shape: BoxShape.circle,
                 ),
@@ -1125,7 +1125,7 @@ class _DonationSheetState extends State<_DonationSheet> {
                         end: Alignment.bottomRight,
                         colors: [
                           AppColors.bluePrimary,
-                          Color(0xFF4CAF50),
+                          AppColors.greenSuccess,
                         ],
                       ),
                       borderRadius: BorderRadius.circular(20),

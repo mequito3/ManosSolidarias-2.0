@@ -5,6 +5,7 @@ import '../../../models/admin_dashboard.dart';
 import '../../../models/admin_donation_detail.dart';
 import '../../../theme/app_colors.dart';
 import '../../../ui/widgets/premium_empty_state.dart';
+import '../../../ui/widgets/detail_section.dart';
 import '../../../ui/widgets/premium_hero.dart';
 import 'admin_section_widgets.dart';
 
@@ -30,7 +31,9 @@ class DonationsSection extends StatelessWidget {
       children: [
         PremiumSectionHeader(
           title: 'Donaciones por validar',
-          accentGradient: AppColors.successGradient,
+          accentGradient: const LinearGradient(
+            colors: [AppColors.greenSuccess, AppColors.greenSuccess],
+          ),
           count: items.isEmpty ? null : items.length,
           countColor: AppColors.greenSuccess,
         ),
@@ -52,7 +55,7 @@ class DonationsSection extends StatelessWidget {
               description:
                   'No hay donaciones pendientes de revisión. Las nuevas transferencias aparecerán acá apenas los donantes envíen el comprobante.',
               blobColors: [
-                AppColors.greenHope.withValues(alpha: 0.10),
+                AppColors.greenSuccess.withValues(alpha: 0.10),
                 AppColors.bluePrimary.withValues(alpha: 0.08),
               ],
               hintChips: const [
@@ -96,146 +99,142 @@ class DonationReviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final subtitle = item.subtitle?.trim();
     final formattedDate = formatAdminDateTime(item.createdAt);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        boxShadow: AppColors.shadowSm,
       ),
+      padding: const EdgeInsets.all(AppColors.space16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header strip
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.greenHopeDark, AppColors.greenHope],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
+          // ── Encabezado: ícono + tipo/estado + chip de fecha ─────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.greenSuccess.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                ),
+                child: const Icon(Icons.receipt_long_rounded,
+                    color: AppColors.greenSuccess, size: 22),
               ),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.receipt_long_rounded, color: Colors.white, size: 18),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.3,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Body
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: AppColors.space12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.access_time_rounded, size: 14, color: AppColors.grayDark),
-                    const SizedBox(width: 5),
                     Text(
-                      formattedDate,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: AppColors.grayDark,
+                      'Donación',
+                      style: TextStyle(
+                        color: AppColors.darkText,
+                        fontSize: AppColors.fontSizeBase,
+                        fontWeight: AppColors.fontWeightExtraBold,
+                        letterSpacing: -0.1,
                       ),
                     ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.orangeAction.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppColors.orangeAction.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.orangeAction,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          const Text(
-                            'Pendiente',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.orangeAction,
-                            ),
-                          ),
-                        ],
+                    SizedBox(height: 2),
+                    Text(
+                      'Comprobante por validar',
+                      style: TextStyle(
+                        color: AppColors.mediumText,
+                        fontSize: AppColors.fontSizeXs,
                       ),
                     ),
                   ],
                 ),
-                if (subtitle != null && subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    subtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.mediumText,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: onViewDetail,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.greenHope,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.grayNeutral.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.access_time_rounded,
+                        size: 12, color: AppColors.mediumText),
+                    const SizedBox(width: 5),
+                    Text(
+                      formattedDate,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.mediumText,
                       ),
                     ),
-                    icon: const Icon(Icons.visibility_rounded, size: 18),
-                    label: const Text(
-                      'Revisar donación',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                    ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppColors.space12),
+
+          // ── Título (incluye el monto) ───────────────────────────────
+          Text(
+            item.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: AppColors.fontWeightExtraBold,
+              color: AppColors.darkText,
+              fontSize: AppColors.fontSizeLg,
+              letterSpacing: -0.3,
+              height: 1.2,
+            ),
+          ),
+          if (subtitle != null && subtitle.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.mediumText,
+                fontSize: AppColors.fontSizeSm,
+                height: 1.45,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppColors.space12),
+          Divider(
+              height: 1, color: AppColors.grayNeutral.withValues(alpha: 0.18)),
+          const SizedBox(height: AppColors.space12),
+
+          // ── Acción (azul de marca, uniforme con solicitudes) ────────
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: onViewDetail,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppColors.space12 + 1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppColors.radiusSm),
+                ),
+                elevation: 0,
+              ),
+              icon: const Icon(Icons.rate_review_outlined, size: 18),
+              label: const Text(
+                'Revisar donación',
+                style: TextStyle(
+                  fontWeight: AppColors.fontWeightBold,
+                  fontSize: AppColors.fontSizeSm,
+                  letterSpacing: 0.2,
+                ),
+              ),
             ),
           ),
         ],
@@ -482,7 +481,7 @@ class _DonationDetailContent extends StatelessWidget {
         Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppColors.greenHopeDark, AppColors.greenHope],
+              colors: [AppColors.greenSuccess, AppColors.greenHopeDark],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -857,7 +856,7 @@ class _DonationDetailContent extends StatelessWidget {
                   // Approve — gradiente verde (semántico = éxito)
                   DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: AppColors.successGradient,
+                      color: AppColors.greenSuccess,
                       borderRadius: BorderRadius.circular(AppColors.radiusMd),
                       boxShadow: [
                         BoxShadow(
@@ -970,52 +969,11 @@ class _DonationSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 16, color: iconColor),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.darkText,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 16, indent: 14, endIndent: 14, color: Colors.grey.shade100),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: child,
-          ),
-        ],
-      ),
+    return DetailSection(
+      icon: icon,
+      title: title,
+      accent: iconColor,
+      child: child,
     );
   }
 }
@@ -1038,48 +996,12 @@ class _DonationInfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) ...[
-            Container(
-              margin: const EdgeInsets.only(top: 2),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: (iconColor ?? AppColors.bluePrimary).withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, size: 14, color: iconColor ?? AppColors.bluePrimary),
-            ),
-            const SizedBox(width: 10),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.mediumText,
-                    fontSize: 11,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SelectableText(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.darkText,
-                    fontSize: 14,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 2),
+      child: DetailInfoRow(
+        icon: icon,
+        label: label,
+        value: value,
+        accent: iconColor ?? AppColors.bluePrimary,
       ),
     );
   }

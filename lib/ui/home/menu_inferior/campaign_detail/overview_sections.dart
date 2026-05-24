@@ -25,7 +25,7 @@ class _OrganizerSection extends StatelessWidget {
 
     return _SectionCard(
       title: 'Quién está detrás',
-      icon: Icons.people_alt_rounded,
+      icon: Icons.person_rounded,
       iconColor: AppColors.blueSecondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

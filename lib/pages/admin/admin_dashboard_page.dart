@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../controllers/admin_dashboard_controller.dart';
+import '../../controllers/notification_controller.dart';
 import '../../models/admin_dashboard.dart';
 import '../../models/user_profile.dart';
+import '../../services/notification_service.dart';
 import '../../theme/app_colors.dart';
+import '../../ui/home/notifications/notifications_page.dart';
 import '../../ui/widgets/premium_app_bar.dart';
 import 'sections/admin_section_widgets.dart';
 import 'sections/campaign_requests_section.dart';
@@ -30,6 +33,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 		with SingleTickerProviderStateMixin {
 	late final AdminDashboardController _controller;
 	late final AnimationController _animationController;
+	late final NotificationController _notificationController;
 	AdminDashboardSection _selectedSection = AdminDashboardSection.metrics;
 
 	@override
@@ -41,6 +45,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 		// Suscribirse a notificaciones en tiempo real
 		_controller.subscribeToRealtime();
 
+		_notificationController =
+				NotificationController(NotificationService(Supabase.instance.client))
+					..loadNotifications();
+
 		_animationController = AnimationController(
 			vsync: this,
 			duration: const Duration(milliseconds: 280),
@@ -51,10 +59,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 	void dispose() {
 		_animationController.dispose();
 		_controller.dispose();
+		_notificationController.dispose();
 		super.dispose();
 	}
 
 	Future<void> _handleRefresh() => _controller.refresh();
+
+	void _openAdminNotifications() {
+		_notificationController.loadNotifications();
+		Navigator.of(context).push(
+			MaterialPageRoute(
+				builder: (_) => NotificationsPage(
+					controller: _notificationController,
+					typeFilter: const {'evidencia_para_revisar'},
+				),
+			),
+		);
+	}
 
 	Future<void> _openCampaignReview(AdminPendingItem item) async {
 		final result = await showCampaignReviewSheet(
@@ -114,6 +135,8 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 				);
 				break;
 		}
+
+		await _handleRefresh();
 	}
 
 	Future<void> _openOrganizationReview(AdminPendingItem item) async {
@@ -160,6 +183,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 				showBack: canPop,
 				onBack: () => Navigator.of(context).maybePop(),
 				actions: [
+					PremiumAppBarAction(
+						icon: Icons.notifications_outlined,
+						tooltip: 'Notificaciones',
+						onPressed: _openAdminNotifications,
+					),
 					_ViewAsUserButton(onTap: widget.onViewAsUser),
 					_AdminAvatarButton(
 						profile: widget.profile,

@@ -68,9 +68,7 @@ class AdminDashboardController extends ChangeNotifier {
         solicitudId: solicitudId,
         approve: true,
         categoriaId: categoriaId,
-      );
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      );    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.approveCampaignRequest error: $error');
@@ -84,9 +82,7 @@ class AdminDashboardController extends ChangeNotifier {
         solicitudId: solicitudId,
         approve: false,
         message: message,
-      );
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      );    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.requestChangesForCampaign error: $error');
@@ -107,9 +103,7 @@ class AdminDashboardController extends ChangeNotifier {
 
   Future<void> approveDonation(String donationId) async {
     try {
-      await _service.reviewDonation(donationId: donationId, approve: true);
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      await _service.reviewDonation(donationId: donationId, approve: true);    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.approveDonation error: $error');
@@ -119,9 +113,7 @@ class AdminDashboardController extends ChangeNotifier {
 
   Future<void> rejectDonation(String donationId) async {
     try {
-      await _service.reviewDonation(donationId: donationId, approve: false);
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      await _service.reviewDonation(donationId: donationId, approve: false);    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.rejectDonation error: $error');
@@ -131,7 +123,9 @@ class AdminDashboardController extends ChangeNotifier {
 
   Future<AdminOrganizationDetail> fetchOrganizationDetail(String organizationId) async {
     try {
-      return await _service.fetchOrganizationDetail(organizationId);
+      return await _service
+          .fetchOrganizationDetail(organizationId)
+          .timeout(const Duration(seconds: 20));
     } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
@@ -146,9 +140,7 @@ class AdminDashboardController extends ChangeNotifier {
         organizationId: organizationId,
         approve: true,
         message: notes,
-      );
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      );    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.approveOrganization error: $error');
@@ -162,9 +154,7 @@ class AdminDashboardController extends ChangeNotifier {
         organizationId: organizationId,
         approve: false,
         message: message,
-      );
-      await loadDashboard();
-    } on AdminServiceException catch (error) {
+      );    } on AdminServiceException catch (error) {
       throw AdminActionException(error.message);
     } catch (error) {
       debugPrint('AdminDashboardController.rejectOrganization error: $error');

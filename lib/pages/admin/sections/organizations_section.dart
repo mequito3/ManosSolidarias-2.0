@@ -7,6 +7,7 @@ import '../../../controllers/admin_dashboard_controller.dart';
 import '../../../models/admin_dashboard.dart';
 import '../../../models/admin_organization_detail.dart';
 import '../../../theme/app_colors.dart';
+import '../../../ui/widgets/detail_section.dart';
 import 'admin_section_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,8 +56,16 @@ class OrganizationsSection extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Review card  (two-zone: blue gradient header + white body)
+// Review card  (two-zone: dark header + white body)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Fondo de marca (azul confianza → azul oscuro) para el hero/encabezado de
+/// organización. Usa la paleta oficial, en tono sobrio (no el azul vibrante).
+const LinearGradient _orgHeroGradient = LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: [AppColors.blueSecondary, AppColors.bluePrimaryDark],
+);
 
 class OrganizationReviewCard extends StatelessWidget {
   const OrganizationReviewCard({
@@ -95,7 +104,7 @@ class OrganizationReviewCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
             decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
+              gradient: _orgHeroGradient,
             ),
             child: Row(
               children: [
@@ -372,7 +381,7 @@ class _OrganizationReviewSheetState extends State<OrganizationReviewSheet> {
             future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return _OrgLoadingState(item: widget.item);
               }
               if (snapshot.hasError || snapshot.data == null) {
                 return _OrgDetailError(onRetry: _retry);
@@ -395,6 +404,109 @@ class _OrganizationReviewSheetState extends State<OrganizationReviewSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading state (hero instantáneo desde el item + loader del cuerpo)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OrgLoadingState extends StatelessWidget {
+  const _OrgLoadingState({required this.item});
+
+  final AdminPendingItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final logoUrl = item.coverUrl;
+    return Column(
+      children: [
+        Center(
+          child: Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+          decoration: const BoxDecoration(gradient: _orgHeroGradient),
+          child: Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: (logoUrl != null && logoUrl.isNotEmpty)
+                    ? Image.network(
+                        logoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.business_rounded,
+                            color: Colors.white,
+                            size: 28),
+                      )
+                    : const Icon(Icons.business_rounded,
+                        color: Colors.white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Enviada el ${formatAdminDateTime(item.createdAt)}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.82),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.of(context).maybePop(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+        const Expanded(
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 14),
+                Text(
+                  'Cargando detalle…',
+                  style: TextStyle(color: AppColors.mediumText, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -551,8 +663,18 @@ class _OrganizationDetailContent extends StatelessWidget {
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
+            decoration: BoxDecoration(
+              gradient: detail.galleryUrls.isEmpty ? _orgHeroGradient : null,
+              image: detail.galleryUrls.isNotEmpty
+                  ? DecorationImage(
+                      image: NetworkImage(detail.galleryUrls.first),
+                      fit: BoxFit.cover,
+                      colorFilter: ColorFilter.mode(
+                        Colors.black.withValues(alpha: 0.45),
+                        BlendMode.darken,
+                      ),
+                    )
+                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1159,55 +1281,75 @@ class _OrganizationDetailContent extends StatelessWidget {
                       ),
                     ],
                     if (_isEditable) ...[
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: isProcessing ? null : onReject,
-                              icon: const Icon(Icons.close_rounded, size: 16),
-                              label: const Text('Rechazar'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side:
-                                    const BorderSide(color: AppColors.error),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      AppColors.radiusMd),
-                                ),
-                              ),
+                      const SizedBox(height: 16),
+                      // Aprobar — gradiente verde (mismo estilo que campaña)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: AppColors.successGradient,
+                          borderRadius:
+                              BorderRadius.circular(AppColors.radiusMd),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.greenSuccess
+                                  .withValues(alpha: 0.38),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: FilledButton.icon(
+                          onPressed: isProcessing ? null : onApprove,
+                          icon: isProcessing
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Icon(Icons.check_circle_rounded,
+                                  size: 20),
+                          label: const Text(
+                            'Aprobar organización',
+                            style: TextStyle(
+                              fontSize: AppColors.fontSizeMd,
+                              fontWeight: AppColors.fontWeightBold,
+                              letterSpacing: AppColors.letterSpacingWide,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: FilledButton.icon(
-                              onPressed: isProcessing ? null : onApprove,
-                              icon: isProcessing
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2),
-                                    )
-                                  : const Icon(Icons.verified_rounded,
-                                      size: 16),
-                              label: const Text('Aprobar'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.greenSuccess,
-                                foregroundColor: Colors.white,
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(
-                                      AppColors.radiusMd),
-                                ),
-                              ),
+                          style: FilledButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 54),
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: AppColors.space16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppColors.radiusMd),
                             ),
                           ),
-                        ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Rechazar — outlined rojo, ancho completo (destructivo)
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: isProcessing ? null : onReject,
+                          icon: const Icon(Icons.close_rounded, size: 18),
+                          label: const Text('Rechazar organización'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 52),
+                            foregroundColor: AppColors.error,
+                            side: const BorderSide(color: AppColors.error),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(AppColors.radiusMd),
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -1240,59 +1382,10 @@ class _OrgSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppColors.radiusLg),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-            child: Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(AppColors.radiusSm),
-                  ),
-                  child: Icon(icon, color: Colors.white, size: 16),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.darkText,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(
-            height: 18,
-            indent: 16,
-            endIndent: 16,
-            color: AppColors.dividerColor.withValues(alpha: 0.6),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: child,
-          ),
-        ],
-      ),
+    return DetailSection(
+      icon: icon,
+      title: title,
+      child: child,
     );
   }
 }
@@ -1314,50 +1407,7 @@ class _OrgInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: AppColors.bluePrimary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(AppColors.radiusSm),
-            ),
-            child: Icon(icon, size: 15, color: AppColors.bluePrimary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.mediumText,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SelectableText(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.darkText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    return DetailInfoRow(icon: icon, label: label, value: value);
   }
 }
 

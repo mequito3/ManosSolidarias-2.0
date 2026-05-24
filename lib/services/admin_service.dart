@@ -98,7 +98,7 @@ class AdminService {
   Future<List<AdminPendingItem>> fetchPendingCampaignRequests() async {
     final response = await _client
         .from('solicitudes')
-        .select('id, titulo, descripcion, tipo, portada_url, portada_original_url, categoria_id, created_at, es_anonimo')
+        .select('id, titulo, descripcion, tipo, portada_url, portada_original_url, categoria_id, created_at, es_anonimo, monto_objetivo')
         .eq('estado', 'pendiente')
         .order('created_at', ascending: false);
 
@@ -173,6 +173,7 @@ class AdminService {
               kermesseMenu: kermesseInfo?['menu'],
               kermesseShows: kermesseInfo?['shows'],
               esAnonimo: (row['es_anonimo'] as bool?) ?? false,
+              montoObjetivo: double.tryParse('${row['monto_objetivo'] ?? ''}'),
             );
           },
         )

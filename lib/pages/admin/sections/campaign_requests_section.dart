@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -12,6 +12,8 @@ import '../../../services/admin_service.dart';
 import '../../../theme/app_colors.dart';
 import '../../../ui/widgets/app_buttons.dart';
 import '../../../ui/widgets/app_snackbar.dart';
+import '../../../ui/widgets/detail_section.dart';
+import '../../../ui/widgets/kermesse_lists.dart';
 import '../../../ui/widgets/image_redaction_editor.dart';
 import '../../../ui/widgets/premium_empty_state.dart';
 import '../../../ui/widgets/premium_hero.dart';
@@ -202,72 +204,22 @@ class _ReviewSectionCard extends StatelessWidget {
 	const _ReviewSectionCard({
 		required this.title,
 		required this.child,
+		this.icon,
 		this.subtitle,
 	});
 
 	final String title;
 	final Widget child;
+	final IconData? icon;
 	final String? subtitle;
 
 	@override
 	Widget build(BuildContext context) {
-		return Container(
-			decoration: BoxDecoration(
-				color: AppColors.cardBackground,
-				borderRadius: BorderRadius.circular(AppColors.radiusMd),
-				boxShadow: AppColors.shadowSm,
-			),
-			padding: const EdgeInsets.all(AppColors.space16),
-			child: Column(
-				crossAxisAlignment: CrossAxisAlignment.start,
-				children: [
-					// Encabezado estilo premium: barra de acento + título (sin icono)
-					Row(
-						crossAxisAlignment: CrossAxisAlignment.start,
-						children: [
-							Container(
-								width: 4,
-								height: subtitle != null ? 32 : 18,
-								margin: const EdgeInsets.only(top: 1),
-								decoration: BoxDecoration(
-									gradient: AppColors.primaryGradient,
-									borderRadius: BorderRadius.circular(AppColors.radiusXs),
-								),
-							),
-							const SizedBox(width: AppColors.space12),
-							Expanded(
-								child: Column(
-									crossAxisAlignment: CrossAxisAlignment.start,
-									children: [
-										Text(
-											title,
-											style: const TextStyle(
-												fontWeight: AppColors.fontWeightExtraBold,
-												color: AppColors.darkText,
-												fontSize: AppColors.fontSizeBase,
-												letterSpacing: -0.2,
-											),
-										),
-										if (subtitle != null) ...[
-											const SizedBox(height: 2),
-											Text(
-												subtitle!,
-												style: const TextStyle(
-													color: AppColors.mediumText,
-													fontSize: AppColors.fontSizeXs,
-													height: 1.3,
-												),
-											),
-										],
-									],
-								),
-							),
-						],
-					),
-					const SizedBox(height: AppColors.space12),
-					child,
-				],
-			),
+		return DetailSection(
+			icon: icon,
+			title: title,
+			subtitle: subtitle,
+			child: child,
 		);
 	}
 }
@@ -276,42 +228,26 @@ class _ReviewInfoRow extends StatelessWidget {
 	const _ReviewInfoRow({
 		required this.label,
 		required this.value,
+		this.icon,
 	});
 
 	final String label;
 	final String value;
+	final IconData? icon;
 
 	@override
 	Widget build(BuildContext context) {
-		return Padding(
-			padding: const EdgeInsets.only(bottom: 10),
-			child: Column(
-				crossAxisAlignment: CrossAxisAlignment.start,
-				children: [
-					Text(
-						label.toUpperCase(),
-						style: const TextStyle(
-							fontWeight: AppColors.fontWeightSemiBold,
-							color: AppColors.mediumText,
-							fontSize: AppColors.fontSizeXs,
-							letterSpacing: 0.4,
-						),
-					),
-					const SizedBox(height: 3),
-					Text(
-						value,
-						style: const TextStyle(
-							color: AppColors.darkText,
-							fontSize: AppColors.fontSizeSm,
-							fontWeight: AppColors.fontWeightSemiBold,
-							height: 1.4,
-						),
-					),
-				],
-			),
-		);
+		return DetailInfoRow(icon: icon, label: label, value: value);
 	}
 }
+
+/// Parte un campo multilínea (menú, actividades) en ítems limpios para
+/// alimentar las listas compartidas del detalle de kermés (PricedList/CheckList).
+List<String> _splitItems(String raw) => raw
+		.split('\n')
+		.map((l) => l.replaceFirst(RegExp(r'^\s*[-•·*]\s*'), '').trim())
+		.where((l) => l.isNotEmpty)
+		.toList();
 class CampaignRequestCard extends StatelessWidget {
 	const CampaignRequestCard({
 		super.key,
@@ -898,7 +834,10 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 														child: Column(
 															crossAxisAlignment: CrossAxisAlignment.start,
 															children: [
-																Row(
+																Wrap(
+																	spacing: 8,
+																	runSpacing: 8,
+																	crossAxisAlignment: WrapCrossAlignment.center,
 																	children: [
 																		if (widget.item.solicitudTipo != null)
 																			Container(
@@ -933,7 +872,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																					],
 																				),
 																			),
-																		const Spacer(),
 																		if (hasOriginalCover) ...[
 																			_AdminOriginalBadge(
 																				onTap: () => _showOriginalImageDialog(
@@ -941,7 +879,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																					widget.item.coverOriginalUrl!,
 																				),
 																			),
-																			const SizedBox(width: 6),
 																			_AdminReRedactBadge(
 																				onTap: () => _handleAdminReRedactCover(
 																					context,
@@ -949,7 +886,6 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																					(url) => setState(() {}),
 																				),
 																			),
-																			const SizedBox(width: 8),
 																		],
 																		_buildWaitingTimeBadge(context, widget.item.createdAt),
 																	],
@@ -974,7 +910,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																				size: 13, color: Colors.white70),
 																		const SizedBox(width: 5),
 																		Text(
-																			'Enviado el $formattedDate',
+																			'Enviada el $formattedDate',
 																			style: const TextStyle(
 																				fontSize: 12,
 																				color: Colors.white70,
@@ -997,10 +933,28 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 										child: Column(
 											crossAxisAlignment: CrossAxisAlignment.start,
 											children: [
+												// Meta de recaudación (solo campañas)
+												if (widget.item.solicitudTipo == SolicitudTipo.campania &&
+														widget.item.montoObjetivo != null &&
+														widget.item.montoObjetivo! > 0) ...[
+													_ReviewSectionCard(
+														icon: Icons.flag_rounded, title: 'Meta de recaudación',
+														child: Text(
+															'Bs ${widget.item.montoObjetivo!.toStringAsFixed(2)}',
+															style: const TextStyle(
+																color: AppColors.darkText,
+																fontSize: 20,
+																fontWeight: FontWeight.w800,
+																letterSpacing: -0.4,
+															),
+														),
+													),
+													const SizedBox(height: 12),
+												],
 												// Descripción
 												if ((widget.item.subtitle ?? '').trim().isNotEmpty) ...[
 													_ReviewSectionCard(
-														title: 'Descripción',
+														icon: Icons.description_rounded, title: 'Descripción',
 														child: Text(
 															widget.item.subtitle!,
 															style: const TextStyle(
@@ -1016,16 +970,17 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// Datos del beneficiario
 									if (widget.item.beneficiaryName != null) ...[
 										_ReviewSectionCard(
-											title: 'Datos del beneficiario',
+											icon: Icons.person_rounded, title: 'Datos del beneficiario',
 											child: Column(
+												crossAxisAlignment: CrossAxisAlignment.start,
 												children: [
 													_ReviewInfoRow(
-														label: 'Nombre',
+														icon: Icons.badge_rounded, label: 'Nombre',
 														value: widget.item.beneficiaryName!,
 													),
 													if (widget.item.beneficiaryRelation != null)
 														_ReviewInfoRow(
-															label: 'Relación',
+															icon: Icons.people_rounded, label: 'Relación',
 															value: widget.item.beneficiaryRelation!,
 														),
 												],
@@ -1037,7 +992,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// Evidencias fotográficas
 									if (widget.item.evidenceUrls != null && widget.item.evidenceUrls!.isNotEmpty) ...[
 										_ReviewSectionCard(
-											title: 'Evidencias fotográficas',
+											icon: Icons.photo_library_rounded, title: 'Evidencias fotográficas',
 											child: GridView.builder(
 												shrinkWrap: true,
 												physics: const NeverScrollableScrollPhysics(),
@@ -1065,7 +1020,9 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 														child: Stack(
 															fit: StackFit.expand,
 															children: [
-																Image.network(
+																GestureDetector(
+																	onTap: () => _showOriginalImageDialog(context, url, isOriginal: false),
+																	child: Image.network(
 																	url,
 																	fit: BoxFit.cover,
 																	loadingBuilder: (context, child, loadingProgress) {
@@ -1086,6 +1043,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 																			child: const Icon(Icons.broken_image_rounded, size: 36, color: Colors.grey),
 																		);
 																	},
+																),
 																),
 																if (canReRedact)
 																	Positioned(
@@ -1128,54 +1086,44 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									],
 									// Información de Kermesse
 									if (widget.item.solicitudTipo == SolicitudTipo.kermesse) ...[
+										if (widget.item.kermesseDate != null ||
+												widget.item.kermesseBeneficiaries != null ||
+												widget.item.kermessePurpose != null) ...[
 										_ReviewSectionCard(
-											title: 'Detalles del evento',
+											icon: Icons.event_rounded, title: 'Detalles del evento',
 											child: Column(
 												children: [
 													if (widget.item.kermesseDate != null)
 														_ReviewInfoRow(
-															label: 'Fecha y horario',
+															icon: Icons.schedule_rounded, label: 'Fecha y horario',
 															value: widget.item.kermesseDate!,
 														),
 													if (widget.item.kermesseBeneficiaries != null)
 														_ReviewInfoRow(
-															label: 'Beneficiarios',
+															icon: Icons.groups_rounded, label: 'Beneficiarios',
 															value: widget.item.kermesseBeneficiaries!,
 														),
 													if (widget.item.kermessePurpose != null)
 														_ReviewInfoRow(
-															label: 'Uso de fondos',
+															icon: Icons.savings_rounded, label: 'Uso de fondos',
 															value: widget.item.kermessePurpose!,
 														),
 												],
 											),
 										),
 										const SizedBox(height: 12),
+										],
 										if (widget.item.kermesseMenu != null) ...[
 											_ReviewSectionCard(
-												title: 'Menú y precios',
-												child: Text(
-													widget.item.kermesseMenu!,
-													style: const TextStyle(
-														color: Colors.black87,
-														fontSize: 15,
-														height: 1.55,
-													),
-												),
+												icon: Icons.restaurant_rounded, title: 'Menú y precios',
+												child: PricedList(items: _splitItems(widget.item.kermesseMenu!)),
 											),
 											const SizedBox(height: 12),
 										],
 										if (widget.item.kermesseShows != null) ...[
 											_ReviewSectionCard(
-												title: 'Entretenimiento y actividades',
-												child: Text(
-													widget.item.kermesseShows!,
-													style: const TextStyle(
-														color: Colors.black87,
-														fontSize: 15,
-														height: 1.55,
-													),
-												),
+												icon: Icons.celebration_rounded, title: 'Entretenimiento y actividades',
+												child: CheckList(items: _splitItems(widget.item.kermesseShows!)),
 											),
 											const SizedBox(height: 12),
 										],
@@ -1186,7 +1134,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 											widget.item.kermesseLatitude != null &&
 											widget.item.kermesseLongitude != null) ...[
 										_ReviewSectionCard(
-											title: 'Ubicación del evento',
+											icon: Icons.location_on_rounded, title: 'Ubicación del evento',
 											child: Column(
 												crossAxisAlignment: CrossAxisAlignment.start,
 												children: [
@@ -1264,7 +1212,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									// ── Comments + Actions ──────────────────────────────
 									// Sección de comentarios
 									_ReviewSectionCard(
-										title: 'Comentarios para el organizador',
+										icon: Icons.forum_rounded, title: 'Comentarios para el organizador',
 										subtitle: 'Si necesitas cambios, describe qué ajustes requieres (opcional)',
 										child: TextField(
 											controller: _messageCtrl,
@@ -1325,7 +1273,7 @@ class _CampaignReviewSheetState extends State<CampaignReviewSheet> {
 									if (widget.item.solicitudTipo == SolicitudTipo.campania) ...[
 										const SizedBox(height: 12),
 										_ReviewSectionCard(
-											title: 'Categoría de la campaña',
+											icon: Icons.category_rounded, title: 'Categoría de la campaña',
 											subtitle: 'Selecciona la que mejor describe esta campaña',
 											child: _loadingCategories
 												? Center(
@@ -1683,7 +1631,7 @@ class _AdminOriginalBadge extends StatelessWidget {
 	}
 }
 
-void _showOriginalImageDialog(BuildContext context, String url) {
+void _showOriginalImageDialog(BuildContext context, String url, {bool isOriginal = true}) {
 	showDialog<void>(
 		context: context,
 		barrierColor: Colors.black.withValues(alpha: 0.92),
@@ -1699,7 +1647,7 @@ void _showOriginalImageDialog(BuildContext context, String url) {
 							errorBuilder: (_, __, ___) => const Padding(
 								padding: EdgeInsets.all(40),
 								child: Text(
-									'No pudimos cargar la imagen original.',
+									'No pudimos cargar la imagen.',
 									textAlign: TextAlign.center,
 									style: TextStyle(color: Colors.white),
 								),
@@ -1721,6 +1669,7 @@ void _showOriginalImageDialog(BuildContext context, String url) {
 							),
 						),
 					),
+					if (isOriginal)
 					Positioned(
 						left: 12,
 						bottom: 12,

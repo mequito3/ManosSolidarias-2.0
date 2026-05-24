@@ -25,7 +25,7 @@ class _CommentsSection extends StatelessWidget {
 
     return _SectionCard(
       title: 'Comentarios',
-      icon: Icons.chat_bubble_rounded,
+      icon: Icons.forum_rounded,
       iconColor: AppColors.blueSecondary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

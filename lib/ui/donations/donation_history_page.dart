@@ -81,7 +81,7 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                   'Cuando apoyes una campaña, tus aportes aparecerán acá con su estado y comprobante.',
               blobColors: [
                 AppColors.bluePrimary.withValues(alpha: 0.10),
-                AppColors.greenHope.withValues(alpha: 0.08),
+                AppColors.greenSuccess.withValues(alpha: 0.08),
               ],
               hintChips: const [
                 PremiumHintChip(
@@ -134,18 +134,18 @@ class _DonationHistoryPageState extends State<DonationHistoryPage> {
                       subtitle: 'Gracias por ser parte del cambio.',
                       backgroundColors: [
                         AppColors.bluePrimary.withValues(alpha: 0.10),
-                        AppColors.greenHope.withValues(alpha: 0.07),
+                        AppColors.greenSuccess.withValues(alpha: 0.07),
                       ],
                       blobColors: [
                         AppColors.bluePrimary.withValues(alpha: 0.12),
-                        AppColors.greenHope.withValues(alpha: 0.10),
+                        AppColors.greenSuccess.withValues(alpha: 0.10),
                       ],
                       stats: [
                         PremiumStatPill(
                           icon: Icons.savings_rounded,
                           label: 'Total donado',
                           value: _formatCompact(totalApproved),
-                          color: AppColors.greenHope,
+                          color: AppColors.greenSuccess,
                         ),
                         PremiumStatPill(
                           icon: Icons.check_circle_rounded,
@@ -460,7 +460,7 @@ class _DonationCard extends StatelessWidget {
   static Color _statusColor(DonationStatus status) {
     switch (status) {
       case DonationStatus.approved:
-        return AppColors.greenHope;
+        return AppColors.greenSuccess;
       case DonationStatus.rejected:
         return AppColors.error;
       case DonationStatus.pending:
@@ -533,7 +533,7 @@ class _StatusBadge extends StatelessWidget {
     late final IconData icon;
     switch (status) {
       case DonationStatus.approved:
-        color = AppColors.greenHope;
+        color = AppColors.greenSuccess;
         label = 'APROBADA';
         icon = Icons.check_circle_rounded;
         break;

@@ -9,9 +9,18 @@ import '../../../utils/time_formatter.dart';
 import '../../../utils/notification_navigation_helper.dart';
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key, required this.controller});
+  const NotificationsPage({
+    super.key,
+    required this.controller,
+    this.typeFilter,
+  });
 
   final NotificationController controller;
+
+  /// Si se provee, solo se muestran las notificaciones cuyo `type` esté en
+  /// este conjunto. Lo usa el panel admin para mostrar únicamente las de
+  /// "evidencia por revisar".
+  final Set<String>? typeFilter;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -65,9 +74,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
         builder: (context, _) {
           final isLoading = _controller.isLoading;
           final hasLoaded = _controller.hasLoaded;
-          final notifications = _controller.notifications;
+          final filter = widget.typeFilter;
+          final notifications = filter == null
+              ? _controller.notifications
+              : _controller.notifications
+                  .where((n) => filter.contains(n.type))
+                  .toList(growable: false);
           final error = _controller.errorMessage;
-          final unread = _controller.unreadCount;
+          final unread = filter == null
+              ? _controller.unreadCount
+              : notifications.where((n) => n.isUnread).length;
 
           return CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

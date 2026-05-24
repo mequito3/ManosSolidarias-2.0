@@ -8,6 +8,8 @@ import '../services/donor_trophy_service.dart';
 import '../controllers/donor_trophy_controller.dart';
 import '../ui/home/menu_inferior/campaign_detail/campaign_detail_page.dart';
 import '../ui/home/campaign_evidence_page.dart';
+import '../ui/home/my_requests_page.dart';
+import '../models/user_profile.dart';
 import '../pages/organization_detail_page.dart';
 import '../ui/rewards/donor_trophies_page.dart';
 
@@ -55,18 +57,25 @@ class NotificationNavigationHelper {
         await _navigateToCampaign(context, payload);
         break;
 
-      // Notificaciones de campañas -> abrir detalle de campaña
-      case 'campaign_approved':
+      // Rechazos / cambios solicitados -> Mis solicitudes. La campaña aún
+      // no existe (sigue siendo solicitud), así que no se puede abrir su
+      // detalle: hay que llevar al usuario a su solicitud para editarla.
       case 'campaign_rejected':
+      case 'campana_rechazada':
+      case 'campaña_rechazada':
+      case 'solicitud_rechazada':
+        debugPrint('📝 Navegando a Mis solicitudes (rechazo/cambios)');
+        await _navigateToMyRequests(context);
+        break;
+
+      // Notificaciones de campañas aprobadas/creadas -> abrir detalle
+      case 'campaign_approved':
       case 'campaign_created':
       case 'campaign_updated':
       case 'campaign_goal_reached':
       case 'campana_aprobada':
-      case 'campana_rechazada':
       case 'campaña_aprobada':
-      case 'campaña_rechazada':
       case 'solicitud_aprobada':
-      case 'solicitud_rechazada':
         debugPrint('🎯 Navegando a detalle de campaña');
         await _navigateToCampaign(context, payload);
         break;
@@ -108,6 +117,7 @@ class NotificationNavigationHelper {
         break;
 
       // Notificaciones de evidencias -> abrir CampaignEvidencePage
+      case 'evidencia_para_revisar':
       case 'evidencia_solicitada':
       case 'evidencia_recordatorio_7d':
       case 'evidencia_recordatorio_3d':
@@ -209,6 +219,44 @@ class NotificationNavigationHelper {
       ),
     );
     */
+  }
+
+  /// Navega a "Mis solicitudes" del usuario. Se usa para notificaciones de
+  /// rechazo / cambios solicitados, donde todavía no existe una campaña que
+  /// abrir (la solicitud sigue pendiente de corrección).
+  static Future<void> _navigateToMyRequests(BuildContext context) async {
+    if (!context.mounted) return;
+    final client = Supabase.instance.client;
+    final campaignService = CampaignService(client);
+    final profileService = ProfileService(client);
+    final userId = client.auth.currentUser?.id;
+    UserProfile? userProfile;
+    if (userId != null) {
+      try {
+        userProfile = await profileService.fetchProfileByUserId(userId);
+      } catch (_) {}
+    }
+    if (!context.mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => MyRequestsPage(
+          campaignService: campaignService,
+          onOpenCampaign: (summary) {
+            final profile = userProfile;
+            if (profile == null) return;
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => CampaignDetailPage(
+                  campaignSummary: summary,
+                  campaignService: campaignService,
+                  userProfile: profile,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
   }
 
   /// Navega al detalle de una campaña

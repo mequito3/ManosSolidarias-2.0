@@ -18,6 +18,7 @@ import '../../../../services/campaign_service.dart';
 import '../../../../theme/app_colors.dart';
 import '../../../widgets/app_buttons.dart';
 import '../../../widgets/app_network_image.dart';
+import '../../../widgets/detail_section.dart';
 import '../../../widgets/app_snackbar.dart';
 import '../../../widgets/glass_circle_button.dart';
 import '../../../widgets/highlight_wrapper.dart';

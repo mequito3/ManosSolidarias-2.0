@@ -658,8 +658,9 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         return;
       }
 
-      final bytesToUpload = await _maybeRedact(originalBytes: originalBytes);
-      if (bytesToUpload == null) return;
+      // La portada NO se tacha aunque la campaña sea anónima: una portada
+      // toda tachada se ve fea en el feed. Solo se tachan las evidencias.
+      final bytesToUpload = originalBytes;
 
       setState(() => _uploadingCover = true);
 
@@ -671,22 +672,13 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
         fileExtension: extension,
       );
 
-      final originalCoverUrl = await _uploadOriginalIfNeeded(
-        original: originalBytes,
-        sentBytes: bytesToUpload,
-        uploader: (bytes) => _controller.uploadCoverImage(
-          data: bytes,
-          contentType: contentType,
-          fileExtension: extension,
-        ),
-      );
       if (!mounted) {
         return;
       }
       setState(() {
         _coverPreviewBytes = bytesToUpload;
         _uploadedCoverUrl = uploadedUrl;
-        _uploadedCoverOriginalUrl = originalCoverUrl;
+        _uploadedCoverOriginalUrl = null;
       });
       AppSnackBar.showSuccess(context, 'Imagen subida correctamente.');
     } on SolicitudServiceException catch (error) {
@@ -896,22 +888,6 @@ class _CreateSolicitudPageState extends State<CreateSolicitudPage> {
     );
     if (!mounted) return null;
     return result?.bytes;
-  }
-
-  /// Si la solicitud es anónima y los bytes que se subieron son distintos
-  /// del original (i.e. hubo tachado real), sube también el original para
-  /// que el admin pueda verificar identidad. Devuelve la URL o null.
-  Future<String?> _uploadOriginalIfNeeded({
-    required Uint8List original,
-    required Uint8List sentBytes,
-    required Future<String> Function(Uint8List) uploader,
-  }) async {
-    if (!_esAnonimo || identical(sentBytes, original)) return null;
-    try {
-      return await uploader(original);
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<void> _pickKermesseDateTime() async {
