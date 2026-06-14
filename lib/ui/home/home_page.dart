@@ -109,7 +109,9 @@ class _HomePageState extends State<HomePage> {
       _donorTrophyController
         ..loadLeaderboard()
         ..subscribeToRealtime();
-      _kermesseController.loadKermesses();
+      _kermesseController
+        ..loadKermesses()
+        ..subscribeToRealtime();
     });
 
     _profile = widget.profile;
@@ -164,6 +166,7 @@ class _HomePageState extends State<HomePage> {
           campaignSummary: campaign,
           campaignService: _campaignService,
           userProfile: widget.profile,
+          onCompleteProfile: _openProfileSettings,
         ),
       ),
     );

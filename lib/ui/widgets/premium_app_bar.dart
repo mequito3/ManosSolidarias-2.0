@@ -42,12 +42,16 @@ class PremiumAppBar extends StatelessWidget implements PreferredSizeWidget {
               onPressed: onBack ?? () => Navigator.of(context).maybePop(),
             )
           : null,
-      title: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.darkText,
-          fontWeight: AppColors.fontWeightBold,
-          letterSpacing: -0.3,
+      title: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: AppColors.darkText,
+            fontWeight: AppColors.fontWeightBold,
+            letterSpacing: -0.3,
+          ),
         ),
       ),
       actions: actions == null

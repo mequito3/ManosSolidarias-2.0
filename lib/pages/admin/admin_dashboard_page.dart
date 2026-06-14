@@ -179,7 +179,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage>
 		return Scaffold(
 			backgroundColor: AppColors.lightBackground,
 			appBar: PremiumAppBar(
-				title: 'Panel admin',
+				title: 'Panel Administrativo',
 				showBack: canPop,
 				onBack: () => Navigator.of(context).maybePop(),
 				actions: [

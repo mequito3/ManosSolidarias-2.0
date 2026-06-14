@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/kermesse.dart';
 import '../services/kermesse_service.dart';
@@ -7,6 +8,7 @@ class KermesseController extends ChangeNotifier {
   KermesseController(this._service);
 
   final KermesseService _service;
+  RealtimeChannel? _realtimeChannel;
 
   bool _isLoading = false;
   bool _hasLoaded = false;
@@ -66,11 +68,35 @@ class KermesseController extends ChangeNotifier {
     }
   }
 
+  void subscribeToRealtime() {
+    if (_realtimeChannel != null) return;
+    _realtimeChannel = Supabase.instance.client
+        .channel('kermesses_realtime')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'eventos',
+          callback: (_) => refreshKermesses(),
+        )
+        .subscribe();
+  }
+
+  void unsubscribeFromRealtime() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+  }
+
   void _setLoading(bool value) {
     if (_isLoading == value) {
       return;
     }
     _isLoading = value;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    unsubscribeFromRealtime();
+    super.dispose();
   }
 }

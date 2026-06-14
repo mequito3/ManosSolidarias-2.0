@@ -327,6 +327,13 @@ class _LoginPageState extends State<LoginPage>
                                   ? null
                                   : () => Navigator.of(context).pop(),
                             ),
+                            const SizedBox(height: 28),
+                            _DemoCard(
+                              onTap: () {
+                                _emailCtrl.text = 'demo@manossolidarias.bo';
+                                _passwordCtrl.text = 'Demo1234';
+                              },
+                            ),
                           ],
                         ),
                       ),
@@ -338,6 +345,101 @@ class _LoginPageState extends State<LoginPage>
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DemoCard extends StatelessWidget {
+  const _DemoCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: AppColors.bluePrimary.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.bluePrimary.withValues(alpha: 0.22),
+            width: 1.2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.badge_outlined,
+                    color: AppColors.bluePrimary, size: 16),
+                const SizedBox(width: 7),
+                const Expanded(
+                  child: Text(
+                    'Cuenta de demostración',
+                    style: TextStyle(
+                      color: AppColors.bluePrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.bluePrimary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: const Text(
+                    'Toca para completar',
+                    style: TextStyle(
+                      color: AppColors.bluePrimary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _CredRow(label: 'Correo', value: 'demo@manossolidarias.bo'),
+            const SizedBox(height: 4),
+            _CredRow(label: 'Contraseña', value: 'Demo1234'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CredRow extends StatelessWidget {
+  const _CredRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          '$label:  ',
+          style: const TextStyle(
+            color: AppColors.mediumText,
+            fontSize: 12.5,
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: AppColors.darkText,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

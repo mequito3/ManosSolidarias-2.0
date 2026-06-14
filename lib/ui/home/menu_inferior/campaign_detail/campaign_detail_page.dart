@@ -42,17 +42,21 @@ class CampaignDetailPage extends StatefulWidget {
     required this.userProfile,
     this.highlightCommentId,
     this.highlightDonationId,
+    this.onCompleteProfile,
   });
 
   final CampaignSummary campaignSummary;
   final CampaignService campaignService;
   final UserProfile userProfile;
-  
+
   /// ID del comentario que debe ser resaltado (desde notificación)
   final String? highlightCommentId;
-  
+
   /// ID de la donación que debe ser resaltada (desde notificación)
   final String? highlightDonationId;
+
+  /// Callback para abrir la pantalla de completar perfil desde el padre.
+  final VoidCallback? onCompleteProfile;
 
   @override
   State<CampaignDetailPage> createState() => _CampaignDetailPageState();
@@ -183,19 +187,44 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
       final shouldComplete = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Completa tu perfil'),
-          content: const Text(
-            'Para poder donar, necesitas completar tu información personal '
-            '(nombre, documento, teléfono, ciudad y dirección).\n\n'
-            '¿Deseas completar tu perfil ahora?',
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppColors.radiusXl),
           ),
+          backgroundColor: AppColors.lightBackground,
+          title: const Text(
+            'Completa tu perfil',
+            style: TextStyle(
+              color: AppColors.darkText,
+              fontWeight: AppColors.fontWeightBold,
+              fontSize: 18,
+            ),
+          ),
+          content: const Text(
+            'Para poder donar necesitas completar tu información personal: nombre, documento, teléfono, ciudad y dirección.',
+            style: TextStyle(
+              color: AppColors.mediumText,
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.mediumText,
+              ),
               child: const Text('Después'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.bluePrimary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                ),
+              ),
               child: const Text('Completar perfil'),
             ),
           ],
@@ -203,8 +232,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
       );
 
       if (shouldComplete == true && mounted) {
-        // Navegar a configuración de perfil
-        Navigator.pushNamed(context, '/profile/settings');
+        widget.onCompleteProfile?.call();
       }
       return;
     }
