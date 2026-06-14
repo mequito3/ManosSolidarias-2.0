@@ -372,20 +372,11 @@ class _CampaignEvidencePageState extends State<CampaignEvidencePage> {
                 AppColors.space20,
                 AppColors.space64 + AppColors.space24,
               ),
-              sliver: SliverList.separated(
-                itemCount: _evidences.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppColors.space12),
-                itemBuilder: (context, index) {
-                  final ev = _evidences[index];
-                  return _EvidenceCard(
-                    evidence: ev,
-                    canDelete: _canUpload &&
-                        widget.currentUserId != null &&
-                        ev.uploadedBy == widget.currentUserId,
-                    onDelete: () => _deleteEvidence(ev),
-                  );
-                },
+              sliver: _EvidenceGallery(
+                evidences: _evidences,
+                canDelete: _canUpload,
+                currentUserId: widget.currentUserId,
+                onDelete: _deleteEvidence,
               ),
             ),
         ],
@@ -822,14 +813,21 @@ class _EvidenceCard extends StatelessWidget {
     required this.evidence,
     required this.canDelete,
     required this.onDelete,
+    this.allImages = const [],
   });
 
   final CampaignEvidence evidence;
   final bool canDelete;
   final VoidCallback onDelete;
+  final List<CampaignEvidence> allImages;
 
   @override
   Widget build(BuildContext context) {
+    final isImage = evidence.isImage && evidence.url.isNotEmpty;
+    final imageList = allImages.isEmpty && isImage ? [evidence] : allImages;
+    final imageIndex =
+        imageList.indexWhere((e) => e.url == evidence.url).clamp(0, imageList.length - 1);
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
@@ -840,10 +838,52 @@ class _EvidenceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
-            child: _buildPreview(),
-          ),
+          if (isImage)
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => _FullscreenImagePage(
+                    images: imageList,
+                    initialIndex: imageIndex,
+                  ),
+                ),
+              ),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    AppNetworkImage(
+                      url: evidence.url,
+                      fit: BoxFit.cover,
+                      errorWidget: _filePlaceholder(Icons.broken_image_rounded),
+                    ),
+                    Positioned(
+                      right: AppColors.space8,
+                      bottom: AppColors.space8,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius:
+                              BorderRadius.circular(AppColors.radiusSm),
+                        ),
+                        child: const Icon(
+                          Icons.zoom_in_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            AspectRatio(
+              aspectRatio: 16 / 9,
+              child: _buildPreview(),
+            ),
           Padding(
             padding: const EdgeInsets.all(AppColors.space12),
             child: Column(
@@ -1014,6 +1054,267 @@ class _TypeBadge extends StatelessWidget {
     );
   }
 }
+
+// ─── Evidence gallery sliver ──────────────────────────────────────────────────
+
+class _EvidenceGallery extends StatelessWidget {
+  const _EvidenceGallery({
+    required this.evidences,
+    required this.canDelete,
+    required this.currentUserId,
+    required this.onDelete,
+  });
+
+  final List<CampaignEvidence> evidences;
+  final bool canDelete;
+  final String? currentUserId;
+  final ValueChanged<CampaignEvidence> onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final images =
+        evidences.where((e) => e.isImage && e.url.isNotEmpty).toList();
+    final others =
+        evidences.where((e) => !e.isImage || e.url.isEmpty).toList();
+
+    // Single item or no photos → original full-width card list
+    if (images.length <= 1) {
+      return SliverList.separated(
+        itemCount: evidences.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(height: AppColors.space12),
+        itemBuilder: (context, index) {
+          final ev = evidences[index];
+          return _EvidenceCard(
+            evidence: ev,
+            canDelete: canDelete &&
+                currentUserId != null &&
+                ev.uploadedBy == currentUserId,
+            onDelete: () => onDelete(ev),
+            allImages: images,
+          );
+        },
+      );
+    }
+
+    // Multiple images → 2-column photo grid so all are visible at a glance
+    return SliverMainAxisGroup(
+      slivers: [
+        SliverToBoxAdapter(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final cellSize =
+                  (constraints.maxWidth - AppColors.space8) / 2;
+              return Wrap(
+                spacing: AppColors.space8,
+                runSpacing: AppColors.space8,
+                children: [
+                  for (var i = 0; i < images.length; i++)
+                    SizedBox(
+                      width: cellSize,
+                      height: cellSize,
+                      child: _ImageThumbnail(
+                        evidence: images[i],
+                        allImages: images,
+                        heroIndex: i,
+                        canDelete: canDelete &&
+                            currentUserId != null &&
+                            images[i].uploadedBy == currentUserId,
+                        onDelete: () => onDelete(images[i]),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        if (others.isNotEmpty)
+          SliverPadding(
+            padding:
+                const EdgeInsets.only(top: AppColors.space12),
+            sliver: SliverList.separated(
+              itemCount: others.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(height: AppColors.space12),
+              itemBuilder: (context, index) {
+                final ev = others[index];
+                return _EvidenceCard(
+                  evidence: ev,
+                  canDelete: canDelete &&
+                      currentUserId != null &&
+                      ev.uploadedBy == currentUserId,
+                  onDelete: () => onDelete(ev),
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Image thumbnail (grid cell) ─────────────────────────────────────────────
+
+class _ImageThumbnail extends StatelessWidget {
+  const _ImageThumbnail({
+    required this.evidence,
+    required this.allImages,
+    required this.heroIndex,
+    required this.canDelete,
+    required this.onDelete,
+  });
+
+  final CampaignEvidence evidence;
+  final List<CampaignEvidence> allImages;
+  final int heroIndex;
+  final bool canDelete;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => _FullscreenImagePage(
+            images: allImages,
+            initialIndex: heroIndex,
+          ),
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppColors.radiusMd),
+          color: AppColors.cardBackground,
+          boxShadow: AppColors.shadowSm,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            AppNetworkImage(url: evidence.url, fit: BoxFit.cover),
+            Positioned(
+              right: AppColors.space8,
+              bottom: AppColors.space8,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius:
+                      BorderRadius.circular(AppColors.radiusSm),
+                ),
+                child: const Icon(Icons.zoom_in_rounded,
+                    color: Colors.white, size: 14),
+              ),
+            ),
+            Positioned(
+              left: AppColors.space8,
+              bottom: AppColors.space8,
+              child: _TypeBadge(type: evidence.typeEnum),
+            ),
+            if (canDelete)
+              Positioned(
+                right: AppColors.space8,
+                top: AppColors.space8,
+                child: GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withValues(alpha: 0.85),
+                      borderRadius:
+                          BorderRadius.circular(AppColors.radiusSm),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded,
+                        color: Colors.white, size: 14),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Fullscreen image viewer ──────────────────────────────────────────────────
+
+class _FullscreenImagePage extends StatefulWidget {
+  const _FullscreenImagePage({
+    required this.images,
+    required this.initialIndex,
+  });
+
+  final List<CampaignEvidence> images;
+  final int initialIndex;
+
+  @override
+  State<_FullscreenImagePage> createState() => _FullscreenImagePageState();
+}
+
+class _FullscreenImagePageState extends State<_FullscreenImagePage> {
+  late final PageController _page;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    _current = widget.initialIndex;
+    _page = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _page.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.black.withValues(alpha: 0.55),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: widget.images.length > 1
+            ? Text(
+                '${_current + 1} / ${widget.images.length}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: AppColors.fontSizeSm,
+                  fontWeight: AppColors.fontWeightSemiBold,
+                ),
+              )
+            : null,
+        centerTitle: true,
+      ),
+      body: PageView.builder(
+        controller: _page,
+        itemCount: widget.images.length,
+        onPageChanged: (i) => setState(() => _current = i),
+        itemBuilder: (context, index) {
+          final ev = widget.images[index];
+          return InteractiveViewer(
+            minScale: 0.7,
+            maxScale: 6.0,
+            child: Center(
+              child: AppNetworkImage(
+                url: ev.url,
+                fit: BoxFit.contain,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─── No-evidence placeholder ──────────────────────────────────────────────────
 
 class _NoEvidenceCard extends StatelessWidget {
   const _NoEvidenceCard({required this.canUpload});
