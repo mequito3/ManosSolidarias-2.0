@@ -29,6 +29,15 @@ class ProfileController extends ChangeNotifier {
     try {
       _profile = await _service.fetchCurrentProfile();
       _profile ??= await _service.ensureCurrentProfile();
+
+      // El token de auth a veces no está listo al arrancar la app — un solo
+      // reintento con espera corta resuelve el false-null sin molestar al usuario.
+      if (_profile == null) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        _profile = await _service.fetchCurrentProfile();
+        _profile ??= await _service.ensureCurrentProfile();
+      }
+
       if (_profile == null) {
         _errorMessage = 'No encontramos tu perfil en la base de datos.';
       } else {

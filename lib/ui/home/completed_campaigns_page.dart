@@ -504,6 +504,7 @@ class _CompletedCampaignCard extends StatelessWidget {
                   ],
                 ),
               ),
+              _StatusFooter(status: campaign.verificationStatus),
             ],
           ),
         ),
@@ -663,6 +664,43 @@ class _VerificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (status == VerificationStatus.verificada) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF2ECC87), Color(0xFF1BA05A)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppColors.radiusRound),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.greenHope.withValues(alpha: 0.45),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.verified_rounded, size: 14, color: Colors.white),
+            SizedBox(width: 5),
+            Text(
+              'VERIFICADA',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     late final Color color;
     late final String label;
     late final IconData icon;
@@ -685,8 +723,8 @@ class _VerificationBadge extends StatelessWidget {
         break;
       case VerificationStatus.sinVerificar:
         color = AppColors.grayDark;
-        label = 'SIN VERIFICAR';
-        icon = Icons.report_gmailerrorred_rounded;
+        label = 'SIN EVIDENCIA';
+        icon = Icons.warning_amber_rounded;
         break;
       case VerificationStatus.noAplica:
         color = AppColors.greenHope;
@@ -716,6 +754,76 @@ class _VerificationBadge extends StatelessWidget {
               fontSize: AppColors.fontSizeXs,
               fontWeight: AppColors.fontWeightExtraBold,
               letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Status footer strip ─────────────────────────────────────────────────────
+
+class _StatusFooter extends StatelessWidget {
+  const _StatusFooter({required this.status});
+  final VerificationStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color color;
+    late final IconData icon;
+    late final String text;
+
+    switch (status) {
+      case VerificationStatus.verificada:
+        color = const Color(0xFF1BA05A);
+        icon = Icons.verified_rounded;
+        text = 'Transparencia confirmada · El admin verificó el uso de los fondos';
+        break;
+      case VerificationStatus.enRevision:
+        color = AppColors.bluePrimary;
+        icon = Icons.fact_check_rounded;
+        text = 'Evidencia enviada · El administrador está revisando los documentos';
+        break;
+      case VerificationStatus.pendienteEvidencia:
+        color = AppColors.orangeAction;
+        icon = Icons.upload_file_rounded;
+        text = 'Esperando evidencia · El creador debe subir prueba del uso de fondos';
+        break;
+      case VerificationStatus.sinVerificar:
+        color = AppColors.grayDark;
+        icon = Icons.warning_amber_rounded;
+        text = 'Sin evidencia · No se subió prueba del uso de los fondos';
+        break;
+      case VerificationStatus.noAplica:
+        color = AppColors.greenHope;
+        icon = Icons.check_circle_rounded;
+        text = 'Meta alcanzada · Esta campaña no requería verificación de evidencia';
+        break;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppColors.space16, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        border: Border(top: BorderSide(color: color.withValues(alpha: 0.18))),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: color,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+                height: 1.3,
+              ),
             ),
           ),
         ],
